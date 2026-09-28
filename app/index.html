@@ -1,0 +1,232 @@
+<!doctype html>
+<html lang="es-AR" data-estilo="brasa">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Carta Viva</title>
+<meta name="description" content="La carta en 3D: escaneá el QR de tu mesa, mirá cada plato de todos lados y pidan juntos desde sus celus.">
+<meta name="theme-color" id="meta-tema" content="#170904">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cdefs%3E%3CradialGradient id='g'%3E%3Cstop offset='0' stop-color='%23FFB35C'/%3E%3Cstop offset='1' stop-color='%23FFB35C' stop-opacity='0'/%3E%3C/radialGradient%3E%3C/defs%3E%3Crect width='64' height='64' rx='16' fill='%23170904'/%3E%3Ccircle cx='32' cy='30' r='26' fill='url(%23g)'/%3E%3Cpath d='M18 32a14 11 0 0 1 28 0z' fill='%23F08A24'/%3E%3Crect x='18' y='34' width='28' height='5' rx='2.5' fill='%235A301F'/%3E%3Cpath d='M18 41h28a3 3 0 0 1-3 4H21a3 3 0 0 1-3-4z' fill='%23E3953D'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..900&family=DM+Mono:wght@400;500&family=Instrument+Serif:ital@0;1&family=Onest:wght@400;500;600;700&family=Unbounded:wght@500;700;800&display=swap">
+<link rel="stylesheet" href="/assets/estilos.css">
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.min.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"
+  }
+}
+</script>
+</head>
+<body>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-grilla" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"><rect x="3.5" y="3.5" width="7" height="7" rx="2"/><rect x="13.5" y="3.5" width="7" height="7" rx="2"/><rect x="3.5" y="13.5" width="7" height="7" rx="2"/><rect x="13.5" y="13.5" width="7" height="7" rx="2"/></symbol>
+  <symbol id="i-cerrar" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></symbol>
+  <symbol id="i-flecha" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></symbol>
+  <symbol id="i-volver" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M11 6l-6 6 6 6"/></symbol>
+  <symbol id="i-capas" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"><path d="M12 3l9 5-9 5-9-5 9-5z"/><path d="M3 13l9 5 9-5"/></symbol>
+  <symbol id="i-lapiz" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4L19 9l-4-4L4 16v4z"/><path d="M13.5 6.5l4 4"/></symbol>
+  <symbol id="i-campana" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 16v-5a6 6 0 1 1 12 0v5l1.5 2h-15z"/><path d="M10 20.5a2.2 2.2 0 0 0 4 0"/></symbol>
+  <symbol id="i-cuenta" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h12v18l-3-2-3 2-3-2-3 2z"/><path d="M9 8h6M9 12h6"/></symbol>
+  <symbol id="i-bandeja" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 18h18"/><path d="M5 18a7 7 0 0 1 14 0"/><path d="M12 8.5V6.5M10.2 6.5h3.6"/></symbol>
+  <symbol id="i-reloj" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></symbol>
+  <symbol id="i-giro" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12c0-2.8 4-5 9-5s9 2.2 9 5-4 5-9 5"/><path d="M9 14l3 3-3 3"/></symbol>
+  <symbol id="i-imprimir" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linejoin="round"><path d="M7 9V3.5h10V9"/><rect x="3.5" y="9" width="17" height="8" rx="2"/><path d="M7 14h10v6.5H7z"/></symbol>
+  <symbol id="i-sonido" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9.5h3.5L12 6v12l-4.5-3.5H4z"/><path d="M15.5 9a4 4 0 0 1 0 6M18 6.5a7.5 7.5 0 0 1 0 11"/></symbol>
+  <symbol id="i-mudo" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9.5h3.5L12 6v12l-4.5-3.5H4z"/><path d="M16 9.5l5 5M21 9.5l-5 5"/></symbol>
+  <symbol id="i-borrar" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5h11a1.5 1.5 0 0 1 1.5 1.5v11A1.5 1.5 0 0 1 20 19H9l-6-7z"/><path d="M12.5 9.5l5 5M17.5 9.5l-5 5"/></symbol>
+  <symbol id="i-listo" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M8 12.5l2.8 2.8L16.5 9.5"/></symbol>
+</svg>
+
+<div class="fondo" id="fondo" aria-hidden="true"><div class="fondo__palabra" id="palabra"></div></div>
+<canvas class="lienzo" id="lienzo" aria-hidden="true"></canvas>
+
+<div class="cinta" id="cinta" hidden>
+  <span class="cinta__demo">Demo</span>
+  <div class="estilos" id="estilos" role="group" aria-label="Estilo de la carta">
+    <button type="button" data-estilo="brasa" aria-pressed="true">Brasa</button>
+    <button type="button" data-estilo="jugo" aria-pressed="false">Jugo</button>
+    <button type="button" data-estilo="estudio" aria-pressed="false">Estudio</button>
+  </div>
+  <a class="cinta__link" href="#mesas">Panel del local <svg width="14" height="14" aria-hidden="true"><use href="#i-flecha"/></svg></a>
+</div>
+
+<header class="barra" id="barra">
+  <div class="marca">
+    <span class="marca__nombre" id="marca-nombre"></span>
+    <span class="marca__mesa"><span id="marca-mesa"></span><button class="marca__gente" id="marca-gente" type="button" hidden></button></span>
+  </div>
+  <div class="barra__acciones">
+    <button class="estado-chip" id="btn-estado" type="button" hidden></button>
+    <button class="boton-chico" id="btn-mozo" type="button" aria-label="Llamar al mozo o pedir la cuenta"><svg width="17" height="17" aria-hidden="true"><use href="#i-campana"/></svg><span>Mozo</span></button>
+    <button class="boton-icono" id="btn-carta" type="button" aria-label="Ver toda la carta"><svg width="20" height="20"><use href="#i-grilla"/></svg></button>
+  </div>
+</header>
+<nav class="categorias" id="categorias" aria-label="Secciones de la carta"></nav>
+
+<main class="feed" id="feed" aria-label="La carta"></main>
+
+<div class="etiquetas" id="etiquetas" aria-hidden="true"></div>
+
+<div class="explosion-pie" id="explosion-pie" hidden>
+  <p><span id="explosion-nombre"></span><small>Así viene, capa por capa</small></p>
+  <button class="boton-principal boton-principal--corto" id="explosion-cerrar" type="button">Listo</button>
+</div>
+
+<div class="acciones" id="acciones">
+  <button class="acciones__agregar" id="agregar" type="button">
+    <span class="mas" aria-hidden="true">+</span><span class="acciones__textos"><span id="agregar-texto">Agregar</span><span class="acciones__precio" id="agregar-precio"></span></span>
+  </button>
+  <button class="pastilla" id="pastilla" type="button" hidden>
+    <span class="pastilla__fotos" id="pastilla-fotos"></span>
+    <span class="pastilla__texto"><b id="pastilla-cant"></b><span id="pastilla-total"></span></span>
+  </button>
+</div>
+
+<div class="velo" id="velo" hidden></div>
+
+<section class="hoja hoja--bienvenida" id="hoja-bienvenida" role="dialog" aria-modal="true" aria-labelledby="bienvenida-titulo" hidden>
+  <header class="hoja__cabeza">
+    <div><p class="hoja__sobre" id="bienvenida-sobre"></p><h2 class="bienvenida__mesa" id="bienvenida-titulo"></h2></div>
+    <button class="boton-icono boton-icono--hoja" type="button" data-cerrar aria-label="Primero mirar la carta"><svg width="18" height="18"><use href="#i-cerrar"/></svg></button>
+  </header>
+  <div class="hoja__cuerpo">
+    <p class="bienvenida__gente" id="bienvenida-gente"></p>
+    <div class="campo campo--nombre">
+      <label for="bienvenida-nombre">¿Cómo te llamás?</label>
+      <input id="bienvenida-nombre" type="text" autocomplete="given-name" maxlength="20" placeholder="Tu nombre" enterkeyhint="go">
+    </div>
+    <p class="nota-pie nota-pie--izq">Así en la mesa se sabe qué pidió cada uno. Solo lo ven ustedes y el mozo.</p>
+  </div>
+  <footer class="hoja__pie">
+    <button class="boton-principal" id="bienvenida-entrar" type="button">Entrar a la mesa</button>
+  </footer>
+</section>
+
+<section class="hoja" id="hoja-armar" role="dialog" aria-modal="true" aria-labelledby="armar-titulo" hidden>
+  <header class="hoja__cabeza">
+    <div><p class="hoja__sobre">Armala a tu gusto</p><h2 class="hoja__titulo" id="armar-titulo"></h2></div>
+    <button class="boton-icono boton-icono--hoja" type="button" data-cerrar aria-label="Cerrar"><svg width="18" height="18"><use href="#i-cerrar"/></svg></button>
+  </header>
+  <div class="hoja__cuerpo" id="armar-opciones"></div>
+  <footer class="hoja__pie"><button class="boton-principal" id="armar-agregar" type="button"></button></footer>
+</section>
+
+<section class="hoja" id="hoja-pedido" role="dialog" aria-modal="true" aria-labelledby="pedido-titulo" hidden>
+  <header class="hoja__cabeza">
+    <div><p class="hoja__sobre" id="pedido-mesa"></p><h2 class="hoja__titulo" id="pedido-titulo">El pedido de la mesa</h2></div>
+    <button class="boton-icono boton-icono--hoja" type="button" data-cerrar aria-label="Cerrar"><svg width="18" height="18"><use href="#i-cerrar"/></svg></button>
+  </header>
+  <div class="hoja__cuerpo">
+    <ul class="gente-pedido" id="pedido-lineas"></ul>
+    <div class="campo" id="pedido-campo">
+      <label for="pedido-nota">¿Alguna aclaración?</label>
+      <textarea id="pedido-nota" rows="2" placeholder="Ej.: las papas sin sal, la pizza cortada en 8"></textarea>
+    </div>
+  </div>
+  <footer class="hoja__pie">
+    <div class="total"><span>Total</span><b id="pedido-total"></b></div>
+    <button class="boton-principal" id="pedido-mandar" type="button">Mandar el pedido</button>
+    <p class="nota-pie" id="pedido-aclara"></p>
+  </footer>
+</section>
+
+<section class="hoja hoja--alta" id="hoja-carta" role="dialog" aria-modal="true" aria-labelledby="carta-titulo" hidden>
+  <header class="hoja__cabeza">
+    <div><p class="hoja__sobre" id="carta-sobre"></p><h2 class="hoja__titulo" id="carta-titulo">Toda la carta</h2></div>
+    <button class="boton-icono boton-icono--hoja" type="button" data-cerrar aria-label="Cerrar"><svg width="18" height="18"><use href="#i-cerrar"/></svg></button>
+  </header>
+  <div class="hoja__cuerpo" id="carta-grilla"></div>
+</section>
+
+<section class="hoja" id="hoja-mozo" role="dialog" aria-modal="true" aria-labelledby="mozo-titulo" hidden>
+  <header class="hoja__cabeza">
+    <div><p class="hoja__sobre" id="mozo-mesa"></p><h2 class="hoja__titulo" id="mozo-titulo">¿Qué necesitan?</h2></div>
+    <button class="boton-icono boton-icono--hoja" type="button" data-cerrar aria-label="Cerrar"><svg width="18" height="18"><use href="#i-cerrar"/></svg></button>
+  </header>
+  <div class="hoja__cuerpo">
+    <p class="mozo-estado" id="mozo-estado" role="status" hidden></p>
+    <div class="opciones-mozo">
+      <button class="opcion-grande" id="mozo-llamar" type="button"><b>Que venga el mozo</b><small>Para lo que necesiten</small></button>
+      <button class="opcion-grande" id="mozo-cuenta" type="button" aria-expanded="false"><b>La cuenta</b><small>Junta o dividida</small></button>
+    </div>
+    <div class="cuenta" id="cuenta" hidden>
+      <div class="grupo"><p class="grupo__titulo">¿Cómo pagan?</p><div class="chips" id="cuenta-pago"></div></div>
+      <div class="grupo"><p class="grupo__titulo">Propina</p><div class="chips" id="cuenta-propina"></div></div>
+      <div class="grupo"><p class="grupo__titulo">¿Cómo la dividen?</p><div class="chips" id="cuenta-dividir"></div></div>
+      <dl class="cuenta__numeros" id="cuenta-numeros"></dl>
+      <p class="cuenta__ojo" id="cuenta-ojo" hidden></p>
+      <div class="cuenta__division" id="cuenta-division" hidden></div>
+    </div>
+  </div>
+  <footer class="hoja__pie" id="cuenta-pie" hidden>
+    <button class="boton-principal" id="cuenta-pedir" type="button">Pedir la cuenta</button>
+  </footer>
+</section>
+
+<section class="seguimiento" id="seguimiento" aria-labelledby="seg-titulo" hidden>
+  <div class="seguimiento__brillo" id="seg-brillo" aria-hidden="true"></div>
+  <div class="seguimiento__marco">
+    <header class="seguimiento__cabeza">
+      <span class="seguimiento__numero" id="seg-numero"></span>
+      <button class="boton-chico boton-chico--claro" id="seg-cerrar" type="button">Volver a la carta</button>
+    </header>
+    <h2 class="seguimiento__titulo" id="seg-titulo"></h2>
+    <p class="seguimiento__bajada" id="seg-bajada"></p>
+    <ol class="pasos" id="seg-pasos"></ol>
+    <ul class="seg-partes" id="seg-partes" aria-label="Cómo va cada parte" hidden></ul>
+    <ul class="seg-items" id="seg-items"></ul>
+    <ul class="seg-rondas" id="seg-rondas" aria-label="Las otras rondas de la mesa" hidden></ul>
+    <p class="seg-mesa" id="seg-mesa"></p>
+    <div class="seguimiento__acciones">
+      <button class="boton-principal boton-principal--claro" id="seg-mas" type="button">Pedir algo más</button>
+      <div class="fila">
+        <button class="boton-linea boton-linea--claro" id="seg-mozo" type="button">Llamar al mozo</button>
+        <button class="boton-linea boton-linea--claro" id="seg-cuenta" type="button">Pedir la cuenta</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="gracias" id="gracias" aria-labelledby="gracias-titulo" hidden>
+  <div class="gracias__marco">
+    <p class="gracias__local" id="gracias-local"></p>
+    <h2 class="gracias__titulo" id="gracias-titulo"></h2>
+    <p class="gracias__texto" id="gracias-texto"></p>
+    <button class="boton-principal boton-principal--claro" id="gracias-otra" type="button">Volver a la carta</button>
+  </div>
+</section>
+
+<section class="panel" id="panel" aria-labelledby="panel-titulo" hidden>
+  <div class="entrada-equipo" id="entrada-equipo" hidden></div>
+  <div class="panel__adentro" id="panel-adentro" hidden>
+    <header class="panel__cabeza">
+      <div class="panel__marca">
+        <p class="panel__sobre">Panel del local</p>
+        <h2 class="panel__titulo" id="panel-titulo"></h2>
+      </div>
+      <div class="panel__tabs" role="tablist" aria-label="Secciones del panel" id="panel-tabs"></div>
+      <a class="panel__salir" href="#carta">Ver la carta <svg width="14" height="14" aria-hidden="true"><use href="#i-flecha"/></svg></a>
+    </header>
+    <div class="turno" id="turno"></div>
+    <div class="panel__vista" id="vistas" role="tabpanel"></div>
+    <p class="panel__pie" id="panel-pie">Demo: la Mesa 7 es la tuya (entrás desde la carta). Juli, Tomi, las otras mesas y el resto del equipo son simulados; lo que muevas vos a mano no lo toca nadie. Tocando a alguien de "En turno" entrás como esa persona. Para sumar comensales de verdad, entrá como Sofi y abrí mesas desde <b>QR</b>: cada una se abre en otra pestaña, como otro celular. <button type="button" id="panel-reiniciar">Empezar de cero</button></p>
+  </div>
+  <div class="detalle-velo" id="detalle-velo" hidden></div>
+  <aside class="detalle" id="detalle" role="dialog" aria-modal="true" aria-labelledby="detalle-titulo" hidden></aside>
+</section>
+
+<div class="aviso" id="aviso" role="status" aria-live="polite"></div>
+
+<script src="/assets/local.js"></script>
+<script src="/assets/datos.js"></script>
+<script src="/assets/simulacion.js"></script>
+<script type="module" src="/assets/platos3d.js"></script>
+<script type="module" src="/assets/escena.js"></script>
+<script type="module" src="/assets/app.js"></script>
+<script type="module" src="/assets/panel.js"></script>
+</body>
+</html>

@@ -2,7 +2,8 @@
 
 Carta 3D para locales gastronómicos: el comensal escanea el QR de su mesa, ve cada plato en 3D,
 lo arma a su gusto y lo pide desde el celular. Los de la mesa piden juntos, cada uno desde su
-celular, y el equipo del local (mozos, cocina, barra y encargada) lo recibe en su panel.
+celular, y el equipo del local lo recibe en su panel: cada persona entra con su PIN y ve solo
+lo que le toca (el dueño o el encargado eligen qué puede hacer cada uno).
 Producto propio de **Gaby y Juanma** (arrancado el 26-sep-2026).
 
 - Propuesta, decisiones y arquitectura: [`decisiones.md`](decisiones.md)
@@ -17,22 +18,26 @@ Producto propio de **Gaby y Juanma** (arrancado el 26-sep-2026).
 |---|---|
 | `/?mesa=3` | la carta de la mesa 3, como si hubieras escaneado su QR (sin número: la mesa 7) |
 | `/?mesa=3&nuevo` | otra persona en la misma mesa: abrila en otra pestaña y pidan juntos |
-| `/#panel` | el panel del local: cada uno entra con su nombre y su PIN (en la demo, todos 1234) |
+| `/#panel` | el panel del local: cada uno entra con su nombre y su PIN (en la demo, los de ejemplo tienen 1234) |
 
 En la demo todo queda en el navegador y el resto del local se simula: Juli y Tomi comparten la
-mesa 7 con vos, la cocina y la barra avanzan solas y otras mesas van pidiendo.
+mesa 7 con vos, la cocina y la barra avanzan solas y otras mesas van pidiendo. Si nadie mira la
+demo, el local queda en pausa (así las horas siguen teniendo sentido al volver).
+
+En el panel, "Probar como" cambia de persona: Carla (moza) no ve la cocina y le suena cuando
+algo está listo; Diego ve solo la cocina; Rober (dueño) y Sofi (encargada) tienen **Equipo**.
 
 ## Archivos
 
 ```
 app/index.html            la app: la carta del comensal y el panel del local (#panel)
-app/assets/local.js       TODO lo propio del local: carta, precios, armados, mesas, equipo y estaciones
+app/assets/local.js       TODO lo propio del local: carta, precios, armados, mesas, estaciones, puestos y equipo
 app/assets/platos3d.js    los platos modelados por código, por capas
 app/assets/escena.js      el escenario 3D (Three.js): un lienzo, un lugar por plato
-app/assets/datos.js       mesas, comensales, pedidos, llamados y agotados (demo: en el navegador)
+app/assets/datos.js       mesas, comensales, pedidos, llamados, agotados y equipo con permisos (demo: en el navegador)
 app/assets/simulacion.js  lo que se simula en la demo: Juli y Tomi, cocina, barra y otras mesas
-app/assets/app.js         la carta: feed, armar, pedido de la mesa, seguimiento, mozo y cuenta
-app/assets/panel.js       el panel del local: mesas, cocina, barra, carta (agotados) y QR
+app/assets/app.js         la carta: bienvenida, feed, armar, pedido de la mesa, seguimiento, mozo y cuenta
+app/assets/panel.js       el panel del local: para hacer, mesas, cocina, barra, carta (agotados), QR y equipo
 app/assets/estilos.css    estilos
 supabase/esquema.sql      la base real (Supabase): tablas, reglas y funciones
 supabase/semilla.js       arma semilla.sql (el local, su carta, mesas y equipo) a partir de local.js
@@ -50,12 +55,13 @@ npm run semilla         rearma supabase/semilla.sql después de cambiar local.js
 npm install + npm test  prueba la base (esquema + semilla) en un Postgres local
 ```
 
-## Estado (27-sep-2026)
+## Estado (29-sep-2026)
 
-- **Hecho:** la demo completa (varias personas por mesa, QR por mesa, cocina y barra, panel con
-  PIN por persona). La base de Supabase está escrita y pasa las pruebas.
+- **Hecho:** la demo completa: bienvenida en 3D al escanear el QR, varias personas por mesa,
+  cocina y barra, panel con PIN y permisos por persona (sección Equipo), avisos que suenan,
+  deshacer. La base de Supabase hace cumplir lo mismo y pasa las pruebas (108).
 - **Falta:** conectar la app a Supabase (`datos-supabase.js`), la guía para publicarla y probarla
-  con celulares de verdad.
+  con celulares de verdad; avisos al celular del mozo con la app cerrada.
 
 ## Sumar un plato
 

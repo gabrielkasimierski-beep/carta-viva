@@ -11,7 +11,9 @@
 --      solo puede ver y tocar lo de SU mesa mientras esté abierta.
 --    · El EQUIPO: cada dispositivo del local entra con la cuenta del local (mail y
 --      clave de Supabase) y cada persona se identifica con su PIN. Todo lo que hace
---      queda firmado con su nombre.
+--      queda firmado con su nombre, y solo puede hacer lo que le permiten sus permisos
+--      (los elige el dueño o el encargado desde el panel: ver las mesas, atender,
+--      llevar, cobrar, cada estación, agotados, QR, manejar el equipo).
 --
 --  Nadie toca las tablas directo: todo pasa por las funciones de abajo, que validan
 --  (precios los calcula la base, no el celular; si dos tocan lo mismo, gana uno).
@@ -46,20 +48,28 @@ create table if not exists public.mesas (
   unique (local_id, numero)
 );
 
+-- El equipo: cada persona con su puesto (rol) y lo que puede ver y hacer (permisos).
+-- Los puestos y sus permisos de entrada están en la carta del local (roles, sale de local.js);
+-- quien tiene el permiso "equipo" los ajusta persona por persona desde el panel.
 create table if not exists public.equipo (
   id        uuid primary key default gen_random_uuid(),
   local_id  uuid not null references public.locales on delete cascade,
   nombre    text not null,
-  rol       text not null check (rol in ('encargado', 'mozo', 'cocina', 'barra')),
+  rol       text not null check (rol ~ '^[a-z][a-z0-9-]{1,19}$'),
   puesto    text not null default '',
   zona      text,
   color     text not null default '#C4A4FF',
   pin_sal   text not null default replace(gen_random_uuid()::text, '-', ''),
   pin_hash  text not null,
+  permisos  text[] not null default '{}',
   activo    boolean not null default true,
   orden     integer not null default 0,
   unique (local_id, nombre)
 );
+-- Para bases creadas con la versión anterior (puestos fijos y sin permisos por persona)
+alter table public.equipo drop constraint if exists equipo_rol_check;
+alter table public.equipo add constraint equipo_rol_check check (rol ~ '^[a-z][a-z0-9-]{1,19}$');
+alter table public.equipo add column if not exists permisos text[] not null default '{}';
 
 -- Qué cuentas (usuarios de Supabase Auth) pueden abrir el panel de qué local
 create table if not exists public.cuentas (
@@ -315,6 +325,39 @@ language sql as $$
                     || jsonb_build_array(jsonb_build_object('t', interno.ms(now()), 'texto', texto))
    where id = sesion
 $$;
+-- Lo que se deshizo no queda en la historia (se borra la última vez que se anotó)
+create or replace function interno.desanotar(p_sesion uuid, p_texto text) returns void
+language sql as $$
+  update public.sesiones s
+     set historia = s.historia - (select (e.i - 1)::integer from jsonb_array_elements(s.historia) with ordinality e(x, i)
+                                   where e.x->>'texto' = p_texto order by e.i desc limit 1)
+   where s.id = p_sesion
+     and exists (select 1 from jsonb_array_elements(s.historia) e(x) where e.x->>'texto' = p_texto)
+$$;
+
+-- Permisos: los fijos más uno por estación de la carta (cocina, barra, ...)
+create or replace function interno.permisos_validos(carta jsonb) returns text[]
+language sql immutable as $$
+  select array['mesas', 'atender', 'llevar', 'cobrar', 'carta', 'qr', 'equipo']::text[]
+         || coalesce((select array_agg(e->>'id') from jsonb_array_elements(coalesce(carta->'estaciones', '[]'::jsonb)) e), '{}'::text[])
+$$;
+-- Los permisos de entrada de un puesto (según la carta del local)
+create or replace function interno.permisos_rol(carta jsonb, rol text) returns text[]
+language sql immutable as $$
+  select coalesce(array_agg(distinct x), '{}'::text[])
+    from jsonb_array_elements(coalesce(carta->'roles', '[]'::jsonb)) r, jsonb_array_elements_text(r->'permisos') x
+   where r->>'id' = rol and x = any(interno.permisos_validos(carta))
+$$;
+create or replace function interno.puede(p_equipo uuid, p_permiso text) returns boolean
+language sql stable as $$
+  select exists (select 1 from public.equipo e where e.id = p_equipo and e.activo and p_permiso = any(e.permisos))
+$$;
+-- Si no tiene el permiso, no pasa (la app ya no le muestra el botón; esto es por las dudas)
+create or replace function interno.exigir(p_equipo uuid, p_permiso text) returns void
+language plpgsql stable as $$
+begin
+  if not interno.puede(p_equipo, p_permiso) then raise exception 'sin_permiso'; end if;
+end $$;
 
 -- "Algo cambió": aviso en vivo a los celulares de la mesa y al panel del local.
 -- Si Realtime no está, no pasa nada: los celulares igual preguntan cada tanto.
@@ -386,7 +429,7 @@ language sql stable as $$
   select jsonb_build_object(
     'local',      (select jsonb_build_object('id', l.id, 'nombre', l.nombre, 'canal', l.canal) from public.locales l where l.id = p_local),
     'mesas',      coalesce((select jsonb_agg(jsonb_build_object('n', m.numero, 'zona', m.zona, 'lugares', m.lugares, 'codigo', m.codigo) order by m.numero) from public.mesas m where m.local_id = p_local), '[]'::jsonb),
-    'equipo',     coalesce((select jsonb_agg(jsonb_build_object('id', e.id, 'nombre', e.nombre, 'rol', e.rol, 'puesto', e.puesto, 'zona', e.zona, 'color', e.color) order by e.orden, e.nombre) from public.equipo e where e.local_id = p_local and e.activo), '[]'::jsonb),
+    'equipo',     coalesce((select jsonb_agg(jsonb_build_object('id', e.id, 'nombre', e.nombre, 'rol', e.rol, 'puesto', e.puesto, 'zona', coalesce(e.zona, ''), 'color', e.color, 'permisos', to_jsonb(e.permisos)) order by e.orden, e.nombre) from public.equipo e where e.local_id = p_local and e.activo), '[]'::jsonb),
     'sesiones',   coalesce((select jsonb_agg(interno.j_sesion(s, true) order by s.abierta) from ses s), '[]'::jsonb),
     'comensales', coalesce((select jsonb_agg(interno.j_comensal(c) order by c.unido) from public.comensales c where c.sesion_id in (select id from ses)), '[]'::jsonb),
     'carrito',    coalesce((select jsonb_agg(interno.j_linea(l) order by l.creado) from public.carrito l where l.sesion_id in (select id from ses)), '[]'::jsonb),
@@ -415,7 +458,8 @@ create or replace function interno.turno(p_token text) returns public.turnos
 language plpgsql stable as $$
 declare v_t public.turnos;
 begin
-  select * into v_t from public.turnos x where x.token = p_token and x.vence > now();
+  select * into v_t from public.turnos x where x.token = p_token and x.vence > now()
+     and exists (select 1 from public.equipo e where e.id = x.equipo_id and e.activo);
   if not found then raise exception 'turno_vencido'; end if;
   if not exists (select 1 from public.cuentas k where k.user_id = auth.uid() and k.local_id = v_t.local_id) then raise exception 'sin_permiso'; end if;
   return v_t;
@@ -443,8 +487,9 @@ as $$
   where m.codigo = p_codigo
 $$;
 
--- Entrar a la mesa con un nombre. Si la mesa está libre, se abre.
-create or replace function public.entrar(p_codigo text, p_nombre text) returns jsonb
+-- Entrar a la mesa con un nombre (y el color que eligió, si está libre). Si la mesa está libre, se abre.
+drop function if exists public.entrar(text, text);            -- la versión anterior, sin color
+create or replace function public.entrar(p_codigo text, p_nombre text, p_color text default null) returns jsonb
 language plpgsql volatile security definer
 set search_path = public
 as $$
@@ -471,7 +516,8 @@ begin
     v_nombre := v_nombre || ' ' || (v_gente + 1);
   end if;
   select u.col into v_color from unnest(v_colores) with ordinality as u(col, i)
-   where u.col not in (select x.color from public.comensales x where x.sesion_id = v_s.id) order by u.i limit 1;
+   where u.col not in (select x.color from public.comensales x where x.sesion_id = v_s.id)
+   order by (u.col = p_color) desc, u.i limit 1;                -- el que eligió, si nadie lo tiene
   v_color := coalesce(v_color, v_colores[1 + v_gente % 6]);
   insert into public.comensales (sesion_id, nombre, color) values (v_s.id, v_nombre, v_color) returning * into v_c;
   perform interno.anotar(v_s.id, case when v_gente = 0 then v_nombre || ' escaneó el QR y abrió la mesa' else v_nombre || ' se sumó a la mesa' end);
@@ -671,8 +717,18 @@ begin
   return jsonb_build_object('ok', true, 'turno', v_token, 'equipo', v_e.id);
 end $$;
 
+-- Cómo queda anotado cada paso en la historia de la mesa (mover y deshacer usan el mismo texto)
+create or replace function interno.texto_paso(p_equipo uuid, p_estado text, p_ronda integer, carta jsonb, p_estacion text) returns text
+language sql stable as $$
+  select interno.nombre_equipo(p_equipo) || ' '
+      || case p_estado when 'preparando' then 'empezó' when 'listo' then 'terminó' else 'llevó a la mesa' end
+      || ' la ronda ' || p_ronda || ' · ' || interno.nombre_estacion(carta, p_estacion)
+$$;
+
 -- Avanzar la parte de una estación: nuevo → preparando → listo → entregado.
--- Si dos lo tocan a la vez, gana el primero y el segundo no hace nada.
+-- Empezar y terminar es de la estación (permiso "cocina", "barra"...); llevar a la mesa, de
+-- quien lleva (permiso "llevar"). Si dos lo tocan a la vez, gana el primero y el segundo no
+-- hace nada. Queda guardado cómo estaba, para poder deshacerlo durante 20 segundos.
 create or replace function public.mover(p_turno text, p_pedido uuid, p_estacion text, p_estado text) returns jsonb
 language plpgsql volatile security definer
 set search_path = public
@@ -682,24 +738,50 @@ declare
   v_orden text[] := array['nuevo', 'preparando', 'listo', 'entregado'];
 begin
   v_t := interno.turno(p_turno);
+  perform interno.exigir(v_t.equipo_id, case when p_estado = 'entregado' then 'llevar' else p_estacion end);
   select * into v_p from public.pedidos x where x.id = p_pedido and x.local_id = v_t.local_id for update;
   if not found then raise exception 'no_existe'; end if;
   select * into v_s from public.sesiones x where x.id = v_p.sesion_id;
   if v_s.cerrada is null and v_p.rechazado is null and v_p.partes ? p_estacion
      and coalesce(array_position(v_orden, p_estado), 0) > coalesce(array_position(v_orden, v_p.partes->p_estacion->>'estado'), 99) then
     update public.pedidos x
-       set partes = jsonb_set(x.partes, array[p_estacion], jsonb_build_object('estado', p_estado, 'cambio', interno.ms(now()), 'quien', v_t.equipo_id, 'aMano', true))
+       set partes = jsonb_set(x.partes, array[p_estacion], jsonb_build_object(
+             'estado', p_estado, 'cambio', interno.ms(now()), 'quien', v_t.equipo_id, 'aMano', true,
+             'antes', (x.partes->p_estacion) - 'antes' - 'aMano'))
      where x.id = v_p.id;
     select l.carta into v_carta from public.locales l where l.id = v_t.local_id;
-    perform interno.anotar(v_s.id, interno.nombre_equipo(v_t.equipo_id) || ' '
-      || case p_estado when 'preparando' then 'empezó' when 'listo' then 'terminó' else 'llevó a la mesa' end
-      || ' la ronda ' || v_p.ronda || ' · ' || interno.nombre_estacion(v_carta, p_estacion));
+    perform interno.anotar(v_s.id, interno.texto_paso(v_t.equipo_id, p_estado, v_p.ronda, v_carta, p_estacion));
     perform interno.avisar(v_t.local_id, v_s.id);
   end if;
   return interno.estado_panel(v_t.local_id);
 end $$;
 
--- No tomar un pedido (por ejemplo, uno "en broma" de una mesa donde no hay nadie)
+-- Deshacer un paso tocado sin querer: solo quien lo hizo, antes de 20 segundos y si nadie lo
+-- cambió después. Devuelve el panel con deshecho = true o false.
+create or replace function public.deshacer_paso(p_turno text, p_pedido uuid, p_estacion text) returns jsonb
+language plpgsql volatile security definer
+set search_path = public
+as $$
+declare v_t public.turnos; v_p public.pedidos; v_s public.sesiones; v_pa jsonb; v_carta jsonb;
+begin
+  v_t := interno.turno(p_turno);
+  select * into v_p from public.pedidos x where x.id = p_pedido and x.local_id = v_t.local_id for update;
+  if not found then raise exception 'no_existe'; end if;
+  select * into v_s from public.sesiones x where x.id = v_p.sesion_id;
+  v_pa := v_p.partes->p_estacion;
+  if v_s.cerrada is null and v_pa ? 'antes' and v_pa->>'quien' = v_t.equipo_id::text
+     and (v_pa->>'cambio')::bigint >= interno.ms(now()) - 20000 then
+    update public.pedidos x set partes = jsonb_set(x.partes, array[p_estacion], (v_pa->'antes') || jsonb_build_object('aMano', true)) where x.id = v_p.id;
+    select l.carta into v_carta from public.locales l where l.id = v_t.local_id;
+    perform interno.desanotar(v_s.id, interno.texto_paso(v_t.equipo_id, v_pa->>'estado', v_p.ronda, v_carta, p_estacion));
+    perform interno.avisar(v_t.local_id, v_s.id);
+    return interno.estado_panel(v_t.local_id) || jsonb_build_object('deshecho', true);
+  end if;
+  return interno.estado_panel(v_t.local_id) || jsonb_build_object('deshecho', false);
+end $$;
+
+-- No tomar un pedido (por ejemplo, uno "en broma" de una mesa donde no hay nadie).
+-- Lo puede hacer quien ve las mesas o quien trabaja en alguna estación de ese pedido.
 create or replace function public.rechazar(p_turno text, p_pedido uuid) returns jsonb
 language plpgsql volatile security definer
 set search_path = public
@@ -709,6 +791,10 @@ begin
   v_t := interno.turno(p_turno);
   select * into v_p from public.pedidos x where x.id = p_pedido and x.local_id = v_t.local_id for update;
   if not found then raise exception 'no_existe'; end if;
+  if not interno.puede(v_t.equipo_id, 'mesas')
+     and not exists (select 1 from jsonb_object_keys(v_p.partes) k where interno.puede(v_t.equipo_id, k)) then
+    raise exception 'sin_permiso';
+  end if;
   if v_p.rechazado is null and not exists (select 1 from jsonb_each(v_p.partes) e where e.value->>'estado' <> 'nuevo') then
     update public.pedidos x set rechazado = jsonb_build_object('quien', v_t.equipo_id, 't', interno.ms(now())) where x.id = v_p.id;
     perform interno.anotar(v_p.sesion_id, interno.nombre_equipo(v_t.equipo_id) || ' no tomó la ronda ' || v_p.ronda);
@@ -717,7 +803,8 @@ begin
   return interno.estado_panel(v_t.local_id);
 end $$;
 
--- "Voy" (al mozo) o "Llevo la cuenta". El primero que toca se la queda.
+-- "Voy" (al mozo, permiso "atender") o "Llevo la cuenta" (permiso "cobrar").
+-- El primero que toca se la queda.
 create or replace function public.atender(p_turno text, p_llamado uuid) returns jsonb
 language plpgsql volatile security definer
 set search_path = public
@@ -727,6 +814,7 @@ begin
   v_t := interno.turno(p_turno);
   select * into v_l from public.llamados x where x.id = p_llamado and x.local_id = v_t.local_id for update;
   if not found then raise exception 'no_existe'; end if;
+  perform interno.exigir(v_t.equipo_id, case v_l.tipo when 'mozo' then 'atender' else 'cobrar' end);
   if v_l.atendido is null and v_l.tipo = 'mozo' then
     update public.llamados x set atendido = jsonb_build_object('quien', v_t.equipo_id, 't', interno.ms(now())) where x.id = v_l.id;
     perform interno.anotar(v_l.sesion_id, interno.nombre_equipo(v_t.equipo_id) || ' fue a la mesa');
@@ -739,7 +827,33 @@ begin
   return interno.estado_panel(v_t.local_id);
 end $$;
 
--- Cobrada: la mesa se cierra y queda libre para los próximos
+-- Deshacer un "Voy" o un "Llevo la cuenta" tocado sin querer (quien lo tocó, antes de 20 segundos)
+create or replace function public.deshacer_llamado(p_turno text, p_llamado uuid) returns jsonb
+language plpgsql volatile security definer
+set search_path = public
+as $$
+declare v_t public.turnos; v_l public.llamados; v_cerrada timestamptz; v_hecho boolean := false;
+begin
+  v_t := interno.turno(p_turno);
+  select * into v_l from public.llamados x where x.id = p_llamado and x.local_id = v_t.local_id for update;
+  if not found then raise exception 'no_existe'; end if;
+  select s.cerrada into v_cerrada from public.sesiones s where s.id = v_l.sesion_id;
+  if v_cerrada is null and v_l.tipo = 'mozo' and v_l.atendido->>'quien' = v_t.equipo_id::text
+     and (v_l.atendido->>'t')::bigint >= interno.ms(now()) - 20000 then
+    update public.llamados x set atendido = null where x.id = v_l.id;
+    perform interno.desanotar(v_l.sesion_id, interno.nombre_equipo(v_t.equipo_id) || ' fue a la mesa');
+    v_hecho := true;
+  elsif v_cerrada is null and v_l.tipo = 'cuenta' and v_l.atendido is null and v_l.toma = v_t.equipo_id
+     and v_l.tomado >= now() - interval '20 seconds' then
+    update public.llamados x set toma = null, tomado = null where x.id = v_l.id;
+    perform interno.desanotar(v_l.sesion_id, interno.nombre_equipo(v_t.equipo_id) || ' lleva la cuenta');
+    v_hecho := true;
+  end if;
+  if v_hecho then perform interno.avisar(v_t.local_id, v_l.sesion_id); end if;
+  return interno.estado_panel(v_t.local_id) || jsonb_build_object('deshecho', v_hecho);
+end $$;
+
+-- Cobrada: la mesa se cierra y queda libre para los próximos (permiso "cobrar")
 create or replace function public.cerrar_mesa(p_turno text, p_mesa integer) returns jsonb
 language plpgsql volatile security definer
 set search_path = public
@@ -747,6 +861,7 @@ as $$
 declare v_t public.turnos; v_s public.sesiones; v_ahora bigint := interno.ms(now());
 begin
   v_t := interno.turno(p_turno);
+  perform interno.exigir(v_t.equipo_id, 'cobrar');
   select * into v_s from public.sesiones x where x.local_id = v_t.local_id and x.mesa = p_mesa and x.cerrada is null for update;
   if found then
     update public.sesiones x
@@ -761,7 +876,7 @@ begin
   return interno.estado_panel(v_t.local_id);
 end $$;
 
--- Marcar lo que se terminó: deja de poder pedirse en todas las mesas al instante
+-- Marcar lo que se terminó: deja de poder pedirse en todas las mesas al instante (permiso "carta")
 create or replace function public.agotar(p_turno text, p_plato text, p_si boolean) returns jsonb
 language plpgsql volatile security definer
 set search_path = public
@@ -769,6 +884,7 @@ as $$
 declare v_t public.turnos; v_s record;
 begin
   v_t := interno.turno(p_turno);
+  perform interno.exigir(v_t.equipo_id, 'carta');
   if p_si then
     insert into public.agotados (local_id, plato, quien) values (v_t.local_id, p_plato, v_t.equipo_id) on conflict do nothing;
   else
@@ -778,6 +894,114 @@ begin
   for v_s in select x.id from public.sesiones x where x.local_id = v_t.local_id and x.cerrada is null loop   -- que lo vean todas las mesas
     perform interno.avisar(null, v_s.id);
   end loop;
+  return interno.estado_panel(v_t.local_id);
+end $$;
+
+
+-- El equipo, desde el panel (permiso "equipo": el dueño y el encargado).
+-- Reglas: un dueño solo lo cambia otro dueño; nadie se saca a sí mismo el permiso "equipo"
+-- ni se da de baja a sí mismo. Los PIN nunca vuelven de la base: solo se guardan (con sal).
+--   p_persona: {id (vacío = nueva), nombre, rol, zona, color, permisos: [...]}
+create or replace function public.guardar_persona(p_turno text, p_persona jsonb, p_pin text default null) returns jsonb
+language plpgsql volatile security definer
+set search_path = public
+as $$
+declare
+  v_t public.turnos; v_yo public.equipo; v_e public.equipo; v_carta jsonb;
+  v_id uuid; v_nombre text; v_rol text; v_puesto text; v_permisos text[]; v_zona text; v_color text; v_nueva boolean := false;
+begin
+  v_t := interno.turno(p_turno);
+  select * into v_yo from public.equipo x where x.id = v_t.equipo_id;
+  perform interno.exigir(v_yo.id, 'equipo');
+  select l.carta into v_carta from public.locales l where l.id = v_t.local_id;
+  v_id := case when coalesce(p_persona->>'id', '') ~ '^[0-9a-f-]{36}$' then (p_persona->>'id')::uuid end;
+  if v_id is not null then
+    select * into v_e from public.equipo x where x.id = v_id and x.local_id = v_t.local_id for update;
+    if not found then raise exception 'no_existe'; end if;
+    if v_e.rol = 'dueno' and v_yo.rol <> 'dueno' then raise exception 'solo_dueno'; end if;
+  end if;
+  v_nombre := left(regexp_replace(trim(coalesce(p_persona->>'nombre', '')), '\s+', ' ', 'g'), 20);
+  if v_nombre = '' then raise exception 'nombre'; end if;
+  v_rol := p_persona->>'rol';
+  select r->>'nombre' into v_puesto from jsonb_array_elements(coalesce(v_carta->'roles', '[]'::jsonb)) r where r->>'id' = v_rol;
+  if v_puesto is null then raise exception 'rol'; end if;
+  if v_rol = 'dueno' and v_yo.rol <> 'dueno' then raise exception 'solo_dueno'; end if;
+  if jsonb_typeof(p_persona->'permisos') = 'array' then
+    select coalesce(array_agg(distinct x), '{}'::text[]) into v_permisos
+      from jsonb_array_elements_text(p_persona->'permisos') x where x = any(interno.permisos_validos(v_carta));
+  else
+    v_permisos := interno.permisos_rol(v_carta, v_rol);
+  end if;
+  if v_id = v_yo.id and not ('equipo' = any(v_permisos)) then raise exception 'tu_permiso'; end if;
+  v_zona := left(coalesce(p_persona->>'zona', ''), 30);
+  v_color := case when p_persona->>'color' ~ '^#[0-9A-Fa-f]{6}$' then p_persona->>'color' end;
+  if v_id is null then
+    if coalesce(p_pin, '') !~ '^\d{4}$' then raise exception 'pin'; end if;
+    if exists (select 1 from public.equipo x where x.local_id = v_t.local_id and x.activo and lower(x.nombre) = lower(v_nombre)) then
+      raise exception 'nombre_repetido';
+    end if;
+    -- Si alguien con ese nombre estaba dado de baja, vuelve (con su historia)
+    select * into v_e from public.equipo x where x.local_id = v_t.local_id and not x.activo and lower(x.nombre) = lower(v_nombre) limit 1 for update;
+    if not found then
+      insert into public.equipo (local_id, nombre, rol, puesto, pin_hash, orden)
+      values (v_t.local_id, v_nombre, v_rol, '', '-', (select coalesce(max(x.orden), 0) + 1 from public.equipo x where x.local_id = v_t.local_id))
+      returning * into v_e;
+    end if;
+    v_id := v_e.id;
+    v_nueva := true;
+    update public.equipo x set pin_sal = s.sal, pin_hash = interno.hash_pin(s.sal, p_pin)
+      from (select replace(gen_random_uuid()::text, '-', '') as sal) s where x.id = v_id;
+  elsif exists (select 1 from public.equipo x where x.local_id = v_t.local_id and x.id <> v_id and lower(x.nombre) = lower(v_nombre)) then
+    raise exception 'nombre_repetido';
+  end if;
+  update public.equipo x
+     set nombre = v_nombre, rol = v_rol,
+         puesto = case when x.rol = v_rol and x.puesto <> '' and not v_nueva then x.puesto else v_puesto end,
+         zona = v_zona, color = coalesce(v_color, x.color), permisos = v_permisos, activo = true
+   where x.id = v_id;
+  perform interno.avisar(v_t.local_id, null);
+  return interno.estado_panel(v_t.local_id) || jsonb_build_object('persona', v_id);
+end $$;
+
+-- Un PIN nuevo: se lo da quien maneja el equipo (con la regla del dueño) o cada uno a sí mismo
+create or replace function public.nuevo_pin(p_turno text, p_equipo uuid, p_pin text) returns jsonb
+language plpgsql volatile security definer
+set search_path = public
+as $$
+declare v_t public.turnos; v_yo public.equipo; v_e public.equipo;
+begin
+  v_t := interno.turno(p_turno);
+  select * into v_yo from public.equipo x where x.id = v_t.equipo_id;
+  select * into v_e from public.equipo x where x.id = p_equipo and x.local_id = v_t.local_id and x.activo for update;
+  if not found then raise exception 'no_existe'; end if;
+  if v_e.id <> v_yo.id then
+    perform interno.exigir(v_yo.id, 'equipo');
+    if v_e.rol = 'dueno' and v_yo.rol <> 'dueno' then raise exception 'solo_dueno'; end if;
+  end if;
+  if coalesce(p_pin, '') !~ '^\d{4}$' then raise exception 'pin'; end if;
+  update public.equipo x set pin_sal = s.sal, pin_hash = interno.hash_pin(s.sal, p_pin)
+    from (select replace(gen_random_uuid()::text, '-', '') as sal) s where x.id = v_e.id;
+  delete from public.intentos_pin x where x.equipo_id = v_e.id;
+  return jsonb_build_object('ok', true);
+end $$;
+
+-- Dar de baja: ya no aparece para entrar y se cierran sus turnos abiertos. Lo que hizo queda firmado.
+create or replace function public.baja_persona(p_turno text, p_equipo uuid) returns jsonb
+language plpgsql volatile security definer
+set search_path = public
+as $$
+declare v_t public.turnos; v_yo public.equipo; v_e public.equipo;
+begin
+  v_t := interno.turno(p_turno);
+  select * into v_yo from public.equipo x where x.id = v_t.equipo_id;
+  perform interno.exigir(v_yo.id, 'equipo');
+  select * into v_e from public.equipo x where x.id = p_equipo and x.local_id = v_t.local_id and x.activo for update;
+  if not found then raise exception 'no_existe'; end if;
+  if v_e.id = v_yo.id then raise exception 'vos'; end if;
+  if v_e.rol = 'dueno' and v_yo.rol <> 'dueno' then raise exception 'solo_dueno'; end if;
+  update public.equipo x set activo = false where x.id = v_e.id;
+  delete from public.turnos x where x.equipo_id = v_e.id;
+  perform interno.avisar(v_t.local_id, null);
   return interno.estado_panel(v_t.local_id);
 end $$;
 
@@ -818,7 +1042,7 @@ end $$;
 -- -----------------------------------------------------------------------------
 
 revoke all on function public.ver_mesa(text)                               from public;
-revoke all on function public.entrar(text, text)                           from public;
+revoke all on function public.entrar(text, text, text)                     from public;
 revoke all on function public.mi_mesa(text)                                from public;
 revoke all on function public.sumar(text, text, jsonb, integer)            from public;
 revoke all on function public.cantidad(text, uuid, integer)                from public;
@@ -827,15 +1051,20 @@ revoke all on function public.llamar(text, text, jsonb)                    from 
 revoke all on function public.panel_estado()                               from public, anon;
 revoke all on function public.abrir_turno(uuid, text)                      from public, anon;
 revoke all on function public.mover(text, uuid, text, text)                from public, anon;
+revoke all on function public.deshacer_paso(text, uuid, text)              from public, anon;
 revoke all on function public.rechazar(text, uuid)                         from public, anon;
 revoke all on function public.atender(text, uuid)                          from public, anon;
+revoke all on function public.deshacer_llamado(text, uuid)                 from public, anon;
 revoke all on function public.cerrar_mesa(text, integer)                   from public, anon;
 revoke all on function public.agotar(text, text, boolean)                  from public, anon;
+revoke all on function public.guardar_persona(text, jsonb, text)           from public, anon;
+revoke all on function public.nuevo_pin(text, uuid, text)                  from public, anon;
+revoke all on function public.baja_persona(text, uuid)                     from public, anon;
 revoke all on all functions in schema interno                              from public, anon, authenticated;
 
 -- Los comensales (sin cuenta)
 grant execute on function public.ver_mesa(text)                    to anon, authenticated;
-grant execute on function public.entrar(text, text)                to anon, authenticated;
+grant execute on function public.entrar(text, text, text)          to anon, authenticated;
 grant execute on function public.mi_mesa(text)                     to anon, authenticated;
 grant execute on function public.sumar(text, text, jsonb, integer) to anon, authenticated;
 grant execute on function public.cantidad(text, uuid, integer)     to anon, authenticated;
@@ -845,7 +1074,12 @@ grant execute on function public.llamar(text, text, jsonb)         to anon, auth
 grant execute on function public.panel_estado()                    to authenticated;
 grant execute on function public.abrir_turno(uuid, text)           to authenticated;
 grant execute on function public.mover(text, uuid, text, text)     to authenticated;
+grant execute on function public.deshacer_paso(text, uuid, text)   to authenticated;
 grant execute on function public.rechazar(text, uuid)              to authenticated;
 grant execute on function public.atender(text, uuid)               to authenticated;
+grant execute on function public.deshacer_llamado(text, uuid)      to authenticated;
 grant execute on function public.cerrar_mesa(text, integer)        to authenticated;
 grant execute on function public.agotar(text, text, boolean)       to authenticated;
+grant execute on function public.guardar_persona(text, jsonb, text) to authenticated;
+grant execute on function public.nuevo_pin(text, uuid, text)       to authenticated;
+grant execute on function public.baja_persona(text, uuid)          to authenticated;

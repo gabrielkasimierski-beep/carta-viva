@@ -127,7 +127,6 @@ const paleta = p => ((paletas[estilo] ||= {})[p.id] ||= ESTILOS[estilo](p));
 const feed = $("#feed"), fondo = $("#fondo"), palabra = $("#palabra"), velo = $("#velo");
 const pastilla = $("#pastilla"), seg = $("#seguimiento"), gracias = $("#gracias");
 const hojaArmar = $("#hoja-armar"), hojaPedido = $("#hoja-pedido"), hojaCarta = $("#hoja-carta"), hojaMozo = $("#hoja-mozo");
-const hojaBienvenida = $("#hoja-bienvenida");
 let secciones = [];
 let actual = -1;
 let modo = null;               // "explotando" | "armando" | null
@@ -279,7 +278,7 @@ const normalizar = (p, el) => (el && describir(p, el) ? el : null);
 function agregar(p, el) {
   if (!mesa) return avisar("Para pedir, escaneá el código QR de tu mesa.");
   if (D.agotado(p.id)) return avisar(`${p.nombre} se terminó por hoy.`);
-  if (!miMesa()) return pedirNombre(() => agregar(p, el));
+  if (!miMesa()) return pedirNombre(() => agregar(p, el), p);
   el = normalizar(p, el);
   const linea = D.sumar(yo, { plato: p.id, eleccion: el, detalle: describir(p, el), precio: precioDe(p, el), clave: P.clave(p, el) + (el?.punto || "") });
   if (!linea) return avisar("No se pudo sumar. Probá de nuevo.");
@@ -371,53 +370,156 @@ function cerrarHoja(rapido) {
   velo.classList.remove("abierto");
   const fin = () => { h.hidden = true; if (!hojaAbierta) velo.hidden = true; };
   if (rapido) fin(); else setTimeout(fin, 420);
-  if (!modo && seg.hidden && gracias.hidden) document.body.classList.remove("bloqueada");
-  if (h === hojaBienvenida) setTimeout(ponerPista, 500);
+  if (!modo && seg.hidden && gracias.hidden && !bvAbierta) document.body.classList.remove("bloqueada");
 }
 velo.addEventListener("click", () => cerrarHoja());
 document.addEventListener("click", e => { if (e.target.closest("[data-cerrar]")) cerrarHoja(); });
 
-/* ---------- Bienvenida: entrar a la mesa con tu nombre ---------- */
-let alEntrar = null;
-function pedirNombre(despues) {
-  if (!mesa) return;
+/* ---------- Bienvenida: lo primero que se ve al escanear el QR ----------
+   El plato de la carta viene al medio y se arma solo; se gira con el dedo y con un toque
+   salta. El saludo se completa con tu nombre mientras lo escribís, elegís tu color y ves
+   quiénes ya están en la mesa (si llega alguien más, aparece). Al entrar, el plato vuelve
+   volando a su lugar en la carta. */
+const bv = $("#bienvenida"), bvLugar = $("#bv-plato"), bvNombre = $("#bv-nombre");
+const NOMBRES_COLOR = { "#FF7A59": "coral", "#3DB2FF": "celeste", "#FFC43D": "amarillo", "#A57BFF": "violeta", "#2BC48A": "verde", "#FF6FB5": "rosa" };
+let alEntrar = null, bvAbierta = false, bvPlato = -1, bvPrestado = false, miColor = null;
+const saludo = () => { const h = new Date().getHours(); return h >= 6 && h < 13 ? "Buen día" : h >= 13 && h < 20 ? "Buenas tardes" : "Buenas noches"; };
+function pedirNombre(despues, plato) {
+  if (!mesa || bvAbierta) return;
   alEntrar = despues || null;
+  if (hojaAbierta) cerrarHoja(true);
+  if (modo === "explotando") explotar(false);
+  ocultarPista();
+  bvAbierta = true;
+  bvPlato = plato ? platos.indexOf(plato) : Math.max(0, actual);
+  miColor = null;
+  bvNombre.value = "";
+  $("#bv-bajada").textContent = plato
+    ? `Para sumar ${plato.nombre}, decinos quién sos: así en la mesa se sabe qué pidió cada uno.`
+    : "Mirá cada plato en 3D, armalo a tu gusto y pidan juntos, cada uno desde su celu.";
+  $("#bv-pista").hidden = !!plato;
   pintarBienvenida();
-  abrirHoja(hojaBienvenida, { claro: true });
-  if (despues) setTimeout(() => $("#bienvenida-nombre").focus({ preventScroll: true }), 460);
+  bv.hidden = false;
+  document.body.classList.add("con-bienvenida", "bloqueada");
+  bvPrestado = E.mudar(escenario(bvPlato), bvLugar);
+  if (bvPrestado && !plato) E.presentar(bvLugar);
+  requestAnimationFrame(() => requestAnimationFrame(() => bv.classList.add("abierta")));
+  setTimeout(() => (despues ? bvNombre : $("#bv-entrar")).focus({ preventScroll: true }), despues ? 520 : 60);
+}
+function cerrarBienvenida(entro) {
+  if (!bvAbierta) return;
+  bvAbierta = false;
+  if (bvPrestado) {
+    if (entro) E.saltar(bvLugar, 1);
+    const i = bvPlato;
+    setTimeout(() => E.mudar(bvLugar, escenario(i)), entro ? 260 : 0);
+    bvPrestado = false;
+  }
+  bv.classList.remove("abierta");
+  document.body.classList.remove("con-bienvenida");
+  if (!modo && !hojaAbierta && seg.hidden && gracias.hidden) document.body.classList.remove("bloqueada");
+  setTimeout(() => { if (!bvAbierta) bv.hidden = true; }, 520);
+  // La carta aparece con el plato ya en su lugar y los textos entrando
+  const s = secciones[Math.max(0, actual)];
+  if (s && MOVIMIENTO) { s.classList.remove("entrada"); void s.offsetWidth; s.classList.add("entrada"); }
+  setTimeout(ponerPista, 900);
 }
 function pintarBienvenida() {
   const m = datosMesa();
+  $("#bv-local").textContent = L.nombre;
+  $("#bv-mesa").textContent = [`Mesa ${mesa}`, m.zona].filter(Boolean).join(" · ");
+  bvGente();
+  bvColores();
+  bvYo();
+}
+// Quiénes ya están (con lo que ya pidieron): si entra alguien mientras mirás, aparece
+function bvGente() {
   const gente = D.gente(mesa);
-  $("#bienvenida-sobre").textContent = [L.nombre, m.zona].filter(Boolean).join(" · ");
-  $("#bienvenida-titulo").textContent = `Mesa ${mesa}`;
-  $("#bienvenida-gente").innerHTML = gente.length
-    ? `<span class="avatares">${gente.slice(0, 5).map(c => avatar(c)).join("")}</span>
-       <span>Ya ${gente.length === 1 ? "está" : "están"} <b>${esc(lista(gente.map(c => c.nombre)))}</b>. Lo que elijan va al mismo pedido.</span>`
-    : `<span>Todavía no hay nadie: abrís la mesa vos. Si vienen más, que escaneen el mismo código.</span>`;
+  const s = D.sesionDe(mesa);
+  const rondas = s ? D.mesa(s.id).pedidos.filter(p => !p.rechazado).length : 0;
+  const html = gente.length
+    ? `<span class="avatares">${gente.slice(0, 5).map(c => avatar(c)).join("")}</span><span>Ya ${gente.length === 1 ? "está" : "están"} <b>${esc(lista(gente.map(c => c.nombre)))}</b>. ${rondas
+      ? `Ya ${rondas === 1 ? "mandaron una ronda" : `mandaron ${rondas} rondas`}: lo que elijas va en la próxima.` : "Lo que elijan va al mismo pedido."}</span>`
+    : `<span>Sos el primero en la mesa. Los que vengan, que escaneen el mismo código y pidan juntos.</span>`;
+  const el = $("#bv-gente");
+  if (el._html !== html) { el.innerHTML = html; el._html = html; }
+}
+// Tu color: los que no tiene nadie en la mesa
+function bvColores() {
+  const libres = D.coloresLibres ? D.coloresLibres(mesa) : [];
+  if (!libres.includes(miColor)) miColor = libres[0] || null;
+  const el = $("#bv-colores");
+  const html = libres.map(c => `<button type="button" role="radio" class="bv__color" style="--av:${c}" data-color="${c}" aria-checked="${c === miColor}" aria-label="${NOMBRES_COLOR[c] || c}"></button>`).join("");
+  if (el._html !== html) { el.innerHTML = html; el._html = html; }
+  el.hidden = libres.length < 2;
+}
+function bvYo() {
+  const n = bvNombre.value.trim();
+  const yoEl = $("#bv-yo");
+  yoEl.textContent = n ? inicial(n) : "?";
+  yoEl.style.setProperty("--av", miColor || "#9A9A9A");
+  yoEl.classList.toggle("con-nombre", !!n);
+  $("#bv-titulo").textContent = n ? `¡${saludo()}, ${n.split(" ")[0]}!` : `¡${saludo()}!`;
+  $("#bv-entrar").textContent = n ? `Entrar a la mesa ${mesa}` : "Entrar a la mesa";
+}
+bvNombre.addEventListener("input", () => {
+  const antes_ = $("#bv-yo").classList.contains("con-nombre");
+  bvYo();
+  if (!antes_ && bvNombre.value.trim()) { E.saltar(bvLugar, 0.6); $("#bv-yo").classList.add("salta"); }
+});
+$("#bv-yo").addEventListener("animationend", e => e.currentTarget.classList.remove("salta"));
+bvNombre.addEventListener("focus", () => setTimeout(() => bvNombre.scrollIntoView({ block: "center", behavior: MOVIMIENTO ? "smooth" : "auto" }), 300));
+bvNombre.addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); entrar(); } });
+$("#bv-colores").addEventListener("click", e => {
+  const b = e.target.closest("[data-color]");
+  if (!b) return;
+  miColor = b.dataset.color;
+  bvColores();
+  bvYo();
+  E.saltar(bvLugar, 0.4);
+});
+bvLugar.addEventListener("escena:giro", () => { $("#bv-pista").hidden = true; });
+bvLugar.addEventListener("escena:toque", () => { $("#bv-pista").hidden = true; });
+$("#bv-mirar").addEventListener("click", () => { alEntrar = null; cerrarBienvenida(false); });
+// Tu inicial sale volando hasta la mesa, arriba
+function volarYo(c) {
+  const desde = $("#bv-yo").getBoundingClientRect();
+  const hasta = $("#marca-gente").getBoundingClientRect();
+  if (!MOVIMIENTO || !desde.width || !hasta.width) return;
+  const v = document.createElement("span");
+  v.className = "avatar volador-yo";
+  v.style.setProperty("--av", c.color);
+  v.textContent = inicial(c.nombre);
+  document.body.appendChild(v);
+  const anim = v.animate([
+    { transform: `translate(${desde.left}px, ${desde.top}px) scale(1)` },
+    { transform: `translate(${(desde.left + hasta.left) / 2}px, ${Math.min(desde.top, hasta.top) - 50}px) scale(.8)`, offset: 0.5 },
+    { transform: `translate(${hasta.right - 18}px, ${hasta.top}px) scale(.42)` },
+  ], { duration: 720, easing: "cubic-bezier(.45,0,.25,1)" });
+  anim.onfinish = () => v.remove();
 }
 async function entrar() {
-  const b = $("#bienvenida-entrar");
+  const b = $("#bv-entrar");
   if (b.disabled) return;
   b.disabled = true;
   try {
-    const r = await D.entrar(mesa, $("#bienvenida-nombre").value);
+    const r = await D.entrar(mesa, bvNombre.value, miColor ? { color: miColor } : {});
     if (!r) return avisar("No pudimos entrar a la mesa. Probá de nuevo.");
     yo = r.comensal.id;
     D.recordarYo(r.comensal);
     antes = null;
-    cerrarHoja();
+    cerrarBienvenida(true);
     refrescar();
-    avisar(`¡Hola, ${r.comensal.nombre}! Estás en la mesa ${mesa}.`, r.comensal);
+    requestAnimationFrame(() => volarYo(r.comensal));
+    avisar(`¡Listo, ${r.comensal.nombre}! Ya estás en la mesa ${mesa}.`, r.comensal);
     const f = alEntrar;
     alEntrar = null;
-    if (f) setTimeout(f, 380);
+    if (f) setTimeout(f, 700);
   } finally {
     b.disabled = false;
   }
 }
-$("#bienvenida-entrar").addEventListener("click", entrar);
-$("#bienvenida-nombre").addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); entrar(); } });
+$("#bv-entrar").addEventListener("click", entrar);
 
 /* ---------- ¿Qué tiene? ---------- */
 function explotar(si) {
@@ -496,7 +598,7 @@ $("#armar-opciones").addEventListener("click", e => {
 $("#armar-agregar").addEventListener("click", () => {
   const p = platos[actual];
   const el = { ...eleccion };
-  if (!miMesa()) { cerrarHoja(true); return pedirNombre(() => agregar(p, el)); }
+  if (!miMesa()) { cerrarHoja(true); return pedirNombre(() => agregar(p, el), p); }
   agregar(p, el);
   cerrarHoja();
 });
@@ -955,7 +1057,7 @@ function refrescar() {
   if (!seg.hidden) pintarSeguimiento();
   if (hojaAbierta === hojaPedido) pintarPedido();
   if (hojaAbierta === hojaMozo) { pintarMozoEstado(); if (!$("#cuenta").hidden) pintarCuenta(); }
-  if (hojaAbierta === hojaBienvenida) pintarBienvenida();
+  if (bvAbierta) { bvGente(); bvColores(); bvYo(); }
 }
 
 /* ---------- Pista para la primera vez ---------- */
@@ -1027,8 +1129,9 @@ function iniciar() {
   refrescar();
   alDeslizar();
   secciones[0].classList.add("entrada");
-  // Si todavía no entró a la mesa, se presenta (el plato queda a la vista, arriba).
-  if (mesa && !miMesa() && location.hash !== "#mesas" && location.hash !== "#cocina") setTimeout(() => { if (!hojaAbierta && seg.hidden && $("#panel").hidden) pedirNombre(); else ponerPista(); }, 900);
+  // Si todavía no entró a la mesa, lo primero es la bienvenida (con el plato en el medio).
+  const enPanel = !$("#panel").hidden || /^#(panel|mesas|qr|equipo|cocina|barra)$/.test(location.hash);
+  if (mesa && !miMesa() && !enPanel) pedirNombre();
   else ponerPista();
 
   feed.addEventListener("scroll", () => { if (!cuadroPedido) { cuadroPedido = true; requestAnimationFrame(alDeslizar); } }, { passive: true });
@@ -1052,11 +1155,12 @@ function iniciar() {
     if (!$("#panel").hidden) return;
     if (e.key === "Escape") {
       if (hojaAbierta) cerrarHoja();
+      else if (bvAbierta) { alEntrar = null; cerrarBienvenida(false); }
       else if (modo === "explotando") explotar(false);
       else if (!seg.hidden) cerrarSeguimiento();
       return;
     }
-    if (modo || hojaAbierta || !seg.hidden || !gracias.hidden || e.target.closest("input, textarea")) return;
+    if (modo || hojaAbierta || bvAbierta || !seg.hidden || !gracias.hidden || e.target.closest("input, textarea")) return;
     if (e.key === "ArrowDown" || e.key === "PageDown") { e.preventDefault(); irA(actual + 1, true); }
     if (e.key === "ArrowUp" || e.key === "PageUp") { e.preventDefault(); irA(actual - 1, true); }
   });

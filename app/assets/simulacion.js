@@ -2,12 +2,14 @@
    CARTA VIVA — la demo en movimiento (solo en la demo)
    Hace de "el resto del local" para ver cómo lo usan varias personas a la vez:
    · Juli y Tomi comparten tu mesa y van sumando cosas al mismo pedido.
-   · Diego (cocina) y Martín (barra) empiezan y terminan lo que se pide.
-   · Carla (salón) y Nico (vereda) llevan lo que está listo, van cuando los llaman y,
-     en tu mesa, te traen la cuenta y te cobran.
+   · La cocina (Diego) y la barra (Martín) empiezan y terminan lo que se pide.
+   · Los mozos (Carla en el salón, Nico en la vereda) llevan lo que está listo, van
+     cuando los llaman y, en tu mesa, te traen la cuenta y te cobran.
    · Las otras mesas siguen su curso: piden otra ronda, llaman al mozo, se sienta gente.
-   Lo que alguien mueve a mano desde el panel, la simulación no lo toca. Si hay varias
-   pestañas abiertas, corre en una sola (la que se está mirando).
+   Cada cosa la hace alguien del equipo que tiene ese permiso (si lo cambiás en Equipo,
+   la simulación también). Lo que alguien mueve a mano desde el panel, la simulación no
+   lo toca. Corre en una sola pestaña, la que se está mirando: si nadie mira, el local
+   queda en pausa (ver "El reloj de la demo" en datos.js).
    ============================================================================= */
 
 (function () {
@@ -22,12 +24,13 @@
     tuya:  { cocina: [6e3, 14e3, 8e3],      barra: [3e3, 6e3, 7e3] },
     otras: { cocina: [90e3, 420e3, 180e3],  barra: [50e3, 150e3, 120e3] },
   };
-  const HACE = { cocina: "diego", barra: "martin" };
-  const mozoDe = n => {
-    const zona = (L.mesas.find(m => m.n === n) || {}).zona;
-    const e = L.equipo.find(x => x.rol === "mozo" && x.zona === zona) || L.equipo.find(x => x.rol === "mozo");
-    return e ? e.id : null;
-  };
+  // Alguien del equipo con ese permiso (el de ese puesto primero; el de la zona de la mesa, si hay)
+  function alguien(d, permiso, mesa) {
+    const e = (d.equipo || []).filter(x => x.activo !== false && (x.permisos || []).includes(permiso));
+    const zona = mesa ? (L.mesas.find(m => m.n === mesa) || {}).zona : null;
+    const delPuesto = e.filter(x => x.rol === permiso || (["atender", "llevar", "cobrar"].includes(permiso) && x.rol === "mozo"));
+    return (delPuesto.find(x => zona && x.zona === zona) || delPuesto[0] || e.find(x => zona && x.zona === zona) || e[0] || {}).id || null;
+  }
   const sumarSim = (comensal, id, cant = 1) => {
     const p = L.platos.find(x => x.id === id);
     if (p && !D.agotado(id)) D.sumar(comensal, { plato: id, eleccion: null, detalle: "", precio: p.precio, clave: id, cant });
@@ -82,7 +85,7 @@
         const k = D.ESTADOS.indexOf(pa.estado);
         if (ahora - pa.cambio < (t[est] || t.cocina)[k]) continue;
         const sig = D.ESTADOS[k + 1];
-        D.mover(p.id, est, sig, sig === "entregado" ? mozoDe(p.mesa) : HACE[est] || "diego", false);
+        D.mover(p.id, est, sig, sig === "entregado" ? alguien(d, "llevar", p.mesa) : alguien(d, est), false);
         return true;                     // de a una cosa por vez, como en un local
       }
     }
@@ -94,14 +97,13 @@
   function llamados(d, ahora, tuyas) {
     for (const l of d.llamados) {
       if (l.atendido || !tuyas.has(l.sesion)) continue;
-      const mozo = mozoDe(l.mesa);
-      if (l.tipo === "mozo" && ahora - l.creado > 5e3) { D.atender(l.id, mozo); return true; }
+      if (l.tipo === "mozo" && ahora - l.creado > 5e3) { D.atender(l.id, alguien(d, "atender", l.mesa), false); return true; }
       if (l.tipo === "cuenta" && !l.toma && ahora - l.creado > 6e3) {
-        D.atender(l.id, mozo);
+        D.atender(l.id, alguien(d, "cobrar", l.mesa), false);
         marcar(x => { const y = x.llamados.find(z => z.id === l.id); if (!y) return false; y.porSim = true; });
         return true;
       }
-      if (l.tipo === "cuenta" && l.porSim && l.toma && ahora - l.tomado > 90e3) { D.cerrarMesa(l.mesa, l.toma); return true; }
+      if (l.tipo === "cuenta" && l.porSim && l.toma && ahora - l.tomado > 90e3) { D.cerrarMesa(l.mesa, l.toma, false); return true; }
     }
     return false;
   }
@@ -144,6 +146,7 @@
 
   /* ---------- Un paso por segundo, en una sola pestaña ---------- */
   function paso() {
+    D._reloj();                          // si la compu estuvo dormida, primero la pausa
     const d = D.todo();
     const ahora = Date.now();
     const tuyas = new Set(d.comensales.filter(c => !c.sim).map(c => c.sesion));
@@ -158,11 +161,12 @@
   const PESTANA = Math.random().toString(36).slice(2);
   const LIDER = "cartaviva.demo.lider";
   function meToca() {
-    const ahora = Date.now(), visible = document.visibilityState !== "hidden";
+    if (document.visibilityState === "hidden") return false;     // si nadie la mira, el local espera
+    const ahora = Date.now();
     let l = null;
     try { l = JSON.parse(localStorage.getItem(LIDER)); } catch { return true; }
-    if (l && l.tab !== PESTANA && ahora - l.t < 2500 && (l.visible || !visible)) return false;
-    try { localStorage.setItem(LIDER, JSON.stringify({ tab: PESTANA, t: ahora, visible })); } catch { /* una sola pestaña */ }
+    if (l && l.tab !== PESTANA && ahora - l.t < 2500) return false;
+    try { localStorage.setItem(LIDER, JSON.stringify({ tab: PESTANA, t: ahora })); } catch { /* una sola pestaña */ }
     return true;
   }
   setInterval(() => {

@@ -1,5 +1,5 @@
 /* =============================================================================
-   CARTA VIVA — los datos del local: mesas, comensales, pedidos y llamados
+   CARTA VIVA — los datos del local: mesas, comensales, pedidos, llamados y equipo
    Las mismas funciones sirven para dos lugares:
    · Vista previa (ahora): todo queda en este navegador. Las pestañas se hablan entre
      sí, así que se puede tener la carta en una y el panel en otra.
@@ -15,19 +15,26 @@
      cada parte avanza sola: nuevo → preparando → listo → entregado.
    · LLAMADOS: "que venga el mozo" y "la cuenta". Los toma alguien del equipo, con su
      nombre, para que no vayan dos a la misma mesa.
+   · EQUIPO: cada persona con su PIN, su puesto y sus permisos (qué ve y qué puede hacer).
+     Los maneja quien tiene el permiso "equipo" (el dueño o el encargado).
    ============================================================================= */
 
 (function () {
   "use strict";
 
   const L = window.LOCAL;
-  const CLAVE = "cartaviva.demo.v3";
+  const CLAVE = "cartaviva.demo.v4";
+  const VERSION = 4;
   const ESTADOS = ["nuevo", "preparando", "listo", "entregado"];
   const COLORES = ["#FF7A59", "#3DB2FF", "#FFC43D", "#A57BFF", "#2BC48A", "#FF6FB5"];
+  const COLORES_EQUIPO = ["#C4A4FF", "#7FD6FF", "#8BE3B4", "#FFB27A", "#FFD86B", "#F28FB0", "#9FB4FF", "#E6C79C"];
+  const VENTANA = 20e3;           // cuánto tiempo hay para deshacer algo tocado sin querer
   const SIN = {};                 // "no cambió nada": no se guarda ni se avisa
   let memoria = null, cache = null;
 
+  try { localStorage.removeItem("cartaviva.demo.v3"); } catch { /* sin almacenamiento */ }
   const avisar = () => window.dispatchEvent(new CustomEvent("carta:datos"));
+  const error = texto => window.dispatchEvent(new CustomEvent("carta:error", { detail: texto }));
   window.addEventListener("storage", e => { if (e.key === CLAVE) { cache = null; avisar(); } });
 
   const nuevoId = pre => pre + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
@@ -36,7 +43,6 @@
     const p = platoDe(id), c = p && L.categorias.find(x => x.id === p.categoria);
     return (c && c.estacion) || "cocina";
   };
-  const nombreEquipo = id => ((L.equipo || []).find(e => e.id === id) || {}).nombre || "Alguien del equipo";
   const nombreEstacion = id => ((L.estaciones || []).find(e => e.id === id) || {}).nombre || id;
   const suma = items => items.reduce((s, x) => s + x.precio * x.cant, 0);
   const anotar = (s, texto, t = Date.now()) => {
@@ -44,20 +50,88 @@
     s.historia.sort((a, b) => a.t - b.t);
     if (s.historia.length > 80) s.historia.shift();
   };
+  // Lo que se deshizo no queda en la historia de la mesa
+  const desanotar = (s, texto, t) => {
+    for (let i = s.historia.length - 1; i >= 0; i--) {
+      const h = s.historia[i];
+      if (h.texto === texto && Math.abs(h.t - t) < 2000) { s.historia.splice(i, 1); return; }
+    }
+  };
   const estadoPedido = p => (p.rechazado ? "rechazado"
     : ESTADOS[Math.min(...Object.values(p.partes).map(x => ESTADOS.indexOf(x.estado)))]);
   const DIVIDIR = { junto: "todo junto", igual: "en partes iguales", "cada-uno": "cada uno lo suyo" };
 
   /* ---------------------------------------------------------------------------
+     Permisos y puestos
+     --------------------------------------------------------------------------- */
+  const ESTACIONES = L.estaciones && L.estaciones.length ? L.estaciones : [{ id: "cocina", nombre: "Cocina", donde: "la cocina" }];
+  const PERMISOS = [
+    { id: "mesas",   grupo: "El salón", corto: "Mesas",    nombre: "Ver las mesas",        ayuda: "El plano del salón: quién está sentado, qué pidió cada mesa y cuánto lleva." },
+    { id: "atender", grupo: "El salón", corto: "Llamados", nombre: "Atender los llamados", ayuda: "Le suena cuando una mesa llama al mozo." },
+    { id: "llevar",  grupo: "El salón", corto: "Llevar",   nombre: "Llevar a las mesas",   ayuda: "Le suena cuando la comida o las bebidas están listas para llevar." },
+    { id: "cobrar",  grupo: "El salón", corto: "Cobrar",   nombre: "Cobrar",               ayuda: "Lleva la cuenta, cobra y deja la mesa libre." },
+    ...ESTACIONES.map(e => ({
+      id: e.id, grupo: "Cocina y barra", corto: e.nombre, nombre: e.nombre,
+      ayuda: `Ve las comandas de ${e.donde || e.nombre.toLowerCase()} y las marca empezadas y listas.`,
+    })),
+    { id: "carta",   grupo: "El local", corto: "Agotados", nombre: "Marcar agotados",      ayuda: "Lo que se termina deja de poder pedirse en todas las mesas." },
+    { id: "qr",      grupo: "El local", corto: "QR",       nombre: "Los QR de las mesas",  ayuda: "Verlos e imprimirlos para pegar en cada mesa." },
+    { id: "equipo",  grupo: "El local", corto: "Equipo",   nombre: "Manejar el equipo",    ayuda: "Sumar personas, darles un PIN y elegir qué puede hacer cada una." },
+  ];
+  const TODOS = PERMISOS.map(p => p.id);
+  const ROLES = (L.roles && L.roles.length ? L.roles : [
+    { id: "encargado", nombre: "Encargado/a", permisos: TODOS },
+    { id: "mozo", nombre: "Mozo/a", permisos: ["mesas", "atender", "llevar", "cobrar"] },
+  ]).map(r => ({ id: r.id, nombre: r.nombre, permisos: r.permisos.filter(p => TODOS.includes(p)) }));
+  const rolDe = id => ROLES.find(r => r.id === id) || null;
+  const permisosDeRol = id => [...((rolDe(id) || {}).permisos || [])];
+  const activo = e => !!e && e.activo !== false;
+  const tiene = (e, permiso) => activo(e) && (e.permisos || []).includes(permiso);
+  const quienEs = (d, id) => (d.equipo || []).find(e => e.id === id) || null;
+  const nombreEn = (d, id) => (quienEs(d, id) || {}).nombre || "Alguien del equipo";
+  // Qué hace falta para cada cosa del equipo (lo mismo valida la base real)
+  // Llevar a la mesa es de quien lleva (el mozo); empezar y terminar, de la estación
+  const puedeMover = (e, estacion, estado) => (estado === "entregado" ? tiene(e, "llevar") : tiene(e, estacion));
+  const puedeRechazar = (e, p) => tiene(e, "mesas") || Object.keys(p.partes).some(est => tiene(e, est));
+  const puedeAtender = (e, l) => tiene(e, l.tipo === "mozo" ? "atender" : "cobrar");
+  // Un dueño solo lo cambia otro dueño
+  const puedeEditar = (yo, e) => tiene(yo, "equipo") && (!e || e.rol !== "dueno" || yo.rol === "dueno");
+
+  function pinNuevo() {
+    for (;;) {
+      const p = String(1000 + Math.floor(Math.random() * 9000));
+      if (!/^(\d)\1{3}$/.test(p) && !"0123456789".includes(p) && !"9876543210".includes(p)) return p;
+    }
+  }
+  const pinValido = pin => /^\d{4}$/.test(String(pin || ""));
+  const colorValido = c => /^#[0-9A-Fa-f]{6}$/.test(String(c || ""));
+
+  function equipoInicial() {
+    return (L.equipo || []).map((e, i) => ({
+      id: e.id, nombre: e.nombre, rol: e.rol, puesto: e.puesto || (rolDe(e.rol) || {}).nombre || "",
+      zona: e.zona || "", color: e.color || COLORES_EQUIPO[i % COLORES_EQUIPO.length], pin: String(e.pin || "1234"),
+      permisos: (e.permisos || permisosDeRol(e.rol)).filter(p => TODOS.includes(p)), activo: true, orden: i,
+    }));
+  }
+
+  /* ---------------------------------------------------------------------------
      Lo que ya está pasando en el local cuando se abre la demo
      --------------------------------------------------------------------------- */
-  function ejemplo() {
+  function ejemplo(equipo) {
     const ahora = Date.now();
     const antes = m => ahora - m * 60e3;
-    const d = { v: 3, numero: 39, sesiones: [], comensales: [], carrito: [], pedidos: [], llamados: [], agotados: [], sim: { inicio: ahora, paso: 0 } };
+    const d = {
+      v: VERSION, numero: 39, equipo: equipo || equipoInicial(),
+      sesiones: [], comensales: [], carrito: [], pedidos: [], llamados: [], agotados: [], sim: { inicio: ahora, paso: 0 },
+    };
+    // Quién hace cada cosa en lo que ya pasó: alguien del equipo con ese permiso
+    const hace = (permiso, prefiere) => {
+      const e = d.equipo.filter(x => tiene(x, permiso));
+      return (e.find(x => x.id === prefiere) || e.find(x => x.rol === permiso) || e[0] || {}).id || null;
+    };
 
-    const mesa = (n, hace, nombres, extra = {}) => {
-      const s = { id: "s" + n + "-" + ahora.toString(36), mesa: n, abierta: antes(hace), cerrada: null, historia: [], ...extra };
+    const mesa = (n, hace_, nombres, extra = {}) => {
+      const s = { id: "s" + n + "-" + ahora.toString(36), mesa: n, abierta: antes(hace_), cerrada: null, historia: [], ...extra };
       d.sesiones.push(s);
       const gente = nombres.map((nombre, i) => {
         const c = { id: `${s.id}-${i}`, sesion: s.id, nombre, color: COLORES[i % COLORES.length], unido: s.abierta + i * 50e3, sim: true };
@@ -70,20 +144,21 @@
     const item = (id, cant, c, detalle = "", precio) => ({
       plato: id, nombre: platoDe(id).nombre, cant, precio: precio || platoDe(id).precio, detalle, eleccion: null, comensal: c.id, estacion: estacionDe(id),
     });
-    // estados: { cocina: ["preparando", hace (min), quién], barra: [...] }
-    const QUIEN = { cocina: "diego", barra: "martin" };
-    const pedido = (numero, m, por, hace, items, estados, nota = "") => {
+    // estados: { cocina: ["preparando", hace (min), quién lo llevó], barra: [...] }
+    const pedido = (numero, m, por, hace_, items, estados, nota = "") => {
       const p = {
         id: "p" + numero, numero, sesion: m.s.id, mesa: m.s.mesa, ronda: d.pedidos.filter(x => x.sesion === m.s.id).length + 1,
-        por: por.id, creado: antes(hace), items, nota, total: suma(items), partes: {}, rechazado: null,
+        por: por.id, creado: antes(hace_), items, nota, total: suma(items), partes: {}, rechazado: null,
       };
       anotar(m.s, `${por.nombre} mandó la ronda ${p.ronda} (pedido ${numero})`, p.creado);
-      Object.entries(estados).forEach(([est, [estado, desde, quien]]) => {
-        p.partes[est] = { estado, cambio: antes(desde), quien };
+      Object.entries(estados).forEach(([est, [estado, desde, lleva]]) => {
         const k = ESTADOS.indexOf(estado), nom = nombreEstacion(est);
-        if (k >= 1) anotar(m.s, `${nombreEquipo(QUIEN[est])} empezó la ronda ${p.ronda} · ${nom}`, k === 1 ? antes(desde) : p.creado + 50e3);
-        if (k >= 2) anotar(m.s, `${nombreEquipo(QUIEN[est])} terminó la ronda ${p.ronda} · ${nom}`, k === 2 ? antes(desde) : antes(desde) - 90e3);
-        if (k >= 3) anotar(m.s, `${nombreEquipo(quien)} llevó a la mesa la ronda ${p.ronda} · ${nom}`, antes(desde));
+        const cocinero = hace(est, est === "cocina" ? "diego" : "martin");
+        const llevo = hace("llevar", lleva);
+        p.partes[est] = { estado, cambio: antes(desde), quien: k === 3 ? llevo : k >= 1 ? cocinero : null };
+        if (k >= 1) anotar(m.s, `${nombreEn(d, cocinero)} empezó la ronda ${p.ronda} · ${nom}`, k === 1 ? antes(desde) : p.creado + 50e3);
+        if (k >= 2) anotar(m.s, `${nombreEn(d, cocinero)} terminó la ronda ${p.ronda} · ${nom}`, k === 2 ? antes(desde) : antes(desde) - 90e3);
+        if (k >= 3) anotar(m.s, `${nombreEn(d, llevo)} llevó a la mesa la ronda ${p.ronda} · ${nom}`, antes(desde));
       });
       d.pedidos.push(p);
       return p;
@@ -93,14 +168,16 @@
     const m1 = mesa(1, 95, ["Pau", "Gonza"]);
     pedido(31, m1, m1.gente[0], 88, [item("clasica", 1, m1.gente[0]), item("remolacha", 1, m1.gente[1]), item("ipa", 2, m1.gente[0])],
       { cocina: ["entregado", 70, "carla"], barra: ["entregado", 84, "carla"] });
-    Object.assign(m1.s, { cerrada: antes(41), cerradaPor: "sofi", total: d.pedidos[0].total });
-    anotar(m1.s, "Sofi cobró y liberó la mesa", m1.s.cerrada);
+    const cobra = hace("cobrar", "sofi");
+    Object.assign(m1.s, { cerrada: antes(41), cerradaPor: cobra, total: d.pedidos[0].total });
+    anotar(m1.s, `${nombreEn(d, cobra)} cobró y liberó la mesa`, m1.s.cerrada);
     const m6 = mesa(6, 80, ["Rocío", "Lean", "Maca", "Ivo"]);
     pedido(32, m6, m6.gente[2], 74, [item("pepperoni", 1, m6.gente[0]), item("fugazzeta", 1, m6.gente[2]), item("fernet", 2, m6.gente[1]), item("limonada", 2, m6.gente[3])],
       { cocina: ["entregado", 52, "carla"], barra: ["entregado", 70, "carla"] });
     pedido(33, m6, m6.gente[1], 40, [item("flan", 2, m6.gente[1]), item("helado", 1, m6.gente[3])], { cocina: ["entregado", 31, "carla"] });
-    Object.assign(m6.s, { cerrada: antes(12), cerradaPor: "carla", total: d.pedidos.slice(1, 3).reduce((t, p) => t + p.total, 0) });
-    anotar(m6.s, "Carla cobró y liberó la mesa", m6.s.cerrada);
+    const cobra6 = hace("cobrar", "carla");
+    Object.assign(m6.s, { cerrada: antes(12), cerradaPor: cobra6, total: d.pedidos.slice(1, 3).reduce((t, p) => t + p.total, 0) });
+    anotar(m6.s, `${nombreEn(d, cobra6)} cobró y liberó la mesa`, m6.s.cerrada);
 
     // Las mesas ocupadas ahora
     const m5 = mesa(5, 46, ["Lucas", "Vale", "Agus", "Belu", "Santi"]);
@@ -119,15 +196,15 @@
 
     const m9 = mesa(9, 24, ["Fede", "Sol"]);
     pedido(37, m9, m9.gente[1], 16, [item("fugazzeta", 1, m9.gente[1]), item("fernet", 1, m9.gente[0]), item("fernet", 1, m9.gente[1])],
-      { cocina: ["listo", 1, "diego"], barra: ["entregado", 12, "nico"] });
+      { cocina: ["listo", 1], barra: ["entregado", 12, "nico"] });
 
     const m3 = mesa(3, 14, ["Mica", "Joaco", "Rama"]);
     pedido(38, m3, m3.gente[1], 7, [item("pepperoni", 1, m3.gente[0]), item("papas-cheddar", 1, m3.gente[2]), item("ipa", 2, m3.gente[1])],
-      { cocina: ["preparando", 5, "diego"], barra: ["entregado", 3, "carla"] });
+      { cocina: ["preparando", 5], barra: ["entregado", 3, "carla"] });
 
     const m12 = mesa(12, 4, ["Flor", "Nahue"]);
     pedido(39, m12, m12.gente[0], 0.8, [item("clasica", 1, m12.gente[0], "Doble · sin cebolla", 21700), item("clasica", 1, m12.gente[1], "Doble · sin cebolla", 21700), item("limonada", 1, m12.gente[0]), item("limonada", 1, m12.gente[1])],
-      { cocina: ["nuevo", 0.8, null], barra: ["nuevo", 0.8, null] }, "Una de las burgers bien cocida");
+      { cocina: ["nuevo", 0.8], barra: ["nuevo", 0.8] }, "Una de las burgers bien cocida");
 
     // Mesa 4: se acaban de sentar y están eligiendo
     const m4 = mesa(4, 2, ["Emi"]);
@@ -157,8 +234,8 @@
     if (cache) return cache;
     let d = null;
     try { d = JSON.parse(localStorage.getItem(CLAVE)); } catch { d = null; }
-    if (!d || d.v !== 3) {
-      d = memoria && memoria.v === 3 ? memoria : ejemplo();
+    if (!d || d.v !== VERSION) {
+      d = memoria && memoria.v === VERSION ? memoria : ejemplo();
       try { localStorage.setItem(CLAVE, JSON.stringify(d)); } catch { /* queda en memoria */ }
     }
     memoria = d;
@@ -186,6 +263,51 @@
   };
 
   /* ---------------------------------------------------------------------------
+     El reloj de la demo
+     La demo vive en este navegador: cuando nadie la mira, el local se "pausa". Al volver,
+     todo se corre hacia adelante lo que estuvo pausado (así las horas de lo que hizo cada
+     uno siguen teniendo sentido). Si pasaron más de 6 horas, arranca un servicio nuevo
+     con el mismo equipo.
+     --------------------------------------------------------------------------- */
+  const VIVO = "cartaviva.demo.vivo";
+  const PAUSA = 45e3, OTRO_DIA = 6 * 3600e3;
+  function tiempos(d, fn) {
+    const t = (o, k) => { if (o && typeof o[k] === "number") fn(o, k); };
+    t(d.sim, "inicio");
+    d.sesiones.forEach(s => { t(s, "abierta"); t(s, "cerrada"); t(s.guion, "desde"); (s.historia || []).forEach(h => t(h, "t")); });
+    d.comensales.forEach(c => t(c, "unido"));
+    d.carrito.forEach(l => t(l, "creado"));
+    d.pedidos.forEach(p => {
+      t(p, "creado"); t(p.rechazado, "t");
+      Object.values(p.partes).forEach(pa => { t(pa, "cambio"); t(pa.antes, "cambio"); });
+    });
+    d.llamados.forEach(l => { t(l, "creado"); t(l, "tomado"); t(l.atendido, "t"); });
+    d.agotados.forEach(a => t(a, "t"));
+  }
+  function revisarReloj() {
+    if (document.visibilityState === "hidden") return;
+    const ahora = Date.now();
+    let vivo = 0;
+    try { vivo = +localStorage.getItem(VIVO) || 0; localStorage.setItem(VIVO, String(ahora)); } catch { return; }
+    if (!vivo || ahora - vivo <= PAUSA) return;
+    cache = null;
+    let d = leer();
+    if (ahora - vivo > OTRO_DIA) d = ejemplo(d.equipo);
+    else {
+      let ultimo = 0;
+      tiempos(d, (o, k) => { ultimo = Math.max(ultimo, o[k]); });
+      const correr = Math.min(ahora - vivo, ahora - ultimo);      // nunca al futuro
+      if (correr < 1000) return;
+      tiempos(d, (o, k) => { o[k] += correr; });
+    }
+    guardar(d);
+  }
+  revisarReloj();
+  setInterval(revisarReloj, 5000);
+  document.addEventListener("visibilitychange", revisarReloj);
+  window.addEventListener("pageshow", revisarReloj);
+
+  /* ---------------------------------------------------------------------------
      Lo que hace el comensal
      --------------------------------------------------------------------------- */
   // Entrar a la mesa (el QR): si la mesa está libre, se abre una sesión nueva.
@@ -199,9 +321,11 @@
       const usados = new Set(gente.map(c => c.color));
       nombre = String(nombre || "").replace(/\s+/g, " ").trim().slice(0, 20) || `Invitado ${gente.length + 1}`;
       if (gente.some(c => c.nombre.toLowerCase() === nombre.toLowerCase())) nombre += " " + (gente.length + 1);
+      const { color: pedido, ...resto } = extra;
       const c = {
-        id: nuevoId("c"), sesion: s.id, nombre, unido: ahora, ...extra,
-        color: COLORES.find(x => !usados.has(x)) || COLORES[gente.length % COLORES.length],
+        id: nuevoId("c"), sesion: s.id, nombre, unido: ahora, ...resto,
+        color: COLORES.includes(pedido) && !usados.has(pedido) ? pedido
+          : COLORES.find(x => !usados.has(x)) || COLORES[gente.length % COLORES.length],
       };
       d.comensales.push(c);
       anotar(s, gente.length ? `${nombre} se sumó a la mesa` : `${nombre} escaneó el QR y abrió la mesa`, ahora);
@@ -288,7 +412,12 @@
 
   /* ---------------------------------------------------------------------------
      Lo que hace el equipo (quien = id de la persona que lo hizo)
+     aMano = false: lo hace la simulación de la demo (no pide permisos)
      --------------------------------------------------------------------------- */
+  const sinPermiso = () => { error("No tenés permiso para eso."); return SIN; };
+  const VERBO = { preparando: "empezó", listo: "terminó", entregado: "llevó a la mesa" };
+  const textoPaso = (d, quien, estado, p, estacion) => `${nombreEn(d, quien)} ${VERBO[estado]} la ronda ${p.ronda} · ${nombreEstacion(estacion)}`;
+
   // Avanzar la parte de una estación: nuevo → preparando → listo → entregado.
   // Si dos lo tocan a la vez, gana el primero y el segundo no hace nada.
   function mover(pedidoId, estacion, estado, quien, aMano = true) {
@@ -297,12 +426,13 @@
       const pa = p && p.partes[estacion];
       const s = p && d.sesiones.find(x => x.id === p.sesion);
       if (!pa || !s || s.cerrada || p.rechazado || ESTADOS.indexOf(estado) <= ESTADOS.indexOf(pa.estado)) return SIN;
+      if (aMano && !puedeMover(quienEs(d, quien), estacion, estado)) return sinPermiso();
+      const antes = { estado: pa.estado, cambio: pa.cambio, quien: pa.quien };
       pa.estado = estado;
       pa.cambio = Date.now();
       pa.quien = quien || null;
-      if (aMano) pa.aMano = true;
-      const verbo = { preparando: "empezó", listo: "terminó", entregado: "llevó a la mesa" }[estado];
-      anotar(s, `${nombreEquipo(quien)} ${verbo} la ronda ${p.ronda} · ${nombreEstacion(estacion)}`, pa.cambio);
+      if (aMano) { pa.aMano = true; pa.antes = antes; } else delete pa.antes;
+      anotar(s, textoPaso(d, quien, estado, p, estacion), pa.cambio);
       return p;
     });
   }
@@ -313,55 +443,166 @@
       const p = d.pedidos.find(x => x.id === pedidoId);
       const s = p && d.sesiones.find(x => x.id === p.sesion);
       if (!p || !s || p.rechazado || Object.values(p.partes).some(x => x.estado !== "nuevo")) return SIN;
+      if (!puedeRechazar(quienEs(d, quien), p)) return sinPermiso();
       p.rechazado = { quien: quien || null, t: Date.now() };
-      anotar(s, `${nombreEquipo(quien)} no tomó la ronda ${p.ronda}`, p.rechazado.t);
+      anotar(s, `${nombreEn(d, quien)} no tomó la ronda ${p.ronda}`, p.rechazado.t);
       return p;
     });
   }
 
   // "Voy" (al mozo) o "Llevo la cuenta". El primero que toca se la queda.
-  function atender(llamadoId, quien) {
+  function atender(llamadoId, quien, aMano = true) {
     return cambiar(d => {
       const l = d.llamados.find(x => x.id === llamadoId);
       const s = l && d.sesiones.find(x => x.id === l.sesion);
       if (!l || !s || l.atendido || (l.tipo === "cuenta" && l.toma)) return SIN;
+      if (aMano && !puedeAtender(quienEs(d, quien), l)) return sinPermiso();
       const ahora = Date.now();
       if (l.tipo === "mozo") {
         l.atendido = { quien: quien || null, t: ahora };
-        anotar(s, `${nombreEquipo(quien)} fue a la mesa`, ahora);
+        anotar(s, `${nombreEn(d, quien)} fue a la mesa`, ahora);
       } else {
         l.toma = quien || null;
         l.tomado = ahora;
-        anotar(s, `${nombreEquipo(quien)} lleva la cuenta`, ahora);
+        anotar(s, `${nombreEn(d, quien)} lleva la cuenta`, ahora);
       }
       return l;
     });
   }
 
+  // Deshacer lo último que tocó uno mismo, si nadie lo cambió y pasaron menos de 20 segundos.
+  //   { tipo: "mover", pedido, estacion }  ·  { tipo: "atender", llamado }
+  function deshacer(accion, quien) {
+    return cambiar(d => {
+      const ahora = Date.now();
+      if (accion.tipo === "mover") {
+        const p = d.pedidos.find(x => x.id === accion.pedido);
+        const pa = p && p.partes[accion.estacion];
+        const s = p && d.sesiones.find(x => x.id === p.sesion);
+        if (!pa || !pa.antes || !s || s.cerrada || pa.quien !== quien || ahora - pa.cambio > VENTANA) return SIN;
+        desanotar(s, textoPaso(d, quien, pa.estado, p, accion.estacion), pa.cambio);
+        Object.assign(pa, pa.antes, { aMano: true });           // la simulación ya no la toca
+        delete pa.antes;
+        return p;
+      }
+      if (accion.tipo === "atender") {
+        const l = d.llamados.find(x => x.id === accion.llamado);
+        const s = l && d.sesiones.find(x => x.id === l.sesion);
+        if (!l || !s || s.cerrada) return SIN;
+        if (l.tipo === "mozo" && l.atendido && l.atendido.quien === quien && ahora - l.atendido.t <= VENTANA) {
+          desanotar(s, `${nombreEn(d, quien)} fue a la mesa`, l.atendido.t);
+          l.atendido = null;
+          return l;
+        }
+        if (l.tipo === "cuenta" && !l.atendido && l.toma === quien && ahora - l.tomado <= VENTANA) {
+          desanotar(s, `${nombreEn(d, quien)} lleva la cuenta`, l.tomado);
+          l.toma = null;
+          l.tomado = null;
+          return l;
+        }
+      }
+      return SIN;
+    });
+  }
+
   // Cobrada: la sesión se cierra y la mesa queda libre para los próximos.
-  function cerrarMesa(mesa, quien) {
+  function cerrarMesa(mesa, quien, aMano = true) {
     return cambiar(d => {
       const s = sesionActiva(d, mesa);
       if (!s) return SIN;
+      if (aMano && !tiene(quienEs(d, quien), "cobrar")) return sinPermiso();
       const ahora = Date.now();
       s.cerrada = ahora;
       s.cerradaPor = quien || null;
       s.total = d.pedidos.filter(p => p.sesion === s.id && !p.rechazado).reduce((t, p) => t + p.total, 0);
       d.carrito = d.carrito.filter(l => l.sesion !== s.id);
       d.llamados.forEach(l => { if (l.sesion === s.id && !l.atendido) l.atendido = { quien: quien || null, t: ahora }; });
-      anotar(s, `${nombreEquipo(quien)} cobró y liberó la mesa`, ahora);
+      anotar(s, `${nombreEn(d, quien)} cobró y liberó la mesa`, ahora);
       return s;
     });
   }
 
   function agotar(id, si, quien) {
     return cambiar(d => {
+      if (!tiene(quienEs(d, quien), "carta")) return sinPermiso();
       const ya = d.agotados.some(a => a.id === id);
       if (ya === !!si) return SIN;
       d.agotados = d.agotados.filter(a => a.id !== id);
       if (si) d.agotados.push({ id, quien: quien || null, t: Date.now() });
       return true;
     });
+  }
+
+  /* ---------------------------------------------------------------------------
+     El equipo: sumar, cambiar, PIN y dar de baja (lo hace quien tiene "equipo")
+     Devuelven { ok: true, persona, pin } o { ok: false, motivo }.
+     --------------------------------------------------------------------------- */
+  function guardarPersona(quien, x) {
+    let res = { ok: false, motivo: "error" };
+    cambiar(d => {
+      const yo = quienEs(d, quien);
+      let e = x.id ? quienEs(d, x.id) : null;
+      const no = motivo => { res = { ok: false, motivo }; return SIN; };
+      if (x.id && !e) return no("no_existe");
+      if (!puedeEditar(yo, e)) return no(tiene(yo, "equipo") ? "solo_dueno" : "sin_permiso");
+      const nombre = String(x.nombre || "").replace(/\s+/g, " ").trim().slice(0, 20);
+      if (!nombre) return no("nombre");
+      const rol = rolDe(x.rol);
+      if (!rol) return no("rol");
+      if (rol.id === "dueno" && yo.rol !== "dueno") return no("solo_dueno");
+      const permisos = [...new Set((x.permisos || rol.permisos).filter(p => TODOS.includes(p)))];
+      if (e && e.id === quien && !permisos.includes("equipo")) return no("tu_permiso");
+      const otro = d.equipo.find(y => activo(y) && y !== e && y.nombre.toLowerCase() === nombre.toLowerCase());
+      if (otro) return no("nombre_repetido");
+      let pin = null;
+      if (!e) {
+        pin = x.pin == null ? pinNuevo() : String(x.pin);
+        if (!pinValido(pin)) return no("pin");
+        // Si alguien con ese nombre estaba dado de baja, vuelve (con su historia)
+        e = d.equipo.find(y => !activo(y) && y.nombre.toLowerCase() === nombre.toLowerCase());
+        if (!e) { e = { id: nuevoId("e"), orden: d.equipo.length }; d.equipo.push(e); }
+        e.pin = pin;
+      }
+      const usados = new Set(d.equipo.filter(activo).map(y => y.color));
+      Object.assign(e, {
+        nombre, rol: rol.id,
+        puesto: e.rol === rol.id && e.puesto ? e.puesto : rol.nombre,
+        zona: String(x.zona || "").slice(0, 30),
+        color: colorValido(x.color) ? x.color : e.color || COLORES_EQUIPO.find(c => !usados.has(c)) || COLORES_EQUIPO[0],
+        permisos, activo: true,
+      });
+      res = { ok: true, persona: { ...e, pin: undefined }, pin };
+      return e;
+    });
+    return res;
+  }
+  // Un PIN nuevo: se lo da quien maneja el equipo, o cada uno a sí mismo.
+  function cambiarPin(quien, id, pin) {
+    let res = { ok: false, motivo: "error" };
+    cambiar(d => {
+      const yo = quienEs(d, quien), e = quienEs(d, id);
+      if (!activo(e)) { res = { ok: false, motivo: "no_existe" }; return SIN; }
+      if (quien !== id && !puedeEditar(yo, e)) { res = { ok: false, motivo: "sin_permiso" }; return SIN; }
+      const nuevo = pin == null ? pinNuevo() : String(pin);
+      if (!pinValido(nuevo)) { res = { ok: false, motivo: "pin" }; return SIN; }
+      e.pin = nuevo;
+      res = { ok: true, pin: nuevo };
+      return e;
+    });
+    return res;
+  }
+  function bajaPersona(quien, id) {
+    let res = { ok: false, motivo: "error" };
+    cambiar(d => {
+      const yo = quienEs(d, quien), e = quienEs(d, id);
+      if (!activo(e)) { res = { ok: false, motivo: "no_existe" }; return SIN; }
+      if (id === quien) { res = { ok: false, motivo: "vos" }; return SIN; }
+      if (!puedeEditar(yo, e)) { res = { ok: false, motivo: "sin_permiso" }; return SIN; }
+      e.activo = false;
+      res = { ok: true };
+      return e;
+    });
+    return res;
   }
 
   /* ---------------------------------------------------------------------------
@@ -400,17 +641,18 @@
   }
   function olvidarYo() { try { sessionStorage.removeItem(YO); } catch { /* nada */ } }
 
-  // Quién del equipo está usando este dispositivo (en la demo, el PIN está en local.js)
+  // Quién del equipo está usando este dispositivo
   const SOY = "cartaviva.equipo.yo";
-  const EQUIPO = L.equipo || [];
+  // Como en la base real: el PIN no sale de acá (solo se compara al entrar)
+  const equipoActivo = () => (leer().equipo || []).filter(activo).sort((a, b) => a.orden - b.orden).map(e => ({ ...e, pin: undefined }));
   function soyEquipo() {
     let id = null;
     try { id = sessionStorage.getItem(SOY) || localStorage.getItem(SOY); } catch { /* sin almacenamiento */ }
-    return EQUIPO.some(e => e.id === id) ? id : null;
+    return activo(quienEs(leer(), id)) ? id : null;
   }
   async function entrarEquipo(id, pin) {
-    const e = EQUIPO.find(x => x.id === id);
-    if (!e || String(e.pin) !== String(pin)) return { ok: false, motivo: "pin" };
+    const e = quienEs(leer(), id);
+    if (!activo(e) || String(e.pin) !== String(pin)) return { ok: false, motivo: "pin" };
     try { sessionStorage.setItem(SOY, id); localStorage.setItem(SOY, id); } catch { /* queda en esta pestaña */ }
     return { ok: true };
   }
@@ -419,12 +661,13 @@
   window.Datos = {
     modo: "vista-previa",
     listo: Promise.resolve(),
-    ESTADOS, COLORES, DIVIDIR,
+    ESTADOS, COLORES, COLORES_EQUIPO, DIVIDIR, PERMISOS, ROLES, VENTANA,
 
     // La mesa del link (?mesa=7). En la base real llega con el código del QR (?m=...).
     abrirMesa: async ({ mesa }) => { const m = L.mesas.find(x => x.n === mesa); return m ? { mesa: m.n, zona: m.zona, lugares: m.lugares } : null; },
     yo, recordarYo, olvidarYo,
     gente: mesa => { const s = sesionActiva(leer(), mesa); return s ? leer().comensales.filter(c => c.sesion === s.id) : []; },
+    coloresLibres: mesa => { const usados = new Set(Datos.gente(mesa).map(c => c.color)); return COLORES.filter(c => !usados.has(c)); },
 
     todo: leer,                                       // para el panel: no modificar
     sesionDe: mesa => sesionActiva(leer(), mesa),
@@ -432,20 +675,25 @@
     comensal: id => leer().comensales.find(c => c.id === id) || null,
     agotado: id => leer().agotados.some(a => a.id === id),
     agotadoPor: id => leer().agotados.find(a => a.id === id) || null,
-    estadoPedido, estacionDe, nombreEquipo, nombreEstacion,
+    estadoPedido, estacionDe, nombreEstacion,
+    nombreEquipo: id => nombreEn(leer(), id),
 
     entrar, sumar, cantidad, mandar, llamar,
 
     // El equipo
-    equipo: () => EQUIPO,
+    equipo: equipoActivo,
+    persona: id => { const e = quienEs(leer(), id); return e ? { ...e, pin: undefined } : null; },
+    permisosDeRol, pinNuevo,
+    puede: (id, permiso) => tiene(quienEs(leer(), id), permiso),
     mesas: () => L.mesas,
     necesitaCuenta: () => false,
     abrirPanel: () => {}, cerrarPanel: () => {},
     soyEquipo, entrarEquipo, salirEquipo,
-    mover, rechazar, atender, cerrarMesa, agotar,
+    mover, rechazar, atender, deshacer, cerrarMesa, agotar,
+    guardarPersona, cambiarPin, bajaPersona,
     reiniciar: () => { memoria = null; cache = null; guardar(ejemplo()); },
 
     // Solo para la simulación de la demo
-    _cambiar: cambiar, _SIN: SIN, _anotar: anotar,
+    _cambiar: cambiar, _SIN: SIN, _anotar: anotar, _reloj: revisarReloj,
   };
 })();

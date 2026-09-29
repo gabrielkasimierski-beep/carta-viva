@@ -39,6 +39,9 @@
   <symbol id="i-mudo" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9.5h3.5L12 6v12l-4.5-3.5H4z"/><path d="M16 9.5l5 5M21 9.5l-5 5"/></symbol>
   <symbol id="i-borrar" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5h11a1.5 1.5 0 0 1 1.5 1.5v11A1.5 1.5 0 0 1 20 19H9l-6-7z"/><path d="M12.5 9.5l5 5M17.5 9.5l-5 5"/></symbol>
   <symbol id="i-listo" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M8 12.5l2.8 2.8L16.5 9.5"/></symbol>
+  <symbol id="i-mas" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></symbol>
+  <symbol id="i-deshacer" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14L4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/></symbol>
+  <symbol id="i-fuego" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3c.6 3.2 5 5.4 5 10.2A5 5 0 0 1 7 13.5c0-2.3 1.2-3.8 2.4-4.8.1 1.6.9 2.8 2 3.3C11 9.3 10.9 6.3 12 3z"/></symbol>
 </svg>
 
 <div class="fondo" id="fondo" aria-hidden="true"><div class="fondo__palabra" id="palabra"></div></div>
@@ -88,22 +91,35 @@
 
 <div class="velo" id="velo" hidden></div>
 
-<section class="hoja hoja--bienvenida" id="hoja-bienvenida" role="dialog" aria-modal="true" aria-labelledby="bienvenida-titulo" hidden>
-  <header class="hoja__cabeza">
-    <div><p class="hoja__sobre" id="bienvenida-sobre"></p><h2 class="bienvenida__mesa" id="bienvenida-titulo"></h2></div>
-    <button class="boton-icono boton-icono--hoja" type="button" data-cerrar aria-label="Primero mirar la carta"><svg width="18" height="18"><use href="#i-cerrar"/></svg></button>
-  </header>
-  <div class="hoja__cuerpo">
-    <p class="bienvenida__gente" id="bienvenida-gente"></p>
-    <div class="campo campo--nombre">
-      <label for="bienvenida-nombre">¿Cómo te llamás?</label>
-      <input id="bienvenida-nombre" type="text" autocomplete="given-name" maxlength="20" placeholder="Tu nombre" enterkeyhint="go">
+<!-- Bienvenida: lo primero que se ve al escanear el QR de la mesa. El plato del medio es
+     el mismo 3D de la carta: se arma solo, se gira con el dedo y después vuelve a su lugar. -->
+<section class="bienvenida" id="bienvenida" role="dialog" aria-modal="true" aria-labelledby="bv-titulo" hidden>
+  <div class="bv__marco">
+    <header class="bv__cabeza">
+      <p class="bv__local" id="bv-local"></p>
+      <p class="bv__mesa" id="bv-mesa"></p>
+    </header>
+    <div class="bv__saludo">
+      <h2 class="bv__titulo" id="bv-titulo"></h2>
+      <p class="bv__bajada" id="bv-bajada"></p>
     </div>
-    <p class="nota-pie nota-pie--izq">Así en la mesa se sabe qué pidió cada uno. Solo lo ven ustedes y el mozo.</p>
+    <div class="bv__plato" id="bv-plato">
+      <p class="bv__pista" id="bv-pista"><svg width="16" height="16" aria-hidden="true"><use href="#i-giro"/></svg><span>Giralo con el dedo</span></p>
+    </div>
+    <div class="bv__abajo">
+      <div class="bv__gente" id="bv-gente"></div>
+      <div class="bv__campo">
+        <label for="bv-nombre">¿Cómo te llamás?</label>
+        <div class="bv__fila">
+          <span class="avatar bv__yo" id="bv-yo" aria-hidden="true">?</span>
+          <input id="bv-nombre" type="text" autocomplete="given-name" autocapitalize="words" maxlength="20" placeholder="Tu nombre" enterkeyhint="go">
+        </div>
+        <div class="bv__colores" id="bv-colores" role="radiogroup" aria-label="Tu color en la mesa"></div>
+      </div>
+      <button class="boton-principal bv__entrar" id="bv-entrar" type="button">Entrar a la mesa</button>
+      <button class="bv__mirar" id="bv-mirar" type="button">Primero quiero mirar la carta</button>
+    </div>
   </div>
-  <footer class="hoja__pie">
-    <button class="boton-principal" id="bienvenida-entrar" type="button">Entrar a la mesa</button>
-  </footer>
 </section>
 
 <section class="hoja" id="hoja-armar" role="dialog" aria-modal="true" aria-labelledby="armar-titulo" hidden>
@@ -212,11 +228,14 @@
       <a class="panel__salir" href="#carta">Ver la carta <svg width="14" height="14" aria-hidden="true"><use href="#i-flecha"/></svg></a>
     </header>
     <div class="turno" id="turno"></div>
+    <div class="ahora" id="ahora"></div>
     <div class="panel__vista" id="vistas" role="tabpanel"></div>
-    <p class="panel__pie" id="panel-pie">Demo: la Mesa 7 es la tuya (entrás desde la carta). Juli, Tomi, las otras mesas y el resto del equipo son simulados; lo que muevas vos a mano no lo toca nadie. Tocando a alguien de "En turno" entrás como esa persona. Para sumar comensales de verdad, entrá como Sofi y abrí mesas desde <b>QR</b>: cada una se abre en otra pestaña, como otro celular. <button type="button" id="panel-reiniciar">Empezar de cero</button></p>
+    <p class="panel__pie" id="panel-pie">Demo: la Mesa 7 es la tuya (entrás desde la carta). Juli, Tomi, las otras mesas y el resto del equipo son simulados; lo que muevas vos a mano no lo toca nadie. Con "Probar como" entrás como otra persona y ves lo que le toca a cada una: Carla es moza, no ve la cocina y le suena cuando algo está listo para llevar. Como Rober (dueño) o Sofi (encargada) está <b>Equipo</b>: sumá gente y elegí qué puede hacer cada uno. Desde <b>QR</b> abrís mesas en otra pestaña, como otro celular. Si nadie mira la demo, el local queda en pausa. <button type="button" id="panel-reiniciar">Empezar de cero</button></p>
   </div>
   <div class="detalle-velo" id="detalle-velo" hidden></div>
   <aside class="detalle" id="detalle" role="dialog" aria-modal="true" aria-labelledby="detalle-titulo" hidden></aside>
+  <div class="alerta" id="alerta" hidden></div>
+  <div class="aviso-panel" id="deshacer" role="status" aria-live="polite" hidden></div>
 </section>
 
 <div class="aviso" id="aviso" role="status" aria-live="polite"></div>

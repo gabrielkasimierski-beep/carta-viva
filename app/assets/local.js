@@ -32,12 +32,27 @@ window.LOCAL = {
     { n: 11, zona: "Vereda", lugares: 4 },
     { n: 12, zona: "Vereda", lugares: 4 },
   ],
-  // El equipo: cada uno entra al panel con su nombre y su PIN, y todo lo que hace queda con
-  // su nombre (quién aceptó el pedido, quién lo llevó, quién cobró).
-  //   rol: "encargado" (ve todo) · "mozo" (mesas, llamados y lo que hay que llevar; su zona
-  //   primero) · "cocina" y "barra" (las comandas de su estación y lo que se terminó).
+  // Los puestos y lo que puede ver y hacer cada uno de entrada. Desde el panel (sección
+  // Equipo), el dueño o el encargado suman personas, les eligen el puesto y ajustan los
+  // permisos de cada una.
+  //   mesas: el plano del salón · atender: le suena cuando llaman al mozo · llevar: le suena
+  //   cuando algo está listo para llevar · cobrar: la cuenta y liberar la mesa · cocina,
+  //   barra (una por estación): sus comandas · carta: marcar agotados · qr: los códigos de
+  //   las mesas · equipo: sumar personas, PIN y permisos.
+  roles: [
+    { id: "dueno",     nombre: "Dueño/a",     permisos: ["mesas", "atender", "llevar", "cobrar", "cocina", "barra", "carta", "qr", "equipo"] },
+    { id: "encargado", nombre: "Encargado/a", permisos: ["mesas", "atender", "llevar", "cobrar", "cocina", "barra", "carta", "qr", "equipo"] },
+    { id: "mozo",      nombre: "Mozo/a",      permisos: ["mesas", "atender", "llevar", "cobrar"] },
+    { id: "cocina",    nombre: "Cocina",      permisos: ["cocina", "carta"] },
+    { id: "barra",     nombre: "Barra",       permisos: ["barra", "carta"] },
+    { id: "caja",      nombre: "Caja",        permisos: ["mesas", "cobrar"] },
+  ],
+  // El equipo de arranque: cada uno entra al panel con su nombre y su PIN, y todo lo que
+  // hace queda con su nombre (quién empezó el pedido, quién lo llevó, quién cobró).
+  // zona: la de sus mesas (le aparecen primero). permisos: si no se dicen, los de su puesto.
   // En la demo el PIN de todos es 1234. En la versión real, los PIN viven en la base.
   equipo: [
+    { id: "rober",  nombre: "Rober",  rol: "dueno",     puesto: "Dueño",     color: "#F28FB0", pin: "1234" },
     { id: "sofi",   nombre: "Sofi",   rol: "encargado", puesto: "Encargada", color: "#C4A4FF", pin: "1234" },
     { id: "carla",  nombre: "Carla",  rol: "mozo",      puesto: "Moza",      color: "#7FD6FF", pin: "1234", zona: "Salón" },
     { id: "nico",   nombre: "Nico",   rol: "mozo",      puesto: "Mozo",      color: "#8BE3B4", pin: "1234", zona: "Vereda" },

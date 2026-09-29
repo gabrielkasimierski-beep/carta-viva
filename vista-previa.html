@@ -736,17 +736,120 @@ svg { flex: none; }
 .avatares .avatar + .avatar { margin-left: -7px; }
 .hoja { --anillo: var(--hoja-fondo); }
 
-/* Bienvenida: entrar a la mesa */
-.bienvenida__mesa {
-  margin: 0;
+/* ---------- Bienvenida: lo primero que se ve al escanear el QR ----------
+   Transparente en el medio: ahí se dibuja el plato 3D de la carta (el lienzo está detrás).
+   La carta se esconde mientras tanto y el fondo es el del plato, en cada estilo. */
+.bienvenida {
+  position: fixed; inset: 0; z-index: 5;
+  overflow-y: auto; overscroll-behavior: contain;
+  padding: calc(var(--arriba) + var(--alto-cinta) + 14px) 16px calc(var(--abajo) + 14px);
+  color: var(--tinta-actual);
+  opacity: 0; transition: opacity .45s var(--ease);
+}
+.bienvenida.abierta { opacity: 1; }
+.con-bienvenida .barra, .con-bienvenida .categorias, .con-bienvenida .feed,
+.con-bienvenida .acciones, .con-bienvenida .etiquetas { opacity: 0; pointer-events: none; }
+.bv__marco {
+  min-height: 100%; max-width: 560px; margin: 0 auto;
+  display: grid; grid-template-rows: auto auto minmax(200px, 1fr) auto; gap: 10px;
+}
+.bv__cabeza { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-width: 0; }
+.bv__local {
+  margin: 0; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
   font-family: var(--display); font-weight: var(--display-peso); font-style: var(--display-estilo);
   font-stretch: var(--display-ancho); text-transform: var(--display-caja);
-  font-size: 64px; line-height: .9; letter-spacing: var(--display-espacio);
+  font-size: var(--marca-tam); line-height: 1; letter-spacing: -0.01em;
 }
-:root[data-estilo="jugo"] .bienvenida__mesa, :root[data-estilo="estudio"] .bienvenida__mesa { font-size: 40px; }
-.bienvenida__gente { display: flex; align-items: center; gap: 12px; margin: 2px 0 14px; color: var(--hoja-suave); font-size: 15px; line-height: 1.4; }
-.bienvenida__gente b { color: var(--hoja-tinta); font-weight: 700; }
-.campo--nombre { margin-top: 0; }
+.bv__mesa {
+  margin: 0; flex: none; height: 32px; padding: 0 12px; border-radius: var(--radio-chico);
+  display: inline-flex; align-items: center;
+  background: var(--vidrio); border: 1px solid var(--vidrio-borde);
+  -webkit-backdrop-filter: var(--desenfoque); backdrop-filter: var(--desenfoque);
+  font: var(--rotulo-peso) var(--rotulo-tam)/1 var(--rotulo); letter-spacing: var(--rotulo-espacio); text-transform: uppercase; white-space: nowrap;
+}
+.bv__saludo { display: grid; gap: 8px; }
+.bv__titulo {
+  margin: 10px 0 0;
+  font-family: var(--display); font-weight: var(--display-peso); font-style: var(--display-estilo);
+  font-stretch: var(--display-ancho); text-transform: var(--display-caja);
+  font-size: clamp(46px, 13.5vw, 92px); line-height: var(--display-alto); letter-spacing: var(--display-espacio);
+  text-wrap: balance;
+}
+:root:not([data-estilo="jugo"]):not([data-estilo="estudio"]) .bv__titulo { text-shadow: 0 0 48px color-mix(in srgb, var(--acento-actual) 40%, transparent); }
+:root[data-estilo="jugo"] .bv__titulo, :root[data-estilo="estudio"] .bv__titulo { font-size: clamp(32px, 9.4vw, 64px); }
+.bv__bajada { margin: 0; max-width: 38ch; font-size: 15.5px; line-height: 1.42; color: var(--suave-actual); }
+.bienvenida.abierta .bv__saludo > *, .bienvenida.abierta .bv__abajo { animation: subir .7s var(--ease) both; }
+.bienvenida.abierta .bv__bajada { animation-delay: .08s; }
+.bienvenida.abierta .bv__abajo { animation-delay: .16s; }
+.bv__plato { position: relative; min-height: 200px; touch-action: pan-y; cursor: grab; user-select: none; -webkit-user-select: none; }
+.bv__plato:active { cursor: grabbing; }
+.bv__pista {
+  position: absolute; left: 50%; bottom: 0; transform: translateX(-50%); margin: 0;
+  display: flex; align-items: center; gap: 8px; height: 34px; padding: 0 14px; border-radius: var(--radio-chico);
+  background: var(--vidrio); border: 1px solid var(--vidrio-borde); color: var(--tinta-actual);
+  -webkit-backdrop-filter: var(--desenfoque); backdrop-filter: var(--desenfoque);
+  font-weight: 600; font-size: 13px; white-space: nowrap; pointer-events: none;
+  animation: aparecer .5s 1.4s both;
+}
+.bv__pista svg { animation: vaiven 1.6s ease-in-out infinite; }
+.bv__abajo {
+  --anillo: var(--hoja-fondo);
+  display: grid; gap: 14px; padding: 16px; border-radius: var(--radio-panel);
+  background: var(--hoja-fondo); color: var(--hoja-tinta); border: 1px solid var(--hoja-linea);
+  -webkit-backdrop-filter: blur(24px) saturate(160%); backdrop-filter: blur(24px) saturate(160%);
+  box-shadow: 0 24px 60px -24px rgba(0, 0, 0, .5);
+}
+.bv__abajo :focus-visible { outline-color: var(--hoja-tinta); }
+.bv__gente { display: flex; align-items: center; gap: 12px; color: var(--hoja-suave); font-size: 14.5px; line-height: 1.38; }
+.bv__gente b { color: var(--hoja-tinta); font-weight: 700; }
+.bv__gente .avatar { animation: sentarse .5s var(--ease) both; }
+.bv__gente .avatar:nth-child(2) { animation-delay: .07s; }
+.bv__gente .avatar:nth-child(3) { animation-delay: .14s; }
+.bv__gente .avatar:nth-child(4) { animation-delay: .21s; }
+.bv__campo { display: grid; gap: 8px; }
+.bv__campo label { font: var(--rotulo-peso) var(--rotulo-tam)/1.2 var(--rotulo); letter-spacing: var(--rotulo-espacio); text-transform: uppercase; color: var(--hoja-suave); }
+.bv__fila { display: flex; align-items: center; gap: 10px; }
+.bv__yo { width: 52px; height: 52px; font-size: 22px; transition: background .25s, box-shadow .25s; box-shadow: 0 0 0 3px var(--hoja-fondo), 0 0 0 5px var(--av); }
+.bv__yo:not(.con-nombre) { background: transparent; color: var(--hoja-suave); box-shadow: inset 0 0 0 2px var(--hoja-chip-borde); }
+.bv__yo.salta { animation: saltito .5s var(--ease); }
+.bv__fila input {
+  flex: 1; min-width: 0; height: 56px; padding: 0 16px; border-radius: 16px;
+  border: 1px solid var(--hoja-chip-borde); background: var(--hoja-campo); color: var(--hoja-tinta);
+  font: inherit; font-size: 18px;
+}
+.bv__fila input::placeholder { color: var(--hoja-suave); }
+.bv__fila input:focus { outline: none; border-color: var(--hoja-tinta); }
+.bv__colores { display: flex; flex-wrap: wrap; gap: 10px; padding-left: 62px; }
+.bv__color {
+  width: 30px; height: 30px; padding: 0; border-radius: 50%; border: 0; background: var(--av);
+  box-shadow: inset 0 0 0 2px rgba(0, 0, 0, .12); transition: transform .15s var(--ease), box-shadow .15s;
+}
+.bv__color[aria-checked="true"] { box-shadow: 0 0 0 3px var(--hoja-fondo), 0 0 0 5px var(--av); transform: scale(1.08); }
+.bv__mirar {
+  justify-self: center; height: 40px; margin-top: -4px; padding: 0 12px; border: 0; background: none;
+  color: var(--hoja-suave); font-weight: 600; font-size: 14px; text-decoration: underline; text-underline-offset: 3px;
+}
+.volador-yo { position: fixed; left: 0; top: 0; z-index: 21; width: 52px; height: 52px; font-size: 22px; pointer-events: none; box-shadow: 0 8px 22px rgba(0, 0, 0, .35); }
+.sin-3d .bv__marco { grid-template-rows: auto auto 1fr auto; }
+.sin-3d .bv__plato { min-height: 0; }
+.sin-3d .bv__pista { display: none; }
+@media (max-height: 720px) and (max-width: 899px) {
+  .bv__bajada { display: none; }
+  .bv__marco { grid-template-rows: auto auto minmax(160px, 1fr) auto; }
+  .bv__titulo { font-size: clamp(40px, 12vw, 64px); }
+  :root[data-estilo="jugo"] .bv__titulo, :root[data-estilo="estudio"] .bv__titulo { font-size: clamp(28px, 8.4vw, 48px); }
+}
+@media (min-width: 900px) {
+  .bienvenida { padding-inline: 5vw; }
+  .bv__marco { max-width: 1180px; grid-template-columns: minmax(0, 1.25fr) minmax(360px, 1fr); grid-template-rows: auto 1fr auto; column-gap: 4vw; row-gap: 18px; }
+  .bv__cabeza { grid-column: 1 / -1; }
+  .bv__plato { grid-column: 1; grid-row: 2 / 4; min-height: 420px; }
+  .bv__saludo { grid-column: 2; grid-row: 2; align-self: end; }
+  .bv__abajo { grid-column: 2; grid-row: 3; align-self: start; }
+}
+@keyframes sentarse { from { transform: scale(.3); opacity: 0; } }
+@keyframes saltito { 40% { transform: scale(1.18) translateY(-4px); } }
+
 .campo input {
   font: inherit; font-size: 18px; color: var(--hoja-tinta);
   height: 56px; padding: 0 16px; border-radius: 16px;
@@ -754,7 +857,6 @@ svg { flex: none; }
 }
 .campo input::placeholder { color: var(--hoja-suave); }
 .campo input:focus { outline: none; border-color: var(--hoja-tinta); }
-.nota-pie--izq { text-align: left; margin-top: 10px; }
 
 /* El pedido de la mesa: una parte por persona */
 .gente-pedido { list-style: none; margin: 0; padding: 0; display: grid; gap: 16px; }
@@ -986,10 +1088,10 @@ svg { flex: none; }
 }
 .aviso-fila--cuenta { --a: var(--e-cuenta); }
 .aviso-fila__icono { width: 36px; height: 36px; border-radius: 50%; flex: none; display: grid; place-items: center; background: var(--a); color: #16101A; animation: timbre 2.2s ease-in-out infinite; }
-.aviso-fila__texto { flex: 1 1 170px; min-width: 0; line-height: 1.3; }
+.aviso-fila__texto { flex: 1 1 120px; min-width: 0; line-height: 1.3; }
 .aviso-fila__texto b { font-weight: 700; }
 .aviso-fila__texto small { display: block; color: var(--p-suave); font-size: 12.5px; }
-.aviso-fila button { flex: none; margin-left: auto; height: 40px; padding: 0 16px; border-radius: 10px; border: 0; background: var(--a); color: #16101A; font-weight: 700; }
+.aviso-fila button { flex: none; margin-left: auto; height: 46px; padding: 0 18px; border-radius: 12px; border: 0; background: var(--a); color: #16101A; font-weight: 800; font-size: 15px; }
 
 /* El plano: cada mesa vista desde arriba, con sus sillas */
 .zona { margin-bottom: 24px; }
@@ -1193,6 +1295,11 @@ svg { flex: none; }
   .panel__tabs button { padding: 0 7px; gap: 5px; font-size: 14px; }
   .panel__tabs .insignia { min-width: 18px; height: 18px; padding: 0 5px; font-size: 11px; }
 }
+/* En el celu, si son muchas secciones, van en dos filas: que se vean todas */
+@media (max-width: 560px) {
+  .panel__tabs { flex-wrap: wrap; overflow: visible; }
+  .panel__tabs button { flex: 1 1 auto; }
+}
 @media (max-width: 560px) {
   .turno__equipo { margin-left: 0; order: 3; }
   .turno__sonido span { display: none; }
@@ -1282,6 +1389,170 @@ svg { flex: none; }
 .tarjeta-qr__probar { margin-top: 6px; display: inline-flex; align-items: center; gap: 5px; color: #FFB27A; font-size: 13px; font-weight: 600; text-decoration: none; }
 .tarjeta-qr__probar:hover { text-decoration: underline; }
 
+/* Mozo y cuenta: una franja al costado de la mesa que sobresale por arriba, para verla de lejos */
+.mesa--banda .mesa__tabla { padding-right: 50px; min-height: 120px; }
+.mesa--banda .mesa__sillas { padding-right: 52px; }
+.mesa__banda {
+  --b: var(--e-cuenta);
+  position: absolute; top: -14px; right: -1.5px; bottom: -1.5px; width: 40px;
+  border-radius: 12px 16px 16px 10px;
+  background: var(--b); color: #16101A;
+  display: flex; flex-direction: column; align-items: center; gap: 7px; padding: 10px 0 9px;
+  box-shadow: 0 6px 18px -6px var(--b);
+  animation: banda 1.8s ease-in-out infinite;
+}
+.banda--mozo { --b: var(--e-mozo); }
+.banda--ambos { --b: var(--e-mozo); background: linear-gradient(180deg, var(--e-mozo) 0 50%, var(--e-cuenta) 50% 100%); }
+.mesa__banda-iconos { display: grid; gap: 5px; justify-items: center; }
+.mesa__banda-texto {
+  flex: 1; min-height: 0; overflow: hidden;
+  writing-mode: vertical-rl; transform: rotate(180deg);
+  font-size: 11.5px; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; white-space: nowrap; text-align: center;
+}
+.mesa__banda-min { margin-top: auto; font-size: 12.5px; font-weight: 800; font-variant-numeric: tabular-nums; }
+.mesa__banda .avatar { box-shadow: none; }
+.mesa__banda.tomada {
+  background: color-mix(in srgb, var(--e-cuenta) 18%, var(--p-sup)); color: color-mix(in srgb, var(--e-cuenta) 70%, #fff);
+  box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--e-cuenta) 65%, transparent); animation: none;
+}
+.ref--banda::before { width: 7px; height: 16px; border-radius: 3px; background: var(--e-mozo); box-shadow: none; }
+.ref--banda.ref--cuenta::before { background: var(--e-cuenta); }
+@keyframes banda { 50% { box-shadow: 0 0 0 4px color-mix(in srgb, var(--b) 32%, transparent), 0 10px 26px -6px var(--b); } }
+
+/* Para hacer ahora: arriba de todo; en las otras pantallas, un resumen que lleva a Mesas */
+.ahora { max-width: 1180px; margin: 0 auto; }
+.ahora:empty { display: none; }
+.ahora .zona__titulo .insignia { letter-spacing: 0; }
+.ahora .avisos { margin-bottom: 12px; }
+.ahora__mas { display: block; margin: -2px 0 22px; height: 40px; padding: 0 16px; border-radius: 99px; border: 1px solid var(--p-linea2); background: none; color: var(--p-tinta); font-weight: 600; font-size: 14px; }
+.ahora-corto {
+  width: 100%; min-height: 50px; margin: 0 0 16px; padding: 8px 14px;
+  display: flex; align-items: center; gap: 10px; text-align: left;
+  border-radius: 14px; border: 1px solid color-mix(in srgb, var(--e-mozo) 45%, transparent);
+  background: color-mix(in srgb, var(--e-mozo) 10%, var(--p-sup)); color: var(--p-tinta); font-size: 14.5px;
+}
+.ahora-corto > span:nth-child(2) { flex: 1; min-width: 0; }
+.ahora-corto b { font-weight: 800; }
+.ahora-corto__punto { flex: none; width: 10px; height: 10px; border-radius: 50%; background: var(--e-mozo); animation: latido 1.2s infinite; }
+.aviso-fila__zona, .aviso-fila__cuando { white-space: nowrap; }
+.aviso-fila--nueva { animation: llegar .7s var(--ease); }
+.aviso-fila--tarde .aviso-fila__cuando { color: #FFB3A8; font-weight: 700; }
+.aviso-fila--comanda { --a: var(--e-nuevo); }
+@keyframes llegar { from { transform: translateY(-10px); box-shadow: 0 0 0 4px var(--a); } }
+
+/* El cartel de lo nuevo: arriba, encima de todo, con su botón */
+.alerta {
+  position: fixed; z-index: 16; left: 12px; right: 12px; top: calc(var(--arriba) + 10px);
+  max-width: 560px; margin-inline: auto;
+  transform: translateY(-140%); opacity: 0; transition: transform .38s var(--ease), opacity .25s;
+}
+.alerta.visible { transform: none; opacity: 1; }
+.alerta__caja {
+  --a: var(--e-mozo);
+  display: flex; align-items: center; gap: 12px; padding: 12px 10px 12px 12px; border-radius: 18px;
+  background: color-mix(in srgb, var(--a) 20%, #1B1A1F); border: 1.5px solid var(--a); color: var(--p-tinta);
+  box-shadow: 0 18px 50px -10px rgba(0, 0, 0, .75), 0 0 0 4px color-mix(in srgb, var(--a) 22%, transparent);
+}
+.alerta--listo { --a: var(--e-listo); }
+.alerta--cuenta { --a: var(--e-cuenta); }
+.alerta--comanda { --a: var(--e-nuevo); }
+.alerta__icono { width: 44px; height: 44px; border-radius: 50%; flex: none; display: grid; place-items: center; background: var(--a); color: #16101A; animation: timbre 1.6s ease-in-out 2; }
+.alerta__texto { flex: 1; min-width: 0; display: grid; gap: 2px; line-height: 1.25; }
+.alerta__texto b { font-size: 16.5px; font-weight: 800; }
+.alerta__texto small { color: var(--p-suave); font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.alerta__caja > button:not(.alerta__cerrar) { flex: none; height: 48px; padding: 0 16px; border: 0; border-radius: 12px; background: var(--a); color: #16101A; font-weight: 800; font-size: 15px; }
+.alerta__cerrar { flex: none; width: 36px; height: 36px; padding: 0; border-radius: 50%; border: 0; background: rgba(255, 255, 255, .08); color: var(--p-tinta); display: grid; place-items: center; }
+
+/* Deshacer (y avisos cortos), abajo */
+.aviso-panel {
+  position: fixed; z-index: 16; left: 50%; bottom: calc(var(--abajo) + 18px);
+  width: max-content; max-width: calc(100% - 24px);
+  display: flex; align-items: center; gap: 14px; padding: 8px 8px 8px 16px; border-radius: 14px;
+  background: #F4F1EC; color: #16101A; font-weight: 600; font-size: 14.5px; line-height: 1.3;
+  box-shadow: 0 16px 40px -10px rgba(0, 0, 0, .65);
+  transform: translate(-50%, 160%); opacity: 0; transition: transform .35s var(--ease), opacity .25s;
+}
+.aviso-panel.visible { transform: translate(-50%, 0); opacity: 1; }
+.aviso-panel:not(:has(button)) { padding: 12px 18px; }
+.aviso-panel button { flex: none; height: 42px; padding: 0 14px; border: 0; border-radius: 10px; background: #16101A; color: #F4F1EC; font-weight: 700; display: inline-flex; align-items: center; gap: 6px; }
+
+/* Cocina: todo lo que hay que preparar, sumado */
+.a-preparar { margin: 0 0 18px; }
+.a-preparar ul { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 8px; }
+.a-preparar li { display: flex; align-items: center; gap: 9px; padding: 5px 14px 5px 5px; border-radius: 99px; background: var(--p-sup); border: 1px solid var(--p-linea); }
+.a-preparar li > b { font: 800 22px/1 "Onest", system-ui, sans-serif; font-variant-numeric: tabular-nums; }
+.a-preparar li > span { display: grid; line-height: 1.15; font-weight: 600; font-size: 14.5px; }
+.a-preparar small { color: #FBE2A6; font-size: 12px; font-weight: 600; }
+.a-preparar__foto { width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; overflow: hidden; background: color-mix(in srgb, var(--c) 24%, transparent); }
+.a-preparar__foto img { width: 118%; height: 118%; object-fit: contain; }
+.ticket__acciones { flex-wrap: wrap; align-items: center; }
+.ticket__acciones .boton-paso { flex: 1 1 60%; height: 56px; font-size: 18px; }
+.ticket__espera { flex: 1; margin: 0; display: flex; align-items: center; gap: 6px; font-size: 13.5px; font-weight: 700; color: #2E5F8F; }
+
+/* Equipo: las fichas y el editor */
+.equipo-intro { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 12px 20px; margin-bottom: 18px; }
+.equipo-intro .panel__ayuda { flex: 1 1 320px; margin: 0; }
+.fichas { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 10px; }
+.ficha { display: flex; align-items: center; gap: 14px; padding: 14px; border-radius: 18px; background: var(--p-sup); border: 1px solid var(--p-linea); }
+.ficha .avatar--grande, .ed-nombre .avatar--grande { width: 52px; height: 52px; font-size: 21px; }
+.ficha__info { flex: 1; min-width: 0; display: grid; gap: 2px; }
+.ficha__info p { margin: 0; }
+.ficha__nombre { display: flex; align-items: center; gap: 8px; font-size: 16px; }
+.ficha__vos { padding: 2px 7px; border-radius: 99px; background: var(--p-tinta); color: var(--p-fondo); font-size: 10px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; }
+.ficha__puesto { color: var(--p-suave); font-size: 13px; }
+.ficha__permisos { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px !important; }
+.ficha__permisos i { font-style: normal; font-size: 11.5px; font-weight: 600; padding: 3px 8px; border-radius: 99px; background: var(--p-sup2); }
+.ficha__nada { font-size: 12.5px; color: var(--p-tenue); }
+.ficha__editar { flex: none; height: 42px; padding: 0 16px; border-radius: 12px; border: 1px solid var(--p-linea2); background: none; color: var(--p-tinta); font-weight: 700; }
+.ficha__nota { flex: none; max-width: 84px; font-size: 12px; line-height: 1.3; text-align: right; color: var(--p-tenue); }
+.detalle__cuerpo.editor { gap: 20px; }
+.ed-campo { display: grid; gap: 8px; }
+.ed-rotulo { margin: 0; font-size: 11px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--p-suave); }
+.ed-nombre, .ed-pin { display: flex; align-items: center; gap: 10px; }
+.ed-nombre input, .ed-pin input {
+  flex: 1; min-width: 0; height: 52px; padding: 0 14px; border-radius: 12px;
+  border: 1px solid var(--p-linea2); background: var(--p-fondo); color: var(--p-tinta);
+  font: 600 17px "Onest", system-ui, sans-serif;
+}
+.ed-nombre input:focus, .ed-pin input:focus { outline: none; border-color: var(--p-tinta); }
+.ed-pin input { flex: none; width: 140px; text-align: center; font-size: 24px; letter-spacing: .35em; font-variant-numeric: tabular-nums; }
+.ed-pin__oculto { font-size: 22px; letter-spacing: .3em; color: var(--p-suave); }
+.ed-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.ed-chip { min-height: 42px; padding: 0 14px; border-radius: 99px; border: 1px solid var(--p-linea2); background: none; color: var(--p-tinta); font-weight: 600; font-size: 14px; }
+.ed-chip[aria-pressed="true"] { background: var(--p-tinta); color: var(--p-fondo); border-color: var(--p-tinta); }
+.ed-chip:disabled { opacity: .35; }
+.ed-ayuda { margin: 0; font-size: 12.5px; color: var(--p-suave); }
+.ed-colores { display: flex; flex-wrap: wrap; gap: 8px; }
+.ed-color { width: 38px; height: 38px; padding: 0; border-radius: 32%; border: 0; background: var(--av); box-shadow: inset 0 0 0 2px rgba(0, 0, 0, .15); }
+.ed-color[aria-pressed="true"] { box-shadow: 0 0 0 2px var(--p-sup), 0 0 0 4px var(--p-tinta); }
+.ed-permisos { display: grid; gap: 6px; }
+.ed-permisos__cabeza { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.ed-medida { padding: 2px 8px; border-radius: 99px; background: color-mix(in srgb, var(--e-nuevo) 22%, transparent); color: #FBE2A6; font-size: 11px; font-weight: 700; }
+.ed-reset { margin-left: auto; padding: 4px 0; border: 0; background: none; color: var(--p-tinta); font-size: 13px; font-weight: 600; text-decoration: underline; text-underline-offset: 3px; }
+.ed-permisos h4 { margin: 10px 0 2px; font-size: 13px; font-weight: 700; }
+.ed-permisos ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.ed-permiso {
+  width: 100%; min-height: 56px; padding: 10px 12px; display: flex; align-items: center; gap: 12px; text-align: left;
+  border-radius: 12px; border: 1px solid var(--p-linea); background: var(--p-sup2); color: var(--p-tinta);
+}
+.ed-permiso > span { flex: 1; min-width: 0; display: grid; line-height: 1.3; }
+.ed-permiso b { font-weight: 700; font-size: 14.5px; }
+.ed-permiso small { color: var(--p-suave); font-size: 12.5px; }
+.ed-permiso i { flex: none; width: 44px; height: 28px; border-radius: 99px; background: radial-gradient(circle at 14px 50%, #CFC9D2 0 9px, transparent 10px), #3A3640; }
+.ed-permiso[aria-checked="true"] { border-color: color-mix(in srgb, var(--e-entregado) 45%, transparent); }
+.ed-permiso[aria-checked="true"] i { background: radial-gradient(circle at calc(100% - 14px) 50%, #fff 0 9px, transparent 10px), var(--e-entregado); }
+.ed-permiso:disabled { opacity: .62; cursor: not-allowed; }
+.ed-boton { height: 44px; padding: 0 14px; border-radius: 10px; border: 1px solid var(--p-linea2); background: none; color: var(--p-tinta); font-weight: 700; font-size: 14px; }
+.ed-boton.confirmando, .ed-baja.confirmando { border-color: var(--e-mozo); color: #FFB3B3; background: color-mix(in srgb, var(--e-mozo) 14%, transparent); }
+.ed-error { margin: 0; padding: 10px 12px; border-radius: 10px; background: color-mix(in srgb, var(--e-mozo) 16%, transparent); color: #FFC9C9; font-size: 14px; font-weight: 600; }
+.ed-pie { gap: 8px; }
+.ed-baja { height: 44px; border-radius: 12px; border: 1px solid var(--p-linea2); background: none; color: var(--p-suave); font-weight: 600; font-size: 14px; }
+.detalle__cuerpo.ed-hecho { justify-items: center; align-content: center; gap: 12px; text-align: center; }
+.ed-hecho__titulo { margin: 4px 0 8px; font-size: 18px; }
+.ed-hecho__pin { display: flex; gap: 10px; margin: 0 0 6px; }
+.ed-hecho__pin span { width: 58px; height: 72px; border-radius: 14px; display: grid; place-items: center; background: var(--p-sup2); border: 1px solid var(--p-linea2); font: 800 38px/1 "Onest", system-ui, sans-serif; font-variant-numeric: tabular-nums; }
+.ed-hecho .panel__ayuda { max-width: 34ch; }
+
 @keyframes sacudir { 20%, 60% { transform: translateX(-9px); } 40%, 80% { transform: translateX(9px); } }
 
 @media print {
@@ -1289,7 +1560,7 @@ svg { flex: none; }
   html, body { height: auto; overflow: visible; background: #fff; }
   body > *:not(.panel) { display: none !important; }
   .panel { position: static; overflow: visible; padding: 0; background: #fff; }
-  .panel__cabeza, .turno, .qr-intro, .panel__pie, .detalle, .detalle-velo, .entrada-equipo, .tarjeta-qr__probar { display: none !important; }
+  .panel__cabeza, .turno, .ahora, .alerta, .aviso-panel, .qr-intro, .panel__pie, .detalle, .detalle-velo, .entrada-equipo, .tarjeta-qr__probar { display: none !important; }
   .qr-grilla { grid-template-columns: repeat(2, 1fr); gap: 8mm; }
   .tarjeta-qr { break-inside: avoid; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 }
@@ -1297,7 +1568,7 @@ svg { flex: none; }
 @media (min-width: 900px) {
   .panel { padding-inline: 32px; }
   .panel__cabeza { grid-template-columns: auto 1fr auto; }
-  .panel__tabs { grid-column: 2; grid-row: 1; justify-self: center; width: min(460px, 100%); }
+  .panel__tabs { grid-column: 2; grid-row: 1; justify-self: center; width: auto; min-width: min(460px, 100%); max-width: 100%; }
   .avisos { grid-template-columns: repeat(auto-fill, minmax(380px, 1fr)); }
   .plano { grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); }
   .stock { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -1345,6 +1616,9 @@ svg { flex: none; }
   <symbol id="i-mudo" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9.5h3.5L12 6v12l-4.5-3.5H4z"/><path d="M16 9.5l5 5M21 9.5l-5 5"/></symbol>
   <symbol id="i-borrar" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5h11a1.5 1.5 0 0 1 1.5 1.5v11A1.5 1.5 0 0 1 20 19H9l-6-7z"/><path d="M12.5 9.5l5 5M17.5 9.5l-5 5"/></symbol>
   <symbol id="i-listo" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M8 12.5l2.8 2.8L16.5 9.5"/></symbol>
+  <symbol id="i-mas" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></symbol>
+  <symbol id="i-deshacer" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14L4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/></symbol>
+  <symbol id="i-fuego" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3c.6 3.2 5 5.4 5 10.2A5 5 0 0 1 7 13.5c0-2.3 1.2-3.8 2.4-4.8.1 1.6.9 2.8 2 3.3C11 9.3 10.9 6.3 12 3z"/></symbol>
 </svg>
 
 <div class="fondo" id="fondo" aria-hidden="true"><div class="fondo__palabra" id="palabra"></div></div>
@@ -1394,22 +1668,35 @@ svg { flex: none; }
 
 <div class="velo" id="velo" hidden></div>
 
-<section class="hoja hoja--bienvenida" id="hoja-bienvenida" role="dialog" aria-modal="true" aria-labelledby="bienvenida-titulo" hidden>
-  <header class="hoja__cabeza">
-    <div><p class="hoja__sobre" id="bienvenida-sobre"></p><h2 class="bienvenida__mesa" id="bienvenida-titulo"></h2></div>
-    <button class="boton-icono boton-icono--hoja" type="button" data-cerrar aria-label="Primero mirar la carta"><svg width="18" height="18"><use href="#i-cerrar"/></svg></button>
-  </header>
-  <div class="hoja__cuerpo">
-    <p class="bienvenida__gente" id="bienvenida-gente"></p>
-    <div class="campo campo--nombre">
-      <label for="bienvenida-nombre">¿Cómo te llamás?</label>
-      <input id="bienvenida-nombre" type="text" autocomplete="given-name" maxlength="20" placeholder="Tu nombre" enterkeyhint="go">
+<!-- Bienvenida: lo primero que se ve al escanear el QR de la mesa. El plato del medio es
+     el mismo 3D de la carta: se arma solo, se gira con el dedo y después vuelve a su lugar. -->
+<section class="bienvenida" id="bienvenida" role="dialog" aria-modal="true" aria-labelledby="bv-titulo" hidden>
+  <div class="bv__marco">
+    <header class="bv__cabeza">
+      <p class="bv__local" id="bv-local"></p>
+      <p class="bv__mesa" id="bv-mesa"></p>
+    </header>
+    <div class="bv__saludo">
+      <h2 class="bv__titulo" id="bv-titulo"></h2>
+      <p class="bv__bajada" id="bv-bajada"></p>
     </div>
-    <p class="nota-pie nota-pie--izq">Así en la mesa se sabe qué pidió cada uno. Solo lo ven ustedes y el mozo.</p>
+    <div class="bv__plato" id="bv-plato">
+      <p class="bv__pista" id="bv-pista"><svg width="16" height="16" aria-hidden="true"><use href="#i-giro"/></svg><span>Giralo con el dedo</span></p>
+    </div>
+    <div class="bv__abajo">
+      <div class="bv__gente" id="bv-gente"></div>
+      <div class="bv__campo">
+        <label for="bv-nombre">¿Cómo te llamás?</label>
+        <div class="bv__fila">
+          <span class="avatar bv__yo" id="bv-yo" aria-hidden="true">?</span>
+          <input id="bv-nombre" type="text" autocomplete="given-name" autocapitalize="words" maxlength="20" placeholder="Tu nombre" enterkeyhint="go">
+        </div>
+        <div class="bv__colores" id="bv-colores" role="radiogroup" aria-label="Tu color en la mesa"></div>
+      </div>
+      <button class="boton-principal bv__entrar" id="bv-entrar" type="button">Entrar a la mesa</button>
+      <button class="bv__mirar" id="bv-mirar" type="button">Primero quiero mirar la carta</button>
+    </div>
   </div>
-  <footer class="hoja__pie">
-    <button class="boton-principal" id="bienvenida-entrar" type="button">Entrar a la mesa</button>
-  </footer>
 </section>
 
 <section class="hoja" id="hoja-armar" role="dialog" aria-modal="true" aria-labelledby="armar-titulo" hidden>
@@ -1518,11 +1805,14 @@ svg { flex: none; }
       <a class="panel__salir" href="#carta">Ver la carta <svg width="14" height="14" aria-hidden="true"><use href="#i-flecha"/></svg></a>
     </header>
     <div class="turno" id="turno"></div>
+    <div class="ahora" id="ahora"></div>
     <div class="panel__vista" id="vistas" role="tabpanel"></div>
-    <p class="panel__pie" id="panel-pie">Demo: la Mesa 7 es la tuya (entrás desde la carta). Juli, Tomi, las otras mesas y el resto del equipo son simulados; lo que muevas vos a mano no lo toca nadie. Tocando a alguien de "En turno" entrás como esa persona. Para sumar comensales de verdad, entrá como Sofi y abrí mesas desde <b>QR</b>: cada una se abre en otra pestaña, como otro celular. <button type="button" id="panel-reiniciar">Empezar de cero</button></p>
+    <p class="panel__pie" id="panel-pie">Demo: la Mesa 7 es la tuya (entrás desde la carta). Juli, Tomi, las otras mesas y el resto del equipo son simulados; lo que muevas vos a mano no lo toca nadie. Con "Probar como" entrás como otra persona y ves lo que le toca a cada una: Carla es moza, no ve la cocina y le suena cuando algo está listo para llevar. Como Rober (dueño) o Sofi (encargada) está <b>Equipo</b>: sumá gente y elegí qué puede hacer cada uno. Desde <b>QR</b> abrís mesas en otra pestaña, como otro celular. Si nadie mira la demo, el local queda en pausa. <button type="button" id="panel-reiniciar">Empezar de cero</button></p>
   </div>
   <div class="detalle-velo" id="detalle-velo" hidden></div>
   <aside class="detalle" id="detalle" role="dialog" aria-modal="true" aria-labelledby="detalle-titulo" hidden></aside>
+  <div class="alerta" id="alerta" hidden></div>
+  <div class="aviso-panel" id="deshacer" role="status" aria-live="polite" hidden></div>
 </section>
 
 <div class="aviso" id="aviso" role="status" aria-live="polite"></div>
@@ -1563,12 +1853,27 @@ window.LOCAL = {
     { n: 11, zona: "Vereda", lugares: 4 },
     { n: 12, zona: "Vereda", lugares: 4 },
   ],
-  // El equipo: cada uno entra al panel con su nombre y su PIN, y todo lo que hace queda con
-  // su nombre (quién aceptó el pedido, quién lo llevó, quién cobró).
-  //   rol: "encargado" (ve todo) · "mozo" (mesas, llamados y lo que hay que llevar; su zona
-  //   primero) · "cocina" y "barra" (las comandas de su estación y lo que se terminó).
+  // Los puestos y lo que puede ver y hacer cada uno de entrada. Desde el panel (sección
+  // Equipo), el dueño o el encargado suman personas, les eligen el puesto y ajustan los
+  // permisos de cada una.
+  //   mesas: el plano del salón · atender: le suena cuando llaman al mozo · llevar: le suena
+  //   cuando algo está listo para llevar · cobrar: la cuenta y liberar la mesa · cocina,
+  //   barra (una por estación): sus comandas · carta: marcar agotados · qr: los códigos de
+  //   las mesas · equipo: sumar personas, PIN y permisos.
+  roles: [
+    { id: "dueno",     nombre: "Dueño/a",     permisos: ["mesas", "atender", "llevar", "cobrar", "cocina", "barra", "carta", "qr", "equipo"] },
+    { id: "encargado", nombre: "Encargado/a", permisos: ["mesas", "atender", "llevar", "cobrar", "cocina", "barra", "carta", "qr", "equipo"] },
+    { id: "mozo",      nombre: "Mozo/a",      permisos: ["mesas", "atender", "llevar", "cobrar"] },
+    { id: "cocina",    nombre: "Cocina",      permisos: ["cocina", "carta"] },
+    { id: "barra",     nombre: "Barra",       permisos: ["barra", "carta"] },
+    { id: "caja",      nombre: "Caja",        permisos: ["mesas", "cobrar"] },
+  ],
+  // El equipo de arranque: cada uno entra al panel con su nombre y su PIN, y todo lo que
+  // hace queda con su nombre (quién empezó el pedido, quién lo llevó, quién cobró).
+  // zona: la de sus mesas (le aparecen primero). permisos: si no se dicen, los de su puesto.
   // En la demo el PIN de todos es 1234. En la versión real, los PIN viven en la base.
   equipo: [
+    { id: "rober",  nombre: "Rober",  rol: "dueno",     puesto: "Dueño",     color: "#F28FB0", pin: "1234" },
     { id: "sofi",   nombre: "Sofi",   rol: "encargado", puesto: "Encargada", color: "#C4A4FF", pin: "1234" },
     { id: "carla",  nombre: "Carla",  rol: "mozo",      puesto: "Moza",      color: "#7FD6FF", pin: "1234", zona: "Salón" },
     { id: "nico",   nombre: "Nico",   rol: "mozo",      puesto: "Mozo",      color: "#8BE3B4", pin: "1234", zona: "Vereda" },
@@ -1719,7 +2024,7 @@ window.LOCAL = {
 <script>
 /* /assets/datos.js */
 /* =============================================================================
-   CARTA VIVA — los datos del local: mesas, comensales, pedidos y llamados
+   CARTA VIVA — los datos del local: mesas, comensales, pedidos, llamados y equipo
    Las mismas funciones sirven para dos lugares:
    · Vista previa (ahora): todo queda en este navegador. Las pestañas se hablan entre
      sí, así que se puede tener la carta en una y el panel en otra.
@@ -1735,19 +2040,26 @@ window.LOCAL = {
      cada parte avanza sola: nuevo → preparando → listo → entregado.
    · LLAMADOS: "que venga el mozo" y "la cuenta". Los toma alguien del equipo, con su
      nombre, para que no vayan dos a la misma mesa.
+   · EQUIPO: cada persona con su PIN, su puesto y sus permisos (qué ve y qué puede hacer).
+     Los maneja quien tiene el permiso "equipo" (el dueño o el encargado).
    ============================================================================= */
 
 (function () {
   "use strict";
 
   const L = window.LOCAL;
-  const CLAVE = "cartaviva.demo.v3";
+  const CLAVE = "cartaviva.demo.v4";
+  const VERSION = 4;
   const ESTADOS = ["nuevo", "preparando", "listo", "entregado"];
   const COLORES = ["#FF7A59", "#3DB2FF", "#FFC43D", "#A57BFF", "#2BC48A", "#FF6FB5"];
+  const COLORES_EQUIPO = ["#C4A4FF", "#7FD6FF", "#8BE3B4", "#FFB27A", "#FFD86B", "#F28FB0", "#9FB4FF", "#E6C79C"];
+  const VENTANA = 20e3;           // cuánto tiempo hay para deshacer algo tocado sin querer
   const SIN = {};                 // "no cambió nada": no se guarda ni se avisa
   let memoria = null, cache = null;
 
+  try { localStorage.removeItem("cartaviva.demo.v3"); } catch { /* sin almacenamiento */ }
   const avisar = () => window.dispatchEvent(new CustomEvent("carta:datos"));
+  const error = texto => window.dispatchEvent(new CustomEvent("carta:error", { detail: texto }));
   window.addEventListener("storage", e => { if (e.key === CLAVE) { cache = null; avisar(); } });
 
   const nuevoId = pre => pre + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
@@ -1756,7 +2068,6 @@ window.LOCAL = {
     const p = platoDe(id), c = p && L.categorias.find(x => x.id === p.categoria);
     return (c && c.estacion) || "cocina";
   };
-  const nombreEquipo = id => ((L.equipo || []).find(e => e.id === id) || {}).nombre || "Alguien del equipo";
   const nombreEstacion = id => ((L.estaciones || []).find(e => e.id === id) || {}).nombre || id;
   const suma = items => items.reduce((s, x) => s + x.precio * x.cant, 0);
   const anotar = (s, texto, t = Date.now()) => {
@@ -1764,20 +2075,88 @@ window.LOCAL = {
     s.historia.sort((a, b) => a.t - b.t);
     if (s.historia.length > 80) s.historia.shift();
   };
+  // Lo que se deshizo no queda en la historia de la mesa
+  const desanotar = (s, texto, t) => {
+    for (let i = s.historia.length - 1; i >= 0; i--) {
+      const h = s.historia[i];
+      if (h.texto === texto && Math.abs(h.t - t) < 2000) { s.historia.splice(i, 1); return; }
+    }
+  };
   const estadoPedido = p => (p.rechazado ? "rechazado"
     : ESTADOS[Math.min(...Object.values(p.partes).map(x => ESTADOS.indexOf(x.estado)))]);
   const DIVIDIR = { junto: "todo junto", igual: "en partes iguales", "cada-uno": "cada uno lo suyo" };
 
   /* ---------------------------------------------------------------------------
+     Permisos y puestos
+     --------------------------------------------------------------------------- */
+  const ESTACIONES = L.estaciones && L.estaciones.length ? L.estaciones : [{ id: "cocina", nombre: "Cocina", donde: "la cocina" }];
+  const PERMISOS = [
+    { id: "mesas",   grupo: "El salón", corto: "Mesas",    nombre: "Ver las mesas",        ayuda: "El plano del salón: quién está sentado, qué pidió cada mesa y cuánto lleva." },
+    { id: "atender", grupo: "El salón", corto: "Llamados", nombre: "Atender los llamados", ayuda: "Le suena cuando una mesa llama al mozo." },
+    { id: "llevar",  grupo: "El salón", corto: "Llevar",   nombre: "Llevar a las mesas",   ayuda: "Le suena cuando la comida o las bebidas están listas para llevar." },
+    { id: "cobrar",  grupo: "El salón", corto: "Cobrar",   nombre: "Cobrar",               ayuda: "Lleva la cuenta, cobra y deja la mesa libre." },
+    ...ESTACIONES.map(e => ({
+      id: e.id, grupo: "Cocina y barra", corto: e.nombre, nombre: e.nombre,
+      ayuda: `Ve las comandas de ${e.donde || e.nombre.toLowerCase()} y las marca empezadas y listas.`,
+    })),
+    { id: "carta",   grupo: "El local", corto: "Agotados", nombre: "Marcar agotados",      ayuda: "Lo que se termina deja de poder pedirse en todas las mesas." },
+    { id: "qr",      grupo: "El local", corto: "QR",       nombre: "Los QR de las mesas",  ayuda: "Verlos e imprimirlos para pegar en cada mesa." },
+    { id: "equipo",  grupo: "El local", corto: "Equipo",   nombre: "Manejar el equipo",    ayuda: "Sumar personas, darles un PIN y elegir qué puede hacer cada una." },
+  ];
+  const TODOS = PERMISOS.map(p => p.id);
+  const ROLES = (L.roles && L.roles.length ? L.roles : [
+    { id: "encargado", nombre: "Encargado/a", permisos: TODOS },
+    { id: "mozo", nombre: "Mozo/a", permisos: ["mesas", "atender", "llevar", "cobrar"] },
+  ]).map(r => ({ id: r.id, nombre: r.nombre, permisos: r.permisos.filter(p => TODOS.includes(p)) }));
+  const rolDe = id => ROLES.find(r => r.id === id) || null;
+  const permisosDeRol = id => [...((rolDe(id) || {}).permisos || [])];
+  const activo = e => !!e && e.activo !== false;
+  const tiene = (e, permiso) => activo(e) && (e.permisos || []).includes(permiso);
+  const quienEs = (d, id) => (d.equipo || []).find(e => e.id === id) || null;
+  const nombreEn = (d, id) => (quienEs(d, id) || {}).nombre || "Alguien del equipo";
+  // Qué hace falta para cada cosa del equipo (lo mismo valida la base real)
+  // Llevar a la mesa es de quien lleva (el mozo); empezar y terminar, de la estación
+  const puedeMover = (e, estacion, estado) => (estado === "entregado" ? tiene(e, "llevar") : tiene(e, estacion));
+  const puedeRechazar = (e, p) => tiene(e, "mesas") || Object.keys(p.partes).some(est => tiene(e, est));
+  const puedeAtender = (e, l) => tiene(e, l.tipo === "mozo" ? "atender" : "cobrar");
+  // Un dueño solo lo cambia otro dueño
+  const puedeEditar = (yo, e) => tiene(yo, "equipo") && (!e || e.rol !== "dueno" || yo.rol === "dueno");
+
+  function pinNuevo() {
+    for (;;) {
+      const p = String(1000 + Math.floor(Math.random() * 9000));
+      if (!/^(\d)\1{3}$/.test(p) && !"0123456789".includes(p) && !"9876543210".includes(p)) return p;
+    }
+  }
+  const pinValido = pin => /^\d{4}$/.test(String(pin || ""));
+  const colorValido = c => /^#[0-9A-Fa-f]{6}$/.test(String(c || ""));
+
+  function equipoInicial() {
+    return (L.equipo || []).map((e, i) => ({
+      id: e.id, nombre: e.nombre, rol: e.rol, puesto: e.puesto || (rolDe(e.rol) || {}).nombre || "",
+      zona: e.zona || "", color: e.color || COLORES_EQUIPO[i % COLORES_EQUIPO.length], pin: String(e.pin || "1234"),
+      permisos: (e.permisos || permisosDeRol(e.rol)).filter(p => TODOS.includes(p)), activo: true, orden: i,
+    }));
+  }
+
+  /* ---------------------------------------------------------------------------
      Lo que ya está pasando en el local cuando se abre la demo
      --------------------------------------------------------------------------- */
-  function ejemplo() {
+  function ejemplo(equipo) {
     const ahora = Date.now();
     const antes = m => ahora - m * 60e3;
-    const d = { v: 3, numero: 39, sesiones: [], comensales: [], carrito: [], pedidos: [], llamados: [], agotados: [], sim: { inicio: ahora, paso: 0 } };
+    const d = {
+      v: VERSION, numero: 39, equipo: equipo || equipoInicial(),
+      sesiones: [], comensales: [], carrito: [], pedidos: [], llamados: [], agotados: [], sim: { inicio: ahora, paso: 0 },
+    };
+    // Quién hace cada cosa en lo que ya pasó: alguien del equipo con ese permiso
+    const hace = (permiso, prefiere) => {
+      const e = d.equipo.filter(x => tiene(x, permiso));
+      return (e.find(x => x.id === prefiere) || e.find(x => x.rol === permiso) || e[0] || {}).id || null;
+    };
 
-    const mesa = (n, hace, nombres, extra = {}) => {
-      const s = { id: "s" + n + "-" + ahora.toString(36), mesa: n, abierta: antes(hace), cerrada: null, historia: [], ...extra };
+    const mesa = (n, hace_, nombres, extra = {}) => {
+      const s = { id: "s" + n + "-" + ahora.toString(36), mesa: n, abierta: antes(hace_), cerrada: null, historia: [], ...extra };
       d.sesiones.push(s);
       const gente = nombres.map((nombre, i) => {
         const c = { id: `${s.id}-${i}`, sesion: s.id, nombre, color: COLORES[i % COLORES.length], unido: s.abierta + i * 50e3, sim: true };
@@ -1790,20 +2169,21 @@ window.LOCAL = {
     const item = (id, cant, c, detalle = "", precio) => ({
       plato: id, nombre: platoDe(id).nombre, cant, precio: precio || platoDe(id).precio, detalle, eleccion: null, comensal: c.id, estacion: estacionDe(id),
     });
-    // estados: { cocina: ["preparando", hace (min), quién], barra: [...] }
-    const QUIEN = { cocina: "diego", barra: "martin" };
-    const pedido = (numero, m, por, hace, items, estados, nota = "") => {
+    // estados: { cocina: ["preparando", hace (min), quién lo llevó], barra: [...] }
+    const pedido = (numero, m, por, hace_, items, estados, nota = "") => {
       const p = {
         id: "p" + numero, numero, sesion: m.s.id, mesa: m.s.mesa, ronda: d.pedidos.filter(x => x.sesion === m.s.id).length + 1,
-        por: por.id, creado: antes(hace), items, nota, total: suma(items), partes: {}, rechazado: null,
+        por: por.id, creado: antes(hace_), items, nota, total: suma(items), partes: {}, rechazado: null,
       };
       anotar(m.s, `${por.nombre} mandó la ronda ${p.ronda} (pedido ${numero})`, p.creado);
-      Object.entries(estados).forEach(([est, [estado, desde, quien]]) => {
-        p.partes[est] = { estado, cambio: antes(desde), quien };
+      Object.entries(estados).forEach(([est, [estado, desde, lleva]]) => {
         const k = ESTADOS.indexOf(estado), nom = nombreEstacion(est);
-        if (k >= 1) anotar(m.s, `${nombreEquipo(QUIEN[est])} empezó la ronda ${p.ronda} · ${nom}`, k === 1 ? antes(desde) : p.creado + 50e3);
-        if (k >= 2) anotar(m.s, `${nombreEquipo(QUIEN[est])} terminó la ronda ${p.ronda} · ${nom}`, k === 2 ? antes(desde) : antes(desde) - 90e3);
-        if (k >= 3) anotar(m.s, `${nombreEquipo(quien)} llevó a la mesa la ronda ${p.ronda} · ${nom}`, antes(desde));
+        const cocinero = hace(est, est === "cocina" ? "diego" : "martin");
+        const llevo = hace("llevar", lleva);
+        p.partes[est] = { estado, cambio: antes(desde), quien: k === 3 ? llevo : k >= 1 ? cocinero : null };
+        if (k >= 1) anotar(m.s, `${nombreEn(d, cocinero)} empezó la ronda ${p.ronda} · ${nom}`, k === 1 ? antes(desde) : p.creado + 50e3);
+        if (k >= 2) anotar(m.s, `${nombreEn(d, cocinero)} terminó la ronda ${p.ronda} · ${nom}`, k === 2 ? antes(desde) : antes(desde) - 90e3);
+        if (k >= 3) anotar(m.s, `${nombreEn(d, llevo)} llevó a la mesa la ronda ${p.ronda} · ${nom}`, antes(desde));
       });
       d.pedidos.push(p);
       return p;
@@ -1813,14 +2193,16 @@ window.LOCAL = {
     const m1 = mesa(1, 95, ["Pau", "Gonza"]);
     pedido(31, m1, m1.gente[0], 88, [item("clasica", 1, m1.gente[0]), item("remolacha", 1, m1.gente[1]), item("ipa", 2, m1.gente[0])],
       { cocina: ["entregado", 70, "carla"], barra: ["entregado", 84, "carla"] });
-    Object.assign(m1.s, { cerrada: antes(41), cerradaPor: "sofi", total: d.pedidos[0].total });
-    anotar(m1.s, "Sofi cobró y liberó la mesa", m1.s.cerrada);
+    const cobra = hace("cobrar", "sofi");
+    Object.assign(m1.s, { cerrada: antes(41), cerradaPor: cobra, total: d.pedidos[0].total });
+    anotar(m1.s, `${nombreEn(d, cobra)} cobró y liberó la mesa`, m1.s.cerrada);
     const m6 = mesa(6, 80, ["Rocío", "Lean", "Maca", "Ivo"]);
     pedido(32, m6, m6.gente[2], 74, [item("pepperoni", 1, m6.gente[0]), item("fugazzeta", 1, m6.gente[2]), item("fernet", 2, m6.gente[1]), item("limonada", 2, m6.gente[3])],
       { cocina: ["entregado", 52, "carla"], barra: ["entregado", 70, "carla"] });
     pedido(33, m6, m6.gente[1], 40, [item("flan", 2, m6.gente[1]), item("helado", 1, m6.gente[3])], { cocina: ["entregado", 31, "carla"] });
-    Object.assign(m6.s, { cerrada: antes(12), cerradaPor: "carla", total: d.pedidos.slice(1, 3).reduce((t, p) => t + p.total, 0) });
-    anotar(m6.s, "Carla cobró y liberó la mesa", m6.s.cerrada);
+    const cobra6 = hace("cobrar", "carla");
+    Object.assign(m6.s, { cerrada: antes(12), cerradaPor: cobra6, total: d.pedidos.slice(1, 3).reduce((t, p) => t + p.total, 0) });
+    anotar(m6.s, `${nombreEn(d, cobra6)} cobró y liberó la mesa`, m6.s.cerrada);
 
     // Las mesas ocupadas ahora
     const m5 = mesa(5, 46, ["Lucas", "Vale", "Agus", "Belu", "Santi"]);
@@ -1839,15 +2221,15 @@ window.LOCAL = {
 
     const m9 = mesa(9, 24, ["Fede", "Sol"]);
     pedido(37, m9, m9.gente[1], 16, [item("fugazzeta", 1, m9.gente[1]), item("fernet", 1, m9.gente[0]), item("fernet", 1, m9.gente[1])],
-      { cocina: ["listo", 1, "diego"], barra: ["entregado", 12, "nico"] });
+      { cocina: ["listo", 1], barra: ["entregado", 12, "nico"] });
 
     const m3 = mesa(3, 14, ["Mica", "Joaco", "Rama"]);
     pedido(38, m3, m3.gente[1], 7, [item("pepperoni", 1, m3.gente[0]), item("papas-cheddar", 1, m3.gente[2]), item("ipa", 2, m3.gente[1])],
-      { cocina: ["preparando", 5, "diego"], barra: ["entregado", 3, "carla"] });
+      { cocina: ["preparando", 5], barra: ["entregado", 3, "carla"] });
 
     const m12 = mesa(12, 4, ["Flor", "Nahue"]);
     pedido(39, m12, m12.gente[0], 0.8, [item("clasica", 1, m12.gente[0], "Doble · sin cebolla", 21700), item("clasica", 1, m12.gente[1], "Doble · sin cebolla", 21700), item("limonada", 1, m12.gente[0]), item("limonada", 1, m12.gente[1])],
-      { cocina: ["nuevo", 0.8, null], barra: ["nuevo", 0.8, null] }, "Una de las burgers bien cocida");
+      { cocina: ["nuevo", 0.8], barra: ["nuevo", 0.8] }, "Una de las burgers bien cocida");
 
     // Mesa 4: se acaban de sentar y están eligiendo
     const m4 = mesa(4, 2, ["Emi"]);
@@ -1877,8 +2259,8 @@ window.LOCAL = {
     if (cache) return cache;
     let d = null;
     try { d = JSON.parse(localStorage.getItem(CLAVE)); } catch { d = null; }
-    if (!d || d.v !== 3) {
-      d = memoria && memoria.v === 3 ? memoria : ejemplo();
+    if (!d || d.v !== VERSION) {
+      d = memoria && memoria.v === VERSION ? memoria : ejemplo();
       try { localStorage.setItem(CLAVE, JSON.stringify(d)); } catch { /* queda en memoria */ }
     }
     memoria = d;
@@ -1906,6 +2288,51 @@ window.LOCAL = {
   };
 
   /* ---------------------------------------------------------------------------
+     El reloj de la demo
+     La demo vive en este navegador: cuando nadie la mira, el local se "pausa". Al volver,
+     todo se corre hacia adelante lo que estuvo pausado (así las horas de lo que hizo cada
+     uno siguen teniendo sentido). Si pasaron más de 6 horas, arranca un servicio nuevo
+     con el mismo equipo.
+     --------------------------------------------------------------------------- */
+  const VIVO = "cartaviva.demo.vivo";
+  const PAUSA = 45e3, OTRO_DIA = 6 * 3600e3;
+  function tiempos(d, fn) {
+    const t = (o, k) => { if (o && typeof o[k] === "number") fn(o, k); };
+    t(d.sim, "inicio");
+    d.sesiones.forEach(s => { t(s, "abierta"); t(s, "cerrada"); t(s.guion, "desde"); (s.historia || []).forEach(h => t(h, "t")); });
+    d.comensales.forEach(c => t(c, "unido"));
+    d.carrito.forEach(l => t(l, "creado"));
+    d.pedidos.forEach(p => {
+      t(p, "creado"); t(p.rechazado, "t");
+      Object.values(p.partes).forEach(pa => { t(pa, "cambio"); t(pa.antes, "cambio"); });
+    });
+    d.llamados.forEach(l => { t(l, "creado"); t(l, "tomado"); t(l.atendido, "t"); });
+    d.agotados.forEach(a => t(a, "t"));
+  }
+  function revisarReloj() {
+    if (document.visibilityState === "hidden") return;
+    const ahora = Date.now();
+    let vivo = 0;
+    try { vivo = +localStorage.getItem(VIVO) || 0; localStorage.setItem(VIVO, String(ahora)); } catch { return; }
+    if (!vivo || ahora - vivo <= PAUSA) return;
+    cache = null;
+    let d = leer();
+    if (ahora - vivo > OTRO_DIA) d = ejemplo(d.equipo);
+    else {
+      let ultimo = 0;
+      tiempos(d, (o, k) => { ultimo = Math.max(ultimo, o[k]); });
+      const correr = Math.min(ahora - vivo, ahora - ultimo);      // nunca al futuro
+      if (correr < 1000) return;
+      tiempos(d, (o, k) => { o[k] += correr; });
+    }
+    guardar(d);
+  }
+  revisarReloj();
+  setInterval(revisarReloj, 5000);
+  document.addEventListener("visibilitychange", revisarReloj);
+  window.addEventListener("pageshow", revisarReloj);
+
+  /* ---------------------------------------------------------------------------
      Lo que hace el comensal
      --------------------------------------------------------------------------- */
   // Entrar a la mesa (el QR): si la mesa está libre, se abre una sesión nueva.
@@ -1919,9 +2346,11 @@ window.LOCAL = {
       const usados = new Set(gente.map(c => c.color));
       nombre = String(nombre || "").replace(/\s+/g, " ").trim().slice(0, 20) || `Invitado ${gente.length + 1}`;
       if (gente.some(c => c.nombre.toLowerCase() === nombre.toLowerCase())) nombre += " " + (gente.length + 1);
+      const { color: pedido, ...resto } = extra;
       const c = {
-        id: nuevoId("c"), sesion: s.id, nombre, unido: ahora, ...extra,
-        color: COLORES.find(x => !usados.has(x)) || COLORES[gente.length % COLORES.length],
+        id: nuevoId("c"), sesion: s.id, nombre, unido: ahora, ...resto,
+        color: COLORES.includes(pedido) && !usados.has(pedido) ? pedido
+          : COLORES.find(x => !usados.has(x)) || COLORES[gente.length % COLORES.length],
       };
       d.comensales.push(c);
       anotar(s, gente.length ? `${nombre} se sumó a la mesa` : `${nombre} escaneó el QR y abrió la mesa`, ahora);
@@ -2008,7 +2437,12 @@ window.LOCAL = {
 
   /* ---------------------------------------------------------------------------
      Lo que hace el equipo (quien = id de la persona que lo hizo)
+     aMano = false: lo hace la simulación de la demo (no pide permisos)
      --------------------------------------------------------------------------- */
+  const sinPermiso = () => { error("No tenés permiso para eso."); return SIN; };
+  const VERBO = { preparando: "empezó", listo: "terminó", entregado: "llevó a la mesa" };
+  const textoPaso = (d, quien, estado, p, estacion) => `${nombreEn(d, quien)} ${VERBO[estado]} la ronda ${p.ronda} · ${nombreEstacion(estacion)}`;
+
   // Avanzar la parte de una estación: nuevo → preparando → listo → entregado.
   // Si dos lo tocan a la vez, gana el primero y el segundo no hace nada.
   function mover(pedidoId, estacion, estado, quien, aMano = true) {
@@ -2017,12 +2451,13 @@ window.LOCAL = {
       const pa = p && p.partes[estacion];
       const s = p && d.sesiones.find(x => x.id === p.sesion);
       if (!pa || !s || s.cerrada || p.rechazado || ESTADOS.indexOf(estado) <= ESTADOS.indexOf(pa.estado)) return SIN;
+      if (aMano && !puedeMover(quienEs(d, quien), estacion, estado)) return sinPermiso();
+      const antes = { estado: pa.estado, cambio: pa.cambio, quien: pa.quien };
       pa.estado = estado;
       pa.cambio = Date.now();
       pa.quien = quien || null;
-      if (aMano) pa.aMano = true;
-      const verbo = { preparando: "empezó", listo: "terminó", entregado: "llevó a la mesa" }[estado];
-      anotar(s, `${nombreEquipo(quien)} ${verbo} la ronda ${p.ronda} · ${nombreEstacion(estacion)}`, pa.cambio);
+      if (aMano) { pa.aMano = true; pa.antes = antes; } else delete pa.antes;
+      anotar(s, textoPaso(d, quien, estado, p, estacion), pa.cambio);
       return p;
     });
   }
@@ -2033,55 +2468,166 @@ window.LOCAL = {
       const p = d.pedidos.find(x => x.id === pedidoId);
       const s = p && d.sesiones.find(x => x.id === p.sesion);
       if (!p || !s || p.rechazado || Object.values(p.partes).some(x => x.estado !== "nuevo")) return SIN;
+      if (!puedeRechazar(quienEs(d, quien), p)) return sinPermiso();
       p.rechazado = { quien: quien || null, t: Date.now() };
-      anotar(s, `${nombreEquipo(quien)} no tomó la ronda ${p.ronda}`, p.rechazado.t);
+      anotar(s, `${nombreEn(d, quien)} no tomó la ronda ${p.ronda}`, p.rechazado.t);
       return p;
     });
   }
 
   // "Voy" (al mozo) o "Llevo la cuenta". El primero que toca se la queda.
-  function atender(llamadoId, quien) {
+  function atender(llamadoId, quien, aMano = true) {
     return cambiar(d => {
       const l = d.llamados.find(x => x.id === llamadoId);
       const s = l && d.sesiones.find(x => x.id === l.sesion);
       if (!l || !s || l.atendido || (l.tipo === "cuenta" && l.toma)) return SIN;
+      if (aMano && !puedeAtender(quienEs(d, quien), l)) return sinPermiso();
       const ahora = Date.now();
       if (l.tipo === "mozo") {
         l.atendido = { quien: quien || null, t: ahora };
-        anotar(s, `${nombreEquipo(quien)} fue a la mesa`, ahora);
+        anotar(s, `${nombreEn(d, quien)} fue a la mesa`, ahora);
       } else {
         l.toma = quien || null;
         l.tomado = ahora;
-        anotar(s, `${nombreEquipo(quien)} lleva la cuenta`, ahora);
+        anotar(s, `${nombreEn(d, quien)} lleva la cuenta`, ahora);
       }
       return l;
     });
   }
 
+  // Deshacer lo último que tocó uno mismo, si nadie lo cambió y pasaron menos de 20 segundos.
+  //   { tipo: "mover", pedido, estacion }  ·  { tipo: "atender", llamado }
+  function deshacer(accion, quien) {
+    return cambiar(d => {
+      const ahora = Date.now();
+      if (accion.tipo === "mover") {
+        const p = d.pedidos.find(x => x.id === accion.pedido);
+        const pa = p && p.partes[accion.estacion];
+        const s = p && d.sesiones.find(x => x.id === p.sesion);
+        if (!pa || !pa.antes || !s || s.cerrada || pa.quien !== quien || ahora - pa.cambio > VENTANA) return SIN;
+        desanotar(s, textoPaso(d, quien, pa.estado, p, accion.estacion), pa.cambio);
+        Object.assign(pa, pa.antes, { aMano: true });           // la simulación ya no la toca
+        delete pa.antes;
+        return p;
+      }
+      if (accion.tipo === "atender") {
+        const l = d.llamados.find(x => x.id === accion.llamado);
+        const s = l && d.sesiones.find(x => x.id === l.sesion);
+        if (!l || !s || s.cerrada) return SIN;
+        if (l.tipo === "mozo" && l.atendido && l.atendido.quien === quien && ahora - l.atendido.t <= VENTANA) {
+          desanotar(s, `${nombreEn(d, quien)} fue a la mesa`, l.atendido.t);
+          l.atendido = null;
+          return l;
+        }
+        if (l.tipo === "cuenta" && !l.atendido && l.toma === quien && ahora - l.tomado <= VENTANA) {
+          desanotar(s, `${nombreEn(d, quien)} lleva la cuenta`, l.tomado);
+          l.toma = null;
+          l.tomado = null;
+          return l;
+        }
+      }
+      return SIN;
+    });
+  }
+
   // Cobrada: la sesión se cierra y la mesa queda libre para los próximos.
-  function cerrarMesa(mesa, quien) {
+  function cerrarMesa(mesa, quien, aMano = true) {
     return cambiar(d => {
       const s = sesionActiva(d, mesa);
       if (!s) return SIN;
+      if (aMano && !tiene(quienEs(d, quien), "cobrar")) return sinPermiso();
       const ahora = Date.now();
       s.cerrada = ahora;
       s.cerradaPor = quien || null;
       s.total = d.pedidos.filter(p => p.sesion === s.id && !p.rechazado).reduce((t, p) => t + p.total, 0);
       d.carrito = d.carrito.filter(l => l.sesion !== s.id);
       d.llamados.forEach(l => { if (l.sesion === s.id && !l.atendido) l.atendido = { quien: quien || null, t: ahora }; });
-      anotar(s, `${nombreEquipo(quien)} cobró y liberó la mesa`, ahora);
+      anotar(s, `${nombreEn(d, quien)} cobró y liberó la mesa`, ahora);
       return s;
     });
   }
 
   function agotar(id, si, quien) {
     return cambiar(d => {
+      if (!tiene(quienEs(d, quien), "carta")) return sinPermiso();
       const ya = d.agotados.some(a => a.id === id);
       if (ya === !!si) return SIN;
       d.agotados = d.agotados.filter(a => a.id !== id);
       if (si) d.agotados.push({ id, quien: quien || null, t: Date.now() });
       return true;
     });
+  }
+
+  /* ---------------------------------------------------------------------------
+     El equipo: sumar, cambiar, PIN y dar de baja (lo hace quien tiene "equipo")
+     Devuelven { ok: true, persona, pin } o { ok: false, motivo }.
+     --------------------------------------------------------------------------- */
+  function guardarPersona(quien, x) {
+    let res = { ok: false, motivo: "error" };
+    cambiar(d => {
+      const yo = quienEs(d, quien);
+      let e = x.id ? quienEs(d, x.id) : null;
+      const no = motivo => { res = { ok: false, motivo }; return SIN; };
+      if (x.id && !e) return no("no_existe");
+      if (!puedeEditar(yo, e)) return no(tiene(yo, "equipo") ? "solo_dueno" : "sin_permiso");
+      const nombre = String(x.nombre || "").replace(/\s+/g, " ").trim().slice(0, 20);
+      if (!nombre) return no("nombre");
+      const rol = rolDe(x.rol);
+      if (!rol) return no("rol");
+      if (rol.id === "dueno" && yo.rol !== "dueno") return no("solo_dueno");
+      const permisos = [...new Set((x.permisos || rol.permisos).filter(p => TODOS.includes(p)))];
+      if (e && e.id === quien && !permisos.includes("equipo")) return no("tu_permiso");
+      const otro = d.equipo.find(y => activo(y) && y !== e && y.nombre.toLowerCase() === nombre.toLowerCase());
+      if (otro) return no("nombre_repetido");
+      let pin = null;
+      if (!e) {
+        pin = x.pin == null ? pinNuevo() : String(x.pin);
+        if (!pinValido(pin)) return no("pin");
+        // Si alguien con ese nombre estaba dado de baja, vuelve (con su historia)
+        e = d.equipo.find(y => !activo(y) && y.nombre.toLowerCase() === nombre.toLowerCase());
+        if (!e) { e = { id: nuevoId("e"), orden: d.equipo.length }; d.equipo.push(e); }
+        e.pin = pin;
+      }
+      const usados = new Set(d.equipo.filter(activo).map(y => y.color));
+      Object.assign(e, {
+        nombre, rol: rol.id,
+        puesto: e.rol === rol.id && e.puesto ? e.puesto : rol.nombre,
+        zona: String(x.zona || "").slice(0, 30),
+        color: colorValido(x.color) ? x.color : e.color || COLORES_EQUIPO.find(c => !usados.has(c)) || COLORES_EQUIPO[0],
+        permisos, activo: true,
+      });
+      res = { ok: true, persona: { ...e, pin: undefined }, pin };
+      return e;
+    });
+    return res;
+  }
+  // Un PIN nuevo: se lo da quien maneja el equipo, o cada uno a sí mismo.
+  function cambiarPin(quien, id, pin) {
+    let res = { ok: false, motivo: "error" };
+    cambiar(d => {
+      const yo = quienEs(d, quien), e = quienEs(d, id);
+      if (!activo(e)) { res = { ok: false, motivo: "no_existe" }; return SIN; }
+      if (quien !== id && !puedeEditar(yo, e)) { res = { ok: false, motivo: "sin_permiso" }; return SIN; }
+      const nuevo = pin == null ? pinNuevo() : String(pin);
+      if (!pinValido(nuevo)) { res = { ok: false, motivo: "pin" }; return SIN; }
+      e.pin = nuevo;
+      res = { ok: true, pin: nuevo };
+      return e;
+    });
+    return res;
+  }
+  function bajaPersona(quien, id) {
+    let res = { ok: false, motivo: "error" };
+    cambiar(d => {
+      const yo = quienEs(d, quien), e = quienEs(d, id);
+      if (!activo(e)) { res = { ok: false, motivo: "no_existe" }; return SIN; }
+      if (id === quien) { res = { ok: false, motivo: "vos" }; return SIN; }
+      if (!puedeEditar(yo, e)) { res = { ok: false, motivo: "sin_permiso" }; return SIN; }
+      e.activo = false;
+      res = { ok: true };
+      return e;
+    });
+    return res;
   }
 
   /* ---------------------------------------------------------------------------
@@ -2120,17 +2666,18 @@ window.LOCAL = {
   }
   function olvidarYo() { try { sessionStorage.removeItem(YO); } catch { /* nada */ } }
 
-  // Quién del equipo está usando este dispositivo (en la demo, el PIN está en local.js)
+  // Quién del equipo está usando este dispositivo
   const SOY = "cartaviva.equipo.yo";
-  const EQUIPO = L.equipo || [];
+  // Como en la base real: el PIN no sale de acá (solo se compara al entrar)
+  const equipoActivo = () => (leer().equipo || []).filter(activo).sort((a, b) => a.orden - b.orden).map(e => ({ ...e, pin: undefined }));
   function soyEquipo() {
     let id = null;
     try { id = sessionStorage.getItem(SOY) || localStorage.getItem(SOY); } catch { /* sin almacenamiento */ }
-    return EQUIPO.some(e => e.id === id) ? id : null;
+    return activo(quienEs(leer(), id)) ? id : null;
   }
   async function entrarEquipo(id, pin) {
-    const e = EQUIPO.find(x => x.id === id);
-    if (!e || String(e.pin) !== String(pin)) return { ok: false, motivo: "pin" };
+    const e = quienEs(leer(), id);
+    if (!activo(e) || String(e.pin) !== String(pin)) return { ok: false, motivo: "pin" };
     try { sessionStorage.setItem(SOY, id); localStorage.setItem(SOY, id); } catch { /* queda en esta pestaña */ }
     return { ok: true };
   }
@@ -2139,12 +2686,13 @@ window.LOCAL = {
   window.Datos = {
     modo: "vista-previa",
     listo: Promise.resolve(),
-    ESTADOS, COLORES, DIVIDIR,
+    ESTADOS, COLORES, COLORES_EQUIPO, DIVIDIR, PERMISOS, ROLES, VENTANA,
 
     // La mesa del link (?mesa=7). En la base real llega con el código del QR (?m=...).
     abrirMesa: async ({ mesa }) => { const m = L.mesas.find(x => x.n === mesa); return m ? { mesa: m.n, zona: m.zona, lugares: m.lugares } : null; },
     yo, recordarYo, olvidarYo,
     gente: mesa => { const s = sesionActiva(leer(), mesa); return s ? leer().comensales.filter(c => c.sesion === s.id) : []; },
+    coloresLibres: mesa => { const usados = new Set(Datos.gente(mesa).map(c => c.color)); return COLORES.filter(c => !usados.has(c)); },
 
     todo: leer,                                       // para el panel: no modificar
     sesionDe: mesa => sesionActiva(leer(), mesa),
@@ -2152,21 +2700,26 @@ window.LOCAL = {
     comensal: id => leer().comensales.find(c => c.id === id) || null,
     agotado: id => leer().agotados.some(a => a.id === id),
     agotadoPor: id => leer().agotados.find(a => a.id === id) || null,
-    estadoPedido, estacionDe, nombreEquipo, nombreEstacion,
+    estadoPedido, estacionDe, nombreEstacion,
+    nombreEquipo: id => nombreEn(leer(), id),
 
     entrar, sumar, cantidad, mandar, llamar,
 
     // El equipo
-    equipo: () => EQUIPO,
+    equipo: equipoActivo,
+    persona: id => { const e = quienEs(leer(), id); return e ? { ...e, pin: undefined } : null; },
+    permisosDeRol, pinNuevo,
+    puede: (id, permiso) => tiene(quienEs(leer(), id), permiso),
     mesas: () => L.mesas,
     necesitaCuenta: () => false,
     abrirPanel: () => {}, cerrarPanel: () => {},
     soyEquipo, entrarEquipo, salirEquipo,
-    mover, rechazar, atender, cerrarMesa, agotar,
+    mover, rechazar, atender, deshacer, cerrarMesa, agotar,
+    guardarPersona, cambiarPin, bajaPersona,
     reiniciar: () => { memoria = null; cache = null; guardar(ejemplo()); },
 
     // Solo para la simulación de la demo
-    _cambiar: cambiar, _SIN: SIN, _anotar: anotar,
+    _cambiar: cambiar, _SIN: SIN, _anotar: anotar, _reloj: revisarReloj,
   };
 })();
 
@@ -2177,12 +2730,14 @@ window.LOCAL = {
    CARTA VIVA — la demo en movimiento (solo en la demo)
    Hace de "el resto del local" para ver cómo lo usan varias personas a la vez:
    · Juli y Tomi comparten tu mesa y van sumando cosas al mismo pedido.
-   · Diego (cocina) y Martín (barra) empiezan y terminan lo que se pide.
-   · Carla (salón) y Nico (vereda) llevan lo que está listo, van cuando los llaman y,
-     en tu mesa, te traen la cuenta y te cobran.
+   · La cocina (Diego) y la barra (Martín) empiezan y terminan lo que se pide.
+   · Los mozos (Carla en el salón, Nico en la vereda) llevan lo que está listo, van
+     cuando los llaman y, en tu mesa, te traen la cuenta y te cobran.
    · Las otras mesas siguen su curso: piden otra ronda, llaman al mozo, se sienta gente.
-   Lo que alguien mueve a mano desde el panel, la simulación no lo toca. Si hay varias
-   pestañas abiertas, corre en una sola (la que se está mirando).
+   Cada cosa la hace alguien del equipo que tiene ese permiso (si lo cambiás en Equipo,
+   la simulación también). Lo que alguien mueve a mano desde el panel, la simulación no
+   lo toca. Corre en una sola pestaña, la que se está mirando: si nadie mira, el local
+   queda en pausa (ver "El reloj de la demo" en datos.js).
    ============================================================================= */
 
 (function () {
@@ -2197,12 +2752,13 @@ window.LOCAL = {
     tuya:  { cocina: [6e3, 14e3, 8e3],      barra: [3e3, 6e3, 7e3] },
     otras: { cocina: [90e3, 420e3, 180e3],  barra: [50e3, 150e3, 120e3] },
   };
-  const HACE = { cocina: "diego", barra: "martin" };
-  const mozoDe = n => {
-    const zona = (L.mesas.find(m => m.n === n) || {}).zona;
-    const e = L.equipo.find(x => x.rol === "mozo" && x.zona === zona) || L.equipo.find(x => x.rol === "mozo");
-    return e ? e.id : null;
-  };
+  // Alguien del equipo con ese permiso (el de ese puesto primero; el de la zona de la mesa, si hay)
+  function alguien(d, permiso, mesa) {
+    const e = (d.equipo || []).filter(x => x.activo !== false && (x.permisos || []).includes(permiso));
+    const zona = mesa ? (L.mesas.find(m => m.n === mesa) || {}).zona : null;
+    const delPuesto = e.filter(x => x.rol === permiso || (["atender", "llevar", "cobrar"].includes(permiso) && x.rol === "mozo"));
+    return (delPuesto.find(x => zona && x.zona === zona) || delPuesto[0] || e.find(x => zona && x.zona === zona) || e[0] || {}).id || null;
+  }
   const sumarSim = (comensal, id, cant = 1) => {
     const p = L.platos.find(x => x.id === id);
     if (p && !D.agotado(id)) D.sumar(comensal, { plato: id, eleccion: null, detalle: "", precio: p.precio, clave: id, cant });
@@ -2257,7 +2813,7 @@ window.LOCAL = {
         const k = D.ESTADOS.indexOf(pa.estado);
         if (ahora - pa.cambio < (t[est] || t.cocina)[k]) continue;
         const sig = D.ESTADOS[k + 1];
-        D.mover(p.id, est, sig, sig === "entregado" ? mozoDe(p.mesa) : HACE[est] || "diego", false);
+        D.mover(p.id, est, sig, sig === "entregado" ? alguien(d, "llevar", p.mesa) : alguien(d, est), false);
         return true;                     // de a una cosa por vez, como en un local
       }
     }
@@ -2269,14 +2825,13 @@ window.LOCAL = {
   function llamados(d, ahora, tuyas) {
     for (const l of d.llamados) {
       if (l.atendido || !tuyas.has(l.sesion)) continue;
-      const mozo = mozoDe(l.mesa);
-      if (l.tipo === "mozo" && ahora - l.creado > 5e3) { D.atender(l.id, mozo); return true; }
+      if (l.tipo === "mozo" && ahora - l.creado > 5e3) { D.atender(l.id, alguien(d, "atender", l.mesa), false); return true; }
       if (l.tipo === "cuenta" && !l.toma && ahora - l.creado > 6e3) {
-        D.atender(l.id, mozo);
+        D.atender(l.id, alguien(d, "cobrar", l.mesa), false);
         marcar(x => { const y = x.llamados.find(z => z.id === l.id); if (!y) return false; y.porSim = true; });
         return true;
       }
-      if (l.tipo === "cuenta" && l.porSim && l.toma && ahora - l.tomado > 90e3) { D.cerrarMesa(l.mesa, l.toma); return true; }
+      if (l.tipo === "cuenta" && l.porSim && l.toma && ahora - l.tomado > 90e3) { D.cerrarMesa(l.mesa, l.toma, false); return true; }
     }
     return false;
   }
@@ -2319,6 +2874,7 @@ window.LOCAL = {
 
   /* ---------- Un paso por segundo, en una sola pestaña ---------- */
   function paso() {
+    D._reloj();                          // si la compu estuvo dormida, primero la pausa
     const d = D.todo();
     const ahora = Date.now();
     const tuyas = new Set(d.comensales.filter(c => !c.sim).map(c => c.sesion));
@@ -2333,11 +2889,12 @@ window.LOCAL = {
   const PESTANA = Math.random().toString(36).slice(2);
   const LIDER = "cartaviva.demo.lider";
   function meToca() {
-    const ahora = Date.now(), visible = document.visibilityState !== "hidden";
+    if (document.visibilityState === "hidden") return false;     // si nadie la mira, el local espera
+    const ahora = Date.now();
     let l = null;
     try { l = JSON.parse(localStorage.getItem(LIDER)); } catch { return true; }
-    if (l && l.tab !== PESTANA && ahora - l.t < 2500 && (l.visible || !visible)) return false;
-    try { localStorage.setItem(LIDER, JSON.stringify({ tab: PESTANA, t: ahora, visible })); } catch { /* una sola pestaña */ }
+    if (l && l.tab !== PESTANA && ahora - l.t < 2500) return false;
+    try { localStorage.setItem(LIDER, JSON.stringify({ tab: PESTANA, t: ahora })); } catch { /* una sola pestaña */ }
     return true;
   }
   setInterval(() => {
@@ -3247,6 +3804,8 @@ window.Platos3D = { construir, clave, liberar };
    Escena.vincular(div, plato)             el plato vive en ese div
    Escena.cambiar(div, eleccion)           lo arma a gusto del comensal (con un saltito)
    Escena.explotar(div, si)                separa las capas y las nombra
+   Escena.mudar(div, otroDiv)              el plato se va volando a otro lugar (la bienvenida)
+   Escena.presentar(div) · saltar(div)     se arma solo al aparecer · pega un salto
    Escena.tono(luz, sombra)                la luz de atrás y la sombra toman el color del plato
    Escena.estilo(nombre)                   brasa · jugo · estudio: cómo se ilumina todo
    Escena.foto(plato, eleccion)            → Promise<dataURL> para listas y el pedido
@@ -3434,8 +3993,8 @@ function vincular(el, plato) {
   p.pivote.visible = false;
   scene.add(p.pivote);
   aplicarSombra(p);
-  gestos(p);
   puestos.set(el, p);
+  gestos(el);
 }
 
 function armarModelo(p) {
@@ -3453,18 +4012,20 @@ function armarModelo(p) {
   p.sucio = false;
 }
 
-// Girar con el dedo (lo vertical queda para deslizar la carta) y tocar para un saltito
-function gestos(p) {
-  const el = p.el;
-  let x0 = 0, t0 = 0, recorrido = 0, dedo = null;
+// Girar con el dedo (lo vertical queda para deslizar la carta) y tocar para un saltito.
+// Los gestos son del lugar (el div): el plato que esté ahí en ese momento es el que gira.
+function gestos(el) {
+  el._gestos = true;
+  let x0 = 0, t0 = 0, recorrido = 0, dedo = null, p = null;
   el.addEventListener("pointerdown", e => {
-    if (e.target.closest("button, a")) return;
+    p = puestos.get(el);
+    if (!p || e.target.closest("button, a, input")) return;
     dedo = e.pointerId; x0 = e.clientX; t0 = performance.now(); recorrido = 0;
     p.arrastrando = true;
     if (e.pointerType === "mouse") el.setPointerCapture(dedo);
   });
   el.addEventListener("pointermove", e => {
-    if (e.pointerId !== dedo || !p.arrastrando) return;
+    if (!p || e.pointerId !== dedo || !p.arrastrando) return;
     const dx = e.clientX - x0, ahora = performance.now();
     const dt = Math.max(8, ahora - t0) / 1000;
     x0 = e.clientX; t0 = ahora;
@@ -3475,7 +4036,7 @@ function gestos(p) {
     if (recorrido > 12) el.dispatchEvent(new CustomEvent("escena:giro", { bubbles: true }));
   });
   const fin = e => {
-    if (e.pointerId !== dedo) return;
+    if (!p || e.pointerId !== dedo) return;
     p.arrastrando = false;
     dedo = null;
     if (performance.now() - t0 > 120) p.vel *= 0.3;     // si soltó quieto, no sale disparado
@@ -3533,12 +4094,15 @@ function cuadro(ahora) {
 
     // Dónde y de qué tamaño
     const inc = m.userData.inclinacion;
-    const altoVisto = h * Math.cos(inc) + med.ancho * Math.sin(inc);
+    // Al presentarse (se arma solo) cuenta el tamaño del plato armado y no se corre
+    if (p.presentando && p.exp < 0.01) p.presentando = false;
+    const ex = p.presentando ? 0 : p.exp;
+    const altoVisto = (p.presentando ? med.alto : h) * Math.cos(inc) + med.ancho * Math.sin(inc);
     // En pantallas angostas, al explotar, el plato se corre a la izquierda y los
     // carteles van todos a la derecha
     const angosto = ancho < 640;
-    p.cx = r.left + r.width / 2 - (angosto ? r.width * 0.22 * p.exp : 0);
-    const lugarAncho = r.width * wpp * (angosto ? 1.3 - 0.82 * p.exp : 1.08 - 0.6 * p.exp);
+    p.cx = r.left + r.width / 2 - (angosto ? r.width * 0.22 * ex : 0);
+    const lugarAncho = r.width * wpp * (angosto ? 1.3 - 0.82 * ex : 1.08 - 0.6 * ex);
     const lugarAlto = r.height * wpp * (angosto ? 1.06 : 1.04);
     const esc = Math.min(lugarAncho / med.ancho, lugarAlto / altoVisto);
     v.set((p.cx - ancho / 2) * wpp, -(r.top + r.height / 2 - alto / 2) * wpp, 0);
@@ -3567,7 +4131,7 @@ function cuadro(ahora) {
     p.sombra.material.color.copy(colorSombra);
 
     if (m.userData.animar && MOVIMIENTO) m.userData.animar(t);
-    if (p.exp > 0.02) ponerEtiquetas(p, r, wpp); else quitarEtiquetas(p);
+    if (p.exp > 0.02 && !p.presentando) ponerEtiquetas(p, r, wpp); else quitarEtiquetas(p);
   }
   renderer.render(scene, camera);
 }
@@ -3686,7 +4250,33 @@ window.Escena = {
   },
   explotar(el, si) {
     const p = puestos.get(el);
-    if (p) p.expObj = si ? 1 : 0;
+    if (p) { p.expObj = si ? 1 : 0; p.presentando = false; }
+  },
+  // Pasar el plato de un lugar a otro (la bienvenida lo toma prestado de la carta): va volando
+  mudar(de, a) {
+    const p = puestos.get(de);
+    if (!p || !a || puestos.has(a)) return false;
+    puestos.delete(de);
+    quitarEtiquetas(p);
+    p.el = a;
+    puestos.set(a, p);
+    if (!a._gestos) gestos(a);
+    return true;
+  },
+  // Se arma solo: las capas llegan separadas y caen en su lugar, girando
+  presentar(el) {
+    const p = puestos.get(el);
+    if (!p || !MOVIMIENTO) return;
+    p.exp = 1;
+    p.expObj = 0;
+    p.presentando = true;
+    p.vel = 5;
+  },
+  saltar(el, fuerza = 1) {
+    const p = puestos.get(el);
+    if (!p) return;
+    p.salto = Math.max(p.salto, fuerza);
+    p.vel += 5 * fuerza;
   },
   pausar(si) { pausa = !!si; },
   estilo,
@@ -3833,7 +4423,6 @@ const paleta = p => ((paletas[estilo] ||= {})[p.id] ||= ESTILOS[estilo](p));
 const feed = $("#feed"), fondo = $("#fondo"), palabra = $("#palabra"), velo = $("#velo");
 const pastilla = $("#pastilla"), seg = $("#seguimiento"), gracias = $("#gracias");
 const hojaArmar = $("#hoja-armar"), hojaPedido = $("#hoja-pedido"), hojaCarta = $("#hoja-carta"), hojaMozo = $("#hoja-mozo");
-const hojaBienvenida = $("#hoja-bienvenida");
 let secciones = [];
 let actual = -1;
 let modo = null;               // "explotando" | "armando" | null
@@ -3985,7 +4574,7 @@ const normalizar = (p, el) => (el && describir(p, el) ? el : null);
 function agregar(p, el) {
   if (!mesa) return avisar("Para pedir, escaneá el código QR de tu mesa.");
   if (D.agotado(p.id)) return avisar(`${p.nombre} se terminó por hoy.`);
-  if (!miMesa()) return pedirNombre(() => agregar(p, el));
+  if (!miMesa()) return pedirNombre(() => agregar(p, el), p);
   el = normalizar(p, el);
   const linea = D.sumar(yo, { plato: p.id, eleccion: el, detalle: describir(p, el), precio: precioDe(p, el), clave: P.clave(p, el) + (el?.punto || "") });
   if (!linea) return avisar("No se pudo sumar. Probá de nuevo.");
@@ -4077,53 +4666,156 @@ function cerrarHoja(rapido) {
   velo.classList.remove("abierto");
   const fin = () => { h.hidden = true; if (!hojaAbierta) velo.hidden = true; };
   if (rapido) fin(); else setTimeout(fin, 420);
-  if (!modo && seg.hidden && gracias.hidden) document.body.classList.remove("bloqueada");
-  if (h === hojaBienvenida) setTimeout(ponerPista, 500);
+  if (!modo && seg.hidden && gracias.hidden && !bvAbierta) document.body.classList.remove("bloqueada");
 }
 velo.addEventListener("click", () => cerrarHoja());
 document.addEventListener("click", e => { if (e.target.closest("[data-cerrar]")) cerrarHoja(); });
 
-/* ---------- Bienvenida: entrar a la mesa con tu nombre ---------- */
-let alEntrar = null;
-function pedirNombre(despues) {
-  if (!mesa) return;
+/* ---------- Bienvenida: lo primero que se ve al escanear el QR ----------
+   El plato de la carta viene al medio y se arma solo; se gira con el dedo y con un toque
+   salta. El saludo se completa con tu nombre mientras lo escribís, elegís tu color y ves
+   quiénes ya están en la mesa (si llega alguien más, aparece). Al entrar, el plato vuelve
+   volando a su lugar en la carta. */
+const bv = $("#bienvenida"), bvLugar = $("#bv-plato"), bvNombre = $("#bv-nombre");
+const NOMBRES_COLOR = { "#FF7A59": "coral", "#3DB2FF": "celeste", "#FFC43D": "amarillo", "#A57BFF": "violeta", "#2BC48A": "verde", "#FF6FB5": "rosa" };
+let alEntrar = null, bvAbierta = false, bvPlato = -1, bvPrestado = false, miColor = null;
+const saludo = () => { const h = new Date().getHours(); return h >= 6 && h < 13 ? "Buen día" : h >= 13 && h < 20 ? "Buenas tardes" : "Buenas noches"; };
+function pedirNombre(despues, plato) {
+  if (!mesa || bvAbierta) return;
   alEntrar = despues || null;
+  if (hojaAbierta) cerrarHoja(true);
+  if (modo === "explotando") explotar(false);
+  ocultarPista();
+  bvAbierta = true;
+  bvPlato = plato ? platos.indexOf(plato) : Math.max(0, actual);
+  miColor = null;
+  bvNombre.value = "";
+  $("#bv-bajada").textContent = plato
+    ? `Para sumar ${plato.nombre}, decinos quién sos: así en la mesa se sabe qué pidió cada uno.`
+    : "Mirá cada plato en 3D, armalo a tu gusto y pidan juntos, cada uno desde su celu.";
+  $("#bv-pista").hidden = !!plato;
   pintarBienvenida();
-  abrirHoja(hojaBienvenida, { claro: true });
-  if (despues) setTimeout(() => $("#bienvenida-nombre").focus({ preventScroll: true }), 460);
+  bv.hidden = false;
+  document.body.classList.add("con-bienvenida", "bloqueada");
+  bvPrestado = E.mudar(escenario(bvPlato), bvLugar);
+  if (bvPrestado && !plato) E.presentar(bvLugar);
+  requestAnimationFrame(() => requestAnimationFrame(() => bv.classList.add("abierta")));
+  setTimeout(() => (despues ? bvNombre : $("#bv-entrar")).focus({ preventScroll: true }), despues ? 520 : 60);
+}
+function cerrarBienvenida(entro) {
+  if (!bvAbierta) return;
+  bvAbierta = false;
+  if (bvPrestado) {
+    if (entro) E.saltar(bvLugar, 1);
+    const i = bvPlato;
+    setTimeout(() => E.mudar(bvLugar, escenario(i)), entro ? 260 : 0);
+    bvPrestado = false;
+  }
+  bv.classList.remove("abierta");
+  document.body.classList.remove("con-bienvenida");
+  if (!modo && !hojaAbierta && seg.hidden && gracias.hidden) document.body.classList.remove("bloqueada");
+  setTimeout(() => { if (!bvAbierta) bv.hidden = true; }, 520);
+  // La carta aparece con el plato ya en su lugar y los textos entrando
+  const s = secciones[Math.max(0, actual)];
+  if (s && MOVIMIENTO) { s.classList.remove("entrada"); void s.offsetWidth; s.classList.add("entrada"); }
+  setTimeout(ponerPista, 900);
 }
 function pintarBienvenida() {
   const m = datosMesa();
+  $("#bv-local").textContent = L.nombre;
+  $("#bv-mesa").textContent = [`Mesa ${mesa}`, m.zona].filter(Boolean).join(" · ");
+  bvGente();
+  bvColores();
+  bvYo();
+}
+// Quiénes ya están (con lo que ya pidieron): si entra alguien mientras mirás, aparece
+function bvGente() {
   const gente = D.gente(mesa);
-  $("#bienvenida-sobre").textContent = [L.nombre, m.zona].filter(Boolean).join(" · ");
-  $("#bienvenida-titulo").textContent = `Mesa ${mesa}`;
-  $("#bienvenida-gente").innerHTML = gente.length
-    ? `<span class="avatares">${gente.slice(0, 5).map(c => avatar(c)).join("")}</span>
-       <span>Ya ${gente.length === 1 ? "está" : "están"} <b>${esc(lista(gente.map(c => c.nombre)))}</b>. Lo que elijan va al mismo pedido.</span>`
-    : `<span>Todavía no hay nadie: abrís la mesa vos. Si vienen más, que escaneen el mismo código.</span>`;
+  const s = D.sesionDe(mesa);
+  const rondas = s ? D.mesa(s.id).pedidos.filter(p => !p.rechazado).length : 0;
+  const html = gente.length
+    ? `<span class="avatares">${gente.slice(0, 5).map(c => avatar(c)).join("")}</span><span>Ya ${gente.length === 1 ? "está" : "están"} <b>${esc(lista(gente.map(c => c.nombre)))}</b>. ${rondas
+      ? `Ya ${rondas === 1 ? "mandaron una ronda" : `mandaron ${rondas} rondas`}: lo que elijas va en la próxima.` : "Lo que elijan va al mismo pedido."}</span>`
+    : `<span>Sos el primero en la mesa. Los que vengan, que escaneen el mismo código y pidan juntos.</span>`;
+  const el = $("#bv-gente");
+  if (el._html !== html) { el.innerHTML = html; el._html = html; }
+}
+// Tu color: los que no tiene nadie en la mesa
+function bvColores() {
+  const libres = D.coloresLibres ? D.coloresLibres(mesa) : [];
+  if (!libres.includes(miColor)) miColor = libres[0] || null;
+  const el = $("#bv-colores");
+  const html = libres.map(c => `<button type="button" role="radio" class="bv__color" style="--av:${c}" data-color="${c}" aria-checked="${c === miColor}" aria-label="${NOMBRES_COLOR[c] || c}"></button>`).join("");
+  if (el._html !== html) { el.innerHTML = html; el._html = html; }
+  el.hidden = libres.length < 2;
+}
+function bvYo() {
+  const n = bvNombre.value.trim();
+  const yoEl = $("#bv-yo");
+  yoEl.textContent = n ? inicial(n) : "?";
+  yoEl.style.setProperty("--av", miColor || "#9A9A9A");
+  yoEl.classList.toggle("con-nombre", !!n);
+  $("#bv-titulo").textContent = n ? `¡${saludo()}, ${n.split(" ")[0]}!` : `¡${saludo()}!`;
+  $("#bv-entrar").textContent = n ? `Entrar a la mesa ${mesa}` : "Entrar a la mesa";
+}
+bvNombre.addEventListener("input", () => {
+  const antes_ = $("#bv-yo").classList.contains("con-nombre");
+  bvYo();
+  if (!antes_ && bvNombre.value.trim()) { E.saltar(bvLugar, 0.6); $("#bv-yo").classList.add("salta"); }
+});
+$("#bv-yo").addEventListener("animationend", e => e.currentTarget.classList.remove("salta"));
+bvNombre.addEventListener("focus", () => setTimeout(() => bvNombre.scrollIntoView({ block: "center", behavior: MOVIMIENTO ? "smooth" : "auto" }), 300));
+bvNombre.addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); entrar(); } });
+$("#bv-colores").addEventListener("click", e => {
+  const b = e.target.closest("[data-color]");
+  if (!b) return;
+  miColor = b.dataset.color;
+  bvColores();
+  bvYo();
+  E.saltar(bvLugar, 0.4);
+});
+bvLugar.addEventListener("escena:giro", () => { $("#bv-pista").hidden = true; });
+bvLugar.addEventListener("escena:toque", () => { $("#bv-pista").hidden = true; });
+$("#bv-mirar").addEventListener("click", () => { alEntrar = null; cerrarBienvenida(false); });
+// Tu inicial sale volando hasta la mesa, arriba
+function volarYo(c) {
+  const desde = $("#bv-yo").getBoundingClientRect();
+  const hasta = $("#marca-gente").getBoundingClientRect();
+  if (!MOVIMIENTO || !desde.width || !hasta.width) return;
+  const v = document.createElement("span");
+  v.className = "avatar volador-yo";
+  v.style.setProperty("--av", c.color);
+  v.textContent = inicial(c.nombre);
+  document.body.appendChild(v);
+  const anim = v.animate([
+    { transform: `translate(${desde.left}px, ${desde.top}px) scale(1)` },
+    { transform: `translate(${(desde.left + hasta.left) / 2}px, ${Math.min(desde.top, hasta.top) - 50}px) scale(.8)`, offset: 0.5 },
+    { transform: `translate(${hasta.right - 18}px, ${hasta.top}px) scale(.42)` },
+  ], { duration: 720, easing: "cubic-bezier(.45,0,.25,1)" });
+  anim.onfinish = () => v.remove();
 }
 async function entrar() {
-  const b = $("#bienvenida-entrar");
+  const b = $("#bv-entrar");
   if (b.disabled) return;
   b.disabled = true;
   try {
-    const r = await D.entrar(mesa, $("#bienvenida-nombre").value);
+    const r = await D.entrar(mesa, bvNombre.value, miColor ? { color: miColor } : {});
     if (!r) return avisar("No pudimos entrar a la mesa. Probá de nuevo.");
     yo = r.comensal.id;
     D.recordarYo(r.comensal);
     antes = null;
-    cerrarHoja();
+    cerrarBienvenida(true);
     refrescar();
-    avisar(`¡Hola, ${r.comensal.nombre}! Estás en la mesa ${mesa}.`, r.comensal);
+    requestAnimationFrame(() => volarYo(r.comensal));
+    avisar(`¡Listo, ${r.comensal.nombre}! Ya estás en la mesa ${mesa}.`, r.comensal);
     const f = alEntrar;
     alEntrar = null;
-    if (f) setTimeout(f, 380);
+    if (f) setTimeout(f, 700);
   } finally {
     b.disabled = false;
   }
 }
-$("#bienvenida-entrar").addEventListener("click", entrar);
-$("#bienvenida-nombre").addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); entrar(); } });
+$("#bv-entrar").addEventListener("click", entrar);
 
 /* ---------- ¿Qué tiene? ---------- */
 function explotar(si) {
@@ -4202,7 +4894,7 @@ $("#armar-opciones").addEventListener("click", e => {
 $("#armar-agregar").addEventListener("click", () => {
   const p = platos[actual];
   const el = { ...eleccion };
-  if (!miMesa()) { cerrarHoja(true); return pedirNombre(() => agregar(p, el)); }
+  if (!miMesa()) { cerrarHoja(true); return pedirNombre(() => agregar(p, el), p); }
   agregar(p, el);
   cerrarHoja();
 });
@@ -4661,7 +5353,7 @@ function refrescar() {
   if (!seg.hidden) pintarSeguimiento();
   if (hojaAbierta === hojaPedido) pintarPedido();
   if (hojaAbierta === hojaMozo) { pintarMozoEstado(); if (!$("#cuenta").hidden) pintarCuenta(); }
-  if (hojaAbierta === hojaBienvenida) pintarBienvenida();
+  if (bvAbierta) { bvGente(); bvColores(); bvYo(); }
 }
 
 /* ---------- Pista para la primera vez ---------- */
@@ -4733,8 +5425,9 @@ function iniciar() {
   refrescar();
   alDeslizar();
   secciones[0].classList.add("entrada");
-  // Si todavía no entró a la mesa, se presenta (el plato queda a la vista, arriba).
-  if (mesa && !miMesa() && location.hash !== "#mesas" && location.hash !== "#cocina") setTimeout(() => { if (!hojaAbierta && seg.hidden && $("#panel").hidden) pedirNombre(); else ponerPista(); }, 900);
+  // Si todavía no entró a la mesa, lo primero es la bienvenida (con el plato en el medio).
+  const enPanel = !$("#panel").hidden || /^#(panel|mesas|qr|equipo|cocina|barra)$/.test(location.hash);
+  if (mesa && !miMesa() && !enPanel) pedirNombre();
   else ponerPista();
 
   feed.addEventListener("scroll", () => { if (!cuadroPedido) { cuadroPedido = true; requestAnimationFrame(alDeslizar); } }, { passive: true });
@@ -4758,11 +5451,12 @@ function iniciar() {
     if (!$("#panel").hidden) return;
     if (e.key === "Escape") {
       if (hojaAbierta) cerrarHoja();
+      else if (bvAbierta) { alEntrar = null; cerrarBienvenida(false); }
       else if (modo === "explotando") explotar(false);
       else if (!seg.hidden) cerrarSeguimiento();
       return;
     }
-    if (modo || hojaAbierta || !seg.hidden || !gracias.hidden || e.target.closest("input, textarea")) return;
+    if (modo || hojaAbierta || bvAbierta || !seg.hidden || !gracias.hidden || e.target.closest("input, textarea")) return;
     if (e.key === "ArrowDown" || e.key === "PageDown") { e.preventDefault(); irA(actual + 1, true); }
     if (e.key === "ArrowUp" || e.key === "PageUp") { e.preventDefault(); irA(actual - 1, true); }
   });
@@ -4782,16 +5476,19 @@ iniciar();
 /* /assets/panel.js */
 /* =============================================================================
    CARTA VIVA — el panel del local
-   Lo usa todo el equipo a la vez, cada uno desde su dispositivo y con su nombre:
-     · MESAS  — el plano: quién está sentado en cada mesa, qué pidió, qué hay que
-                llevar, quién llama al mozo o pide la cuenta. Tocando una mesa se ve
-                todo lo que pasó en ella y se la cobra.
-     · COCINA y BARRA — las comandas de cada estación: nuevas, preparando, listas.
+   Lo usa todo el equipo a la vez, cada uno desde su dispositivo, con su nombre y su PIN.
+   Cada persona ve y hace solo lo que le toca (lo elige quien maneja el equipo):
+     · PARA HACER — arriba de todo: lo que está listo para llevar, las mesas que llaman
+                    al mozo y las que piden la cuenta. Lo nuevo suena, vibra y aparece en
+                    un cartel con su botón, en cualquier pantalla.
+     · MESAS  — el plano: quién está sentado en cada mesa, qué pidió y cuánto lleva.
+     · COCINA y BARRA — las comandas de cada estación, con todo lo que hay que preparar
+                    sumado arriba. La pantalla no se apaga.
      · CARTA  — lo que se terminó (deja de poder pedirse en todas las mesas al instante).
      · QR     — los códigos para imprimir y pegar en cada mesa.
-   Cada uno entra con su PIN y ve lo suyo primero: el mozo, las mesas de su zona; la
-   cocina y la barra, sus comandas; la encargada, todo. Lo que hace cada uno queda
-   firmado ("Diego la empezó", "Carla fue a la mesa"), así no van dos a lo mismo.
+     · EQUIPO — sumar personas, su PIN y qué puede ver y hacer cada una.
+   Todo queda firmado ("Diego la empezó", "Carla fue a la mesa") y lo que se toca sin
+   querer se puede deshacer durante unos segundos.
    ============================================================================= */
 
 const L = window.LOCAL, D = window.Datos, E = window.Escena;
@@ -4802,6 +5499,7 @@ const icono = (id, tam = 16) => `<svg width="${tam}" height="${tam}" aria-hidden
 const lista = xs => (xs.length <= 1 ? xs[0] || "" : xs.slice(0, -1).join(", ") + " y " + xs[xs.length - 1]);
 const panel = $("#panel"), entrada = $("#entrada-equipo"), adentro = $("#panel-adentro");
 const detalle = $("#detalle"), veloDetalle = $("#detalle-velo");
+const ahoraEl = $("#ahora"), alertaEl = $("#alerta"), avisoEl = $("#deshacer");
 
 const minutos = ms => Math.max(0, Math.floor(ms / 60000));
 const hace = ms => {
@@ -4819,31 +5517,44 @@ const equipo = () => D.equipo() || [];
 const mesasDelLocal = () => (D.mesas() || []).length ? D.mesas() : L.mesas;
 const ESTACIONES = L.estaciones && L.estaciones.length ? L.estaciones : [{ id: "cocina", nombre: "Cocina" }];
 const EST = ESTACIONES.map(e => e.id);
-const persona = id => equipo().find(e => e.id === id) || null;
+const PERMISOS = D.PERMISOS, ROLES = D.ROLES;
+const SALON = ["mesas", "atender", "llevar", "cobrar"];
+const persona = id => (id && D.persona(id)) || null;
 const nombreEst = id => (ESTACIONES.find(e => e.id === id) || { nombre: id }).nombre;
-const VISTAS = { mesas: "Mesas", ...Object.fromEntries(ESTACIONES.map(e => [e.id, e.nombre])), carta: "Carta", qr: "QR" };
-function vistasDe(p) {
-  if (!p) return [];
-  if (p.rol === "encargado") return ["mesas", ...EST, "carta", "qr"];
-  if (p.rol === "mozo") return ["mesas", ...EST];
-  if (EST.includes(p.rol)) return [p.rol, "carta"];
-  return ["mesas"];
-}
-const avatarEquipo = (p, clase = "") => `<span class="avatar avatar--equipo ${clase}" style="--av:${p.color}" aria-hidden="true">${esc(p.nombre[0])}</span>`;
-const avatarComensal = (c, clase = "") => `<span class="avatar ${clase}" style="--av:${c.color}" aria-hidden="true">${esc((c.nombre || "?")[0].toUpperCase())}</span>`;
+const puestoDe = p => p.puesto || (ROLES.find(r => r.id === p.rol) || {}).nombre || "";
 
 // Quién está usando este dispositivo (cada pestaña puede ser alguien distinto)
 let yo = null;
+const puede = (permiso, p = persona(yo)) => !!p && (p.permisos || []).includes(permiso);
+const deSalon = (p = persona(yo)) => SALON.some(x => puede(x, p));
+const puedeMover = (est, a, p = persona(yo)) => (a === "entregado" ? puede("llevar", p) : puede(est, p));
+const puedeRechazar = (ped, p = persona(yo)) => puede("mesas", p) || Object.keys(ped.partes).some(e => puede(e, p));
+const puedeEditarA = (e, p = persona(yo)) => puede("equipo", p) && (e.rol !== "dueno" || p.rol === "dueno");
+
+const VISTAS = { mesas: "Mesas", ...Object.fromEntries(ESTACIONES.map(e => [e.id, e.nombre])), carta: "Carta", qr: "QR", equipo: "Equipo" };
+function vistasDe(p) {
+  if (!p) return [];
+  const v = [];
+  if (deSalon(p)) v.push("mesas");
+  EST.forEach(e => { if (puede(e, p)) v.push(e); });
+  ["carta", "qr", "equipo"].forEach(x => { if (puede(x, p)) v.push(x); });
+  return v;
+}
+// Quien lleva o atiende pero no ve el plano, tiene su lista de tareas
+const nombreVista = (v, p) => (v === "mesas" && !puede("mesas", p) ? "Para hacer" : VISTAS[v]);
+const avatarEquipo = (p, clase = "") => `<span class="avatar avatar--equipo ${clase}" style="--av:${p.color}" aria-hidden="true">${esc((p.nombre || "?")[0].toUpperCase())}</span>`;
+const avatarComensal = (c, clase = "") => `<span class="avatar ${clase}" style="--av:${c.color}" aria-hidden="true">${esc((c.nombre || "?")[0].toUpperCase())}</span>`;
 
 /* ---------- Estados ---------- */
 const ESTADO_MESA = { libre: "Libre", eligiendo: "Eligiendo", nuevo: "Pidió", preparando: "Preparando", listo: "Para llevar", entregado: "Comiendo" };
 const ESTADO_PARTE = { nuevo: "Nuevo", preparando: "Preparando", listo: "Listo para llevar", entregado: "En la mesa" };
 const URGENCIA = ["nuevo", "listo", "preparando", "entregado"];
 const PASO = {
-  nuevo:      { boton: "Aceptar",    sig: "preparando" },
-  preparando: { boton: "Está listo", sig: "listo" },
-  listo:      { boton: "Llevado",    sig: "entregado" },
+  nuevo:      { boton: "Empezar", sig: "preparando" },
+  preparando: { boton: "Listo",   sig: "listo" },
+  listo:      { boton: "Llevado", sig: "entregado" },
 };
+const HECHO = { preparando: "empezada", listo: "lista", entregado: "llevada" };
 const FIRMA = { preparando: "La empezó", listo: "La terminó", entregado: "La llevó" };
 const COLUMNAS = [
   { id: "nuevo",      titulo: "Nuevas" },
@@ -4851,11 +5562,13 @@ const COLUMNAS = [
   { id: "listo",      titulo: "Para llevar" },
 ];
 const RELOJ = { barra: [5, 10] };             // minutos para ponerse amarillo y rojo (cocina: 10 y 20)
+const RELOJ_LISTO = [3, 6];                   // lo que está listo y nadie lleva se enfría
 
 let vista = "mesas";
 let mesaAbierta = null;
+let editor = null;                            // la persona que se está editando en Equipo
 let liberando = null, rechazando = null, dobleT;
-let historiaAbierta = false;
+let historiaAbierta = false, verTodo = false;
 let eligiendo = null, pin = "", pinMal = false;
 
 const datosMesa = n => mesasDelLocal().find(m => m.n === n) || { n, zona: "", lugares: 4 };
@@ -4918,43 +5631,79 @@ const resumenItems = items => {
 };
 const dividirTexto = l => (l.dividir === "igual" ? `en ${l.partes} partes` : l.dividir === "cada-uno" ? "cada uno lo suyo" : "todo junto");
 
-/* ---------- Mesas ---------- */
-function tareas(d, mesas) {
+/* ---------- Para hacer ahora: lo que le toca a cada uno ---------- */
+function tareas(d, mesas, p = persona(yo)) {
   const t = [];
   mesas.forEach(m => {
-    if (m.llama) t.push({ t: m.llama.creado, m, tipo: "mozo", l: m.llama });
-    if (m.cuenta && !m.cuenta.toma) t.push({ t: m.cuenta.creado, m, tipo: "cuenta", l: m.cuenta });
-    m.listos.forEach(x => t.push({ ...x, t: x.cambio, m, tipo: "listo" }));
+    if (m.llama && puede("atender", p)) t.push({ t: m.llama.creado, m, tipo: "mozo", l: m.llama });
+    if (m.cuenta && !m.cuenta.toma && puede("cobrar", p)) t.push({ t: m.cuenta.creado, m, tipo: "cuenta", l: m.cuenta });
+    if (puede("llevar", p)) m.listos.forEach(x => t.push({ ...x, t: x.cambio, m, tipo: "listo" }));
   });
-  const p = persona(yo);
-  const mia = x => (p.rol === "mozo" && p.zona === x.m.zona ? 1 : 0);
+  const mia = x => (p && p.zona && p.zona === x.m.zona ? 1 : 0);
   return t.sort((a, b) => mia(b) - mia(a) || a.t - b.t);
 }
+const ICONO_TAREA = { mozo: "i-campana", cuenta: "i-cuenta", listo: "i-bandeja", comanda: "i-fuego" };
 function tareaHtml(x, d) {
   const p = persona(yo);
-  const tuZona = p.rol === "mozo" && p.zona === x.m.zona ? `<span class="aviso-fila__zona">Tu zona</span>` : "";
-  const fila = (clase, ico, texto, sub, boton) => `<article class="aviso-fila aviso-fila--${clase}">
-    <span class="aviso-fila__icono">${icono(ico, 18)}</span>
-    <span class="aviso-fila__texto">${texto}${tuZona}<small>${sub}</small></span>
+  const espera = Date.now() - x.t;
+  const tarde = espera > (x.tipo === "listo" ? RELOJ_LISTO[0] : 3) * 60e3;
+  const tuZona = p && p.zona && p.zona === x.m.zona ? `<span class="aviso-fila__zona">Tu zona</span>` : "";
+  const fila = (texto, sub, boton) => `<article class="aviso-fila aviso-fila--${x.tipo}${tarde ? " aviso-fila--tarde" : ""}${espera < 12e3 ? " aviso-fila--nueva" : ""}">
+    <span class="aviso-fila__icono">${icono(ICONO_TAREA[x.tipo], 18)}</span>
+    <span class="aviso-fila__texto">${texto}${tuZona}<small>${sub} · <span class="aviso-fila__cuando">${haceCuanto(espera)}</span></small></span>
     ${boton}
   </article>`;
   if (x.tipo === "mozo") {
     const c = comensalDe(d, x.l.comensal);
-    return fila("mozo", "i-campana", `<b>Mesa ${x.m.n}</b> llama al mozo`, `${c ? esc(c.nombre) + " · " : ""}${esc(x.m.zona)} · ${haceCuanto(Date.now() - x.l.creado)}`,
-      `<button type="button" data-atender="${x.l.id}">Voy</button>`);
+    return fila(`<b>Mesa ${x.m.n}</b> llama al mozo`, `${c ? esc(c.nombre) + " · " : ""}${esc(x.m.zona)}`,
+      puede("atender") ? `<button type="button" data-atender="${x.l.id}">Voy</button>` : "");
   }
   if (x.tipo === "cuenta") {
-    return fila("cuenta", "i-cuenta", `<b>Mesa ${x.m.n}</b> pide la cuenta`, `${esc(x.l.pago)} · ${dividirTexto(x.l)} · ${plata(x.l.total)} · ${haceCuanto(Date.now() - x.l.creado)}`,
-      `<button type="button" data-atender="${x.l.id}">Llevo la cuenta</button>`);
+    return fila(`<b>Mesa ${x.m.n}</b> pide la cuenta`, `${esc(x.l.pago)} · ${dividirTexto(x.l)} · ${plata(x.l.total)}`,
+      puede("cobrar") ? `<button type="button" data-atender="${x.l.id}">Llevo la cuenta</button>` : "");
   }
   const items = x.p.items.filter(i => i.estacion === x.est);
-  return fila("listo", "i-bandeja", `<b>Mesa ${x.m.n}</b> · ${esc(nombreEst(x.est))}: listo para llevar`, `${esc(resumenItems(items))} · ${haceCuanto(Date.now() - x.cambio)}`,
-    `<button type="button" data-mover="${x.p.id}" data-estacion="${x.est}" data-a="entregado">Llevado</button>`);
+  return fila(`<b>¡Sale! Mesa ${x.m.n}</b> · ${esc(nombreEst(x.est))}`, esc(resumenItems(items)),
+    puedeMover(x.est, "entregado") ? `<button type="button" data-mover="${x.p.id}" data-estacion="${x.est}" data-a="entregado">Llevado</button>` : "");
+}
+function pintarAhora(d) {
+  const p = persona(yo);
+  if (!deSalon(p)) return "";
+  const t = tareas(d, mesasDelLocal().map(m => mesaInfo(m, d)), p);
+  if (vista !== "mesas") {
+    if (!t.length) return "";
+    const n = tipo => t.filter(x => x.tipo === tipo).length;
+    const partes = [[n("listo"), "para llevar"], [n("mozo"), n("mozo") === 1 ? "llama al mozo" : "llaman al mozo"], [n("cuenta"), n("cuenta") === 1 ? "pide la cuenta" : "piden la cuenta"]]
+      .filter(([k]) => k).map(([k, s]) => `<b>${k}</b> ${s}`);
+    return `<button type="button" class="ahora-corto" data-vista="mesas"><span class="ahora-corto__punto" aria-hidden="true"></span><span>Para hacer: ${partes.join(" · ")}</span>${icono("i-flecha", 15)}</button>`;
+  }
+  if (!t.length) return `<p class="todo-tranqui">${icono("i-listo", 16)} Nada pendiente por ahora. Lo nuevo suena y aparece acá.</p>`;
+  const MAX = 4;
+  const vis = verTodo ? t : t.slice(0, MAX);
+  return `<h3 class="zona__titulo">Para hacer ahora <span class="insignia insignia--alerta">${t.length}</span></h3>
+    <div class="avisos">${vis.map(x => tareaHtml(x, d)).join("")}</div>
+    ${t.length > MAX ? `<button type="button" class="ahora__mas" data-ver-todo>${verTodo ? "Ver menos" : `Ver ${t.length - MAX} más`}</button>` : ""}`;
 }
 
+/* ---------- Mesas ---------- */
 function sillas(m, cuantas, desde) {
   const ocupadas = Math.min(m.comensales.length, m.lugares);
   return `<span class="mesa__sillas" aria-hidden="true">${Array.from({ length: cuantas }, (_, i) => `<i class="${desde + i < ocupadas ? "ocupada" : ""}"></i>`).join("")}</span>`;
+}
+// Mozo y cuenta: una franja al costado de la mesa, que sobresale por arriba
+function bandaHtml(m) {
+  const cuenta = m.cuenta, llama = m.llama;
+  if (!cuenta && !llama) return "";
+  const tomada = cuenta && cuenta.toma && !llama;
+  const desde = [llama && llama.creado, cuenta && !cuenta.toma && cuenta.creado].filter(Boolean);
+  const min = desde.length ? minutos(Date.now() - Math.min(...desde)) : null;
+  const tipo = llama && cuenta ? "ambos" : llama ? "mozo" : "cuenta";
+  const texto = llama && cuenta ? "Mozo y cuenta" : llama ? "Mozo" : tomada ? "Cuenta en camino" : "Cuenta";
+  return `<span class="mesa__banda banda--${tipo}${tomada ? " tomada" : ""}" aria-hidden="true">
+    <span class="mesa__banda-iconos">${llama ? icono("i-campana", 15) : ""}${cuenta ? icono("i-cuenta", 15) : ""}</span>
+    <span class="mesa__banda-texto">${texto}</span>
+    ${min != null ? `<span class="mesa__banda-min">${min < 1 ? "ya" : min + "′"}</span>` : ""}
+  </span>`;
 }
 function mesaHtml(m) {
   const n = m.comensales.length;
@@ -4964,7 +5713,8 @@ function mesaHtml(m) {
   if (m.cuenta) dice.push(m.cuenta.toma ? `cuenta: la lleva ${D.nombreEquipo(m.cuenta.toma)}` : "pide la cuenta");
   if (m.listos.length) dice.push("hay algo para llevar");
   if (m.total) dice.push(plata(m.total));
-  const clases = ["mesa", "mesa--" + m.estado, "mesa--l" + m.lugares, m.llama && "mesa--llama", m.cuenta && !m.cuenta.toma && "mesa--cuenta", miZona(m) && "mesa--mia"].filter(Boolean).join(" ");
+  const banda = bandaHtml(m);
+  const clases = ["mesa", "mesa--" + m.estado, "mesa--l" + m.lugares, m.llama && "mesa--llama", m.cuenta && !m.cuenta.toma && "mesa--cuenta", banda && "mesa--banda", miZona(m) && "mesa--mia"].filter(Boolean).join(" ");
   const arriba = Math.ceil(m.lugares / 2);
   return `<button type="button" class="${clases}" data-mesa="${m.n}" aria-label="Mesa ${m.n}: ${esc(dice.join(", "))}">
     ${sillas(m, arriba, 0)}
@@ -4972,48 +5722,43 @@ function mesaHtml(m) {
       <span class="mesa__arriba">
         <span class="mesa__num">${m.n}</span>
         ${m.tuya ? `<span class="mesa__tuya">tu mesa</span>` : ""}
-        <span class="mesa__avisos">
-          ${m.listos.length ? `<span class="aviso-mesa aviso-mesa--listo" title="Hay algo para llevar">${icono("i-bandeja", 15)}</span>` : ""}
-          ${m.llama ? `<span class="aviso-mesa" title="Llama al mozo">${icono("i-campana", 15)}</span>` : ""}
-          ${m.cuenta ? `<span class="aviso-mesa aviso-mesa--cuenta${m.cuenta.toma ? " tomada" : ""}" title="Pide la cuenta">${icono("i-cuenta", 15)}</span>` : ""}
-        </span>
+        ${m.listos.length ? `<span class="mesa__avisos"><span class="aviso-mesa aviso-mesa--listo" title="Hay algo para llevar">${icono("i-bandeja", 15)}</span></span>` : ""}
       </span>
       <span class="mesa__estado">${ESTADO_MESA[m.estado]}</span>
       ${n ? `<span class="mesa__gente">${m.comensales.slice(0, 5).map(c => avatarComensal(c, "avatar--mini")).join("")}${n > 5 ? `<span class="avatar avatar--mini avatar--mas">+${n - 5}</span>` : ""}</span>` : ""}
       <span class="mesa__meta">${m.s ? `${m.total ? plata(m.total) + " · " : ""}${hace(Date.now() - m.desde)}` : `${m.lugares} lugares`}</span>
+      ${banda}
     </span>
     ${sillas(m, m.lugares - arriba, arriba)}
   </button>`;
 }
-const miZona = m => { const p = persona(yo); return p && p.rol === "mozo" && p.zona === m.zona; };
+const miZona = m => { const p = persona(yo); return !!(p && p.zona && p.zona === m.zona); };
 
 function pintarMesas(d) {
+  const yoP = persona(yo);
+  if (!puede("mesas", yoP)) return `<p class="panel__ayuda">Acá arriba te aparece lo que tenés que llevar o atender. Lo nuevo suena y vibra.</p>`;
   const mesas = mesasDelLocal().map(m => mesaInfo(m, d));
   const ocupadas = mesas.filter(m => m.estado !== "libre");
   const personas = ocupadas.reduce((s, m) => s + m.comensales.length, 0);
   const vendido = d.pedidos.filter(p => !p.rechazado).reduce((s, p) => s + p.total, 0);
   const cobradas = d.sesiones.filter(s => s.cerrada).length;
-  const lista_ = tareas(d, mesas);
-  const yoP = persona(yo);
   let zonas = [...new Set(mesasDelLocal().map(m => m.zona))];
-  if (yoP.rol === "mozo" && zonas.includes(yoP.zona)) zonas = [yoP.zona, ...zonas.filter(z => z !== yoP.zona)];
+  if (yoP.zona && zonas.includes(yoP.zona)) zonas = [yoP.zona, ...zonas.filter(z => z !== yoP.zona)];
   return `
     <div class="resumen">
       <p><b>${ocupadas.length}</b> de ${mesas.length} mesas ocupadas</p>
       <p><b>${personas}</b> ${personas === 1 ? "persona" : "personas"} con la carta abierta</p>
-      <p><b>${plata(vendido)}</b> vendido hoy${cobradas ? ` · ${cobradas} ${cobradas === 1 ? "mesa cobrada" : "mesas cobradas"}` : ""}</p>
+      ${puede("equipo", yoP) ? `<p><b>${plata(vendido)}</b> vendido hoy${cobradas ? ` · ${cobradas} ${cobradas === 1 ? "mesa cobrada" : "mesas cobradas"}` : ""}</p>` : ""}
     </div>
-    ${lista_.length ? `<h3 class="zona__titulo">Para hacer ahora</h3><div class="avisos">${lista_.map(x => tareaHtml(x, d)).join("")}</div>`
-      : `<p class="todo-tranqui">${icono("i-listo", 16)} Nada pendiente: nadie llama y no hay nada para llevar.</p>`}
     ${zonas.map(z => `
       <section class="zona" aria-label="${esc(z)}">
-        <h3 class="zona__titulo">${esc(z)}${yoP.rol === "mozo" && yoP.zona === z ? ` <span class="zona__tuya">tu zona</span>` : ""}</h3>
+        <h3 class="zona__titulo">${esc(z)}${yoP.zona === z ? ` <span class="zona__tuya">tu zona</span>` : ""}</h3>
         <div class="plano">${mesas.filter(m => m.zona === z).map(mesaHtml).join("")}</div>
       </section>`).join("")}
     <ul class="referencias" aria-label="Qué significa cada color">
       ${["libre", "eligiendo", "nuevo", "preparando", "listo", "entregado"].map(e => `<li class="ref estado--${e}">${ESTADO_MESA[e]}</li>`).join("")}
-      <li class="ref ref--aviso">Llama al mozo</li>
-      <li class="ref ref--aviso ref--cuenta">Pide la cuenta</li>
+      <li class="ref ref--banda">Llama al mozo</li>
+      <li class="ref ref--banda ref--cuenta">Pide la cuenta</li>
     </ul>`;
 }
 
@@ -5027,15 +5772,18 @@ function itemsHtml(items, d, conQuien = true) {
 }
 function botonPaso(p, est, pa) {
   const paso = PASO[pa.estado];
-  return paso ? `<button type="button" class="boton-paso paso--${pa.estado}" data-mover="${p.id}" data-estacion="${est}" data-a="${paso.sig}">${paso.boton}</button>` : "";
+  if (!paso || !puedeMover(est, paso.sig)) return "";
+  return `<button type="button" class="boton-paso paso--${pa.estado}" data-mover="${p.id}" data-estacion="${est}" data-a="${paso.sig}">${paso.boton}</button>`;
 }
 function botonNo(p) {
+  if (!puedeRechazar(p)) return "";
   const si = rechazando === p.id;
   return `<button type="button" class="boton-no${si ? " confirmando" : ""}" data-rechazar="${p.id}" title="Por ejemplo, si no hay nadie sentado en esa mesa">${si ? "¿Seguro? Tocá de nuevo" : "No tomar"}</button>`;
 }
 function rondaHtml(p, d) {
   const por = comensalDe(d, p.por);
   const partes = Object.entries(p.partes);
+  const noTomar = !p.rechazado && partes.every(([, pa]) => pa.estado === "nuevo") ? botonNo(p) : "";
   return `<article class="pedido-p${p.rechazado ? " pedido-p--no" : ""}">
     <header><b>Ronda ${p.ronda}</b><small>Pedido ${p.numero}${por ? ` · lo mandó ${esc(por.nombre)}` : ""} · ${haceCuanto(Date.now() - p.creado)}</small></header>
     ${p.rechazado ? `<p class="pedido-p__no">No se tomó · ${esc(D.nombreEquipo(p.rechazado.quien))}</p>` : partes.map(([est, pa]) => `
@@ -5046,7 +5794,7 @@ function rondaHtml(p, d) {
       </div>`).join("")}
     <ul class="lista-items">${itemsHtml(p.items, d)}</ul>
     ${p.nota ? `<p class="nota-p">${esc(p.nota)}</p>` : ""}
-    ${!p.rechazado && partes.every(([, pa]) => pa.estado === "nuevo") ? `<div class="pedido-p__no-tomar">${botonNo(p)}</div>` : ""}
+    ${noTomar ? `<div class="pedido-p__no-tomar">${noTomar}</div>` : ""}
   </article>`;
 }
 function cuentaHtml(l, m, d) {
@@ -5058,6 +5806,7 @@ function cuentaHtml(l, m, d) {
     const cc = comensalDe(d, x.comensal);
     return `<li>${cc ? avatarComensal(cc, "avatar--chico") : ""}<span>${esc(x.nombre)}</span><b>${plata(x.total)}</b></li>`;
   }).join("")}</ul>`;
+  const lleva = l.toma && (persona(l.toma) || { nombre: "?", color: "#999" });
   return `<section class="cuenta-p">
     <header>${icono("i-cuenta", 16)}<b>Pidieron la cuenta</b><small>${c ? esc(c.nombre) + " · " : ""}${haceCuanto(Date.now() - l.creado)}</small></header>
     <dl class="detalle__cuenta">
@@ -5066,17 +5815,18 @@ function cuentaHtml(l, m, d) {
       <dt>A cobrar · ${esc(l.pago)}</dt><dd class="fuerte">${plata(l.total)}</dd>
     </dl>
     ${division}
-    ${l.toma ? `<p class="cuenta-p__quien">${avatarEquipo(persona(l.toma) || { nombre: "?", color: "#999" }, "avatar--chico")} La lleva ${esc(D.nombreEquipo(l.toma))} · ${haceCuanto(Date.now() - l.tomado)}</p>`
-      : `<button type="button" class="cuenta-p__tomar" data-atender="${l.id}">Llevo la cuenta</button>`}
+    ${l.toma ? `<p class="cuenta-p__quien">${avatarEquipo(lleva, "avatar--chico")} La lleva ${esc(D.nombreEquipo(l.toma))} · ${haceCuanto(Date.now() - l.tomado)}</p>`
+      : puede("cobrar") ? `<button type="button" class="cuenta-p__tomar" data-atender="${l.id}">Llevo la cuenta</button>` : ""}
   </section>`;
 }
+function cerrarAside() {
+  detalle.hidden = true;
+  veloDetalle.hidden = true;
+  detalle._html = null;
+}
 function pintarDetalle(d) {
-  if (mesaAbierta == null || vista !== "mesas" || panel.hidden || !yo) {
-    detalle.hidden = true;
-    veloDetalle.hidden = true;
-    detalle._html = null;
-    return;
-  }
+  if (editor) return;                          // el editor de Equipo no se repinta solo
+  if (mesaAbierta == null || vista !== "mesas" || panel.hidden || !yo || !puede("mesas")) return cerrarAside();
   const m = mesaInfo(datosMesa(mesaAbierta), d);
   const nombres = m.comensales.map(c => c.nombre);
   const eligen = [...new Set(m.carrito.map(l => l.comensal))].map(id => (comensalDe(d, id) || {}).nombre).filter(Boolean);
@@ -5094,9 +5844,9 @@ function pintarDetalle(d) {
         <span class="avatares">${m.comensales.slice(0, 6).map(c => avatarComensal(c)).join("")}</span>
         <span><b>${esc(lista(nombres))}</b><small>${nombres.length} ${nombres.length === 1 ? "persona" : "personas"} con la carta · abrieron la mesa ${haceCuanto(Date.now() - m.desde)}</small></span>
       </div>` : ""}
-      ${m.llama ? tareaHtml({ tipo: "mozo", m, l: m.llama }, d) : ""}
+      ${m.llama ? tareaHtml({ tipo: "mozo", m, l: m.llama, t: m.llama.creado }, d) : ""}
       ${m.cuenta ? cuentaHtml(m.cuenta, m, d) : ""}
-      ${m.listos.map(x => tareaHtml({ ...x, m, tipo: "listo" }, d)).join("")}
+      ${m.listos.map(x => tareaHtml({ ...x, t: x.cambio, m, tipo: "listo" }, d)).join("")}
       ${m.carrito.length ? `<section class="eligiendo">
         <p><b>Están eligiendo</b> · ${esc(lista(eligen))} ${eligen.length === 1 ? "tiene" : "tienen"} ${m.carrito.reduce((s, l) => s + l.cant, 0)} cosas sin mandar</p>
         <ul class="lista-items">${itemsHtml(m.carrito.map(l => ({ ...l, nombre: platoDe(l.plato).nombre })), d)}</ul>
@@ -5110,14 +5860,15 @@ function pintarDetalle(d) {
     </div>
     ${m.s ? `<footer class="detalle__pie">
       <dl class="detalle__cuenta"><dt>Consumo${m.validos.length ? ` · ${m.validos.length} ${m.validos.length === 1 ? "ronda" : "rondas"}` : ""}</dt><dd class="fuerte">${plata(m.total)}</dd></dl>
-      <button type="button" class="detalle__liberar${liberando === m.n ? " confirmando" : ""}" data-liberar="${m.n}">${
-        liberando === m.n ? "Tocá de nuevo para liberarla" : m.total ? "Cobrada · liberar la mesa" : "Liberar la mesa (no pidieron nada)"}</button>
+      ${puede("cobrar") ? `<button type="button" class="detalle__liberar${liberando === m.n ? " confirmando" : ""}" data-liberar="${m.n}">${
+        liberando === m.n ? "Tocá de nuevo para liberarla" : m.total ? "Cobrada · liberar la mesa" : "Liberar la mesa (no pidieron nada)"}</button>` : ""}
     </footer>` : ""}`;
   poner(detalle, html);
   detalle.hidden = false;
   veloDetalle.hidden = false;
 }
 function abrirMesa(n) {
+  if (!puede("mesas")) return;
   mesaAbierta = n;
   liberando = null;
   historiaAbierta = false;
@@ -5125,6 +5876,7 @@ function abrirMesa(n) {
   setTimeout(() => detalle.querySelector("[data-cerrar-detalle]")?.focus({ preventScroll: true }), 30);
 }
 function cerrarDetalle() {
+  if (editor) return cerrarEditor();
   const volver = mesaAbierta;
   mesaAbierta = null;
   liberando = null;
@@ -5147,17 +5899,20 @@ function dosToques(cual, valor, hacer) {
 
 /* ---------- Cocina y barra: las comandas ---------- */
 function ticketHtml({ p, pa, items }, est, d) {
-  const min = minutos(Date.now() - p.creado);
-  const [ojo, tarde] = RELOJ[est] || [10, 20];
+  const esperando = pa.estado === "listo";
+  const min = minutos(Date.now() - (esperando ? pa.cambio : p.creado));
+  const [ojo, tarde] = esperando ? RELOJ_LISTO : RELOJ[est] || [10, 20];
   const reloj = min < ojo ? "bien" : min < tarde ? "ojo" : "tarde";
   const zona = datosMesa(p.mesa).zona;
   const nueva = p.ronda === 1 && pa.estado === "nuevo";
+  const accion = botonPaso(p, est, pa) || (esperando ? `<p class="ticket__espera">${icono("i-bandeja", 15)} Esperando que lo lleven</p>` : "");
+  const no = pa.estado === "nuevo" ? botonNo(p) : "";
   return `<article class="ticket">
-    <header class="ticket__cabeza"><b>Mesa ${p.mesa}</b><span class="reloj reloj--${reloj}">${icono("i-reloj", 13)}${min < 1 ? "recién" : min + " min"}</span></header>
+    <header class="ticket__cabeza"><b>Mesa ${p.mesa}</b><span class="reloj reloj--${reloj}" title="${esperando ? "Hace cuánto está listo" : "Hace cuánto lo pidieron"}">${icono("i-reloj", 13)}${min < 1 ? "recién" : min + " min"}</span></header>
     <p class="ticket__sub">${nueva ? `<span class="ticket__nueva" title="Es lo primero que pide esta mesa: si no hay nadie sentado, no lo tomes">Mesa nueva</span>` : ""}Ronda ${p.ronda} · Pedido ${p.numero}${zona ? " · " + esc(zona) : ""}${L.demo && p.mesa === L.mesaDemo ? " · tu mesa" : ""}</p>
     <ul class="lista-items">${itemsHtml(items, d)}</ul>
     ${p.nota ? `<p class="ticket__nota">${esc(p.nota)}</p>` : ""}
-    <div class="ticket__acciones">${botonPaso(p, est, pa)}${pa.estado === "nuevo" ? botonNo(p) : ""}</div>
+    ${accion || no ? `<div class="ticket__acciones">${accion}${no}</div>` : ""}
     ${pa.quien && FIRMA[pa.estado] ? `<p class="ticket__firma">${FIRMA[pa.estado]} ${esc(D.nombreEquipo(pa.quien))} · ${haceCuanto(Date.now() - pa.cambio)}</p>` : ""}
   </article>`;
 }
@@ -5167,10 +5922,26 @@ function comandas(d, est) {
     .filter(p => !p.rechazado && p.partes[est] && abiertas.has(p.sesion))
     .map(p => ({ p, pa: p.partes[est], items: p.items.filter(i => i.estacion === est) }));
 }
+// Todo lo que hay que preparar, sumado: "4 La Clásica · 2 Papas", para hacer de a tandas
+function aPreparar(todas) {
+  const juntos = new Map();
+  todas.filter(x => x.pa.estado === "nuevo" || x.pa.estado === "preparando").forEach(x => x.items.forEach(i => {
+    const v = juntos.get(i.nombre) || { n: 0, gusto: 0, plato: i.plato };
+    v.n += i.cant;
+    if (i.detalle) v.gusto += i.cant;
+    juntos.set(i.nombre, v);
+  }));
+  if (!juntos.size) return "";
+  return `<section class="a-preparar" aria-label="Todo lo que hay que preparar">
+    <h3 class="zona__titulo">A preparar</h3>
+    <ul>${[...juntos].sort((a, b) => b[1].n - a[1].n).map(([nombre, v]) => `<li>${fotoHtml(v.plato, null, "a-preparar__foto")}<b>${v.n}</b><span>${esc(nombre)}${v.gusto ? `<small>${v.gusto} a gusto</small>` : ""}</span></li>`).join("")}</ul>
+  </section>`;
+}
 function pintarEstacion(d, est) {
   const todas = comandas(d, est);
   const hechas = d.pedidos.filter(p => p.partes[est] && p.partes[est].estado === "entregado").length;
   return `
+    ${aPreparar(todas)}
     <div class="tablero" data-scroll="tablero">${COLUMNAS.map(c => {
       const lista_ = todas.filter(x => x.pa.estado === c.id).sort((a, b) => a.p.creado - b.p.creado);
       return `<section class="columna" aria-label="${c.titulo}">
@@ -5199,12 +5970,13 @@ function pintarStock(d) {
 
 /* ---------- QR de las mesas ---------- */
 let qrLib = null, qrError = false;
-function enlaceMesa(n) {
+function enlaceMesa(m) {
   const base = L.enlace || location.origin + location.pathname;
-  return `${base}${base.includes("?") ? "&" : "?"}mesa=${n}`;
+  const q = m.codigo ? `m=${encodeURIComponent(m.codigo)}` : `mesa=${m.n}`;
+  return `${base}${base.includes("?") ? "&" : "?"}${q}`;
 }
 // En la demo, "Abrir la mesa" abre una pestaña que es otra persona (como otro celular)
-const enlaceProbar = n => enlaceMesa(n) + "&nuevo";
+const enlaceProbar = m => enlaceMesa(m) + "&nuevo";
 function qrSvg(texto) {
   const qr = qrLib(0, "M");
   qr.addData(texto);
@@ -5229,17 +6001,223 @@ function pintarQR() {
     </div>
     ${qrError ? `<p class="panel__ayuda">No se pudieron dibujar los códigos (hace falta internet). Probá de nuevo en un rato.</p>` : ""}
     ${L.demo && !L.enlace ? `<p class="panel__ayuda panel__ayuda--chica">En la demo cada código apunta a esta misma página. Cuando la carta esté en internet, apuntan a la dirección del local. Con "Abrir la mesa" probás en otra pestaña, como si fuera otro celular.</p>` : ""}
-    <div class="qr-grilla">${L.mesas.map(m => {
-      const url = enlaceMesa(m.n);
+    <div class="qr-grilla">${mesasDelLocal().map(m => {
+      const url = enlaceMesa(m);
       return `<article class="tarjeta-qr">
         <p class="tarjeta-qr__local">${esc(L.nombre)}</p>
         <div class="tarjeta-qr__codigo">${qrLib ? qrSvg(url) : `<span class="tarjeta-qr__cargando"></span>`}</div>
         <p class="tarjeta-qr__mesa">Mesa <b>${m.n}</b></p>
         <p class="tarjeta-qr__texto">Escaneá con la cámara, mirá los platos en 3D y pedí desde tu celu.</p>
-        ${L.demo ? `<a class="tarjeta-qr__probar" href="${esc(enlaceProbar(m.n))}" target="_blank" rel="noopener" title="Se abre como si fuera otro celular">Abrir la mesa ${m.n} ${icono("i-flecha", 13)}</a>` : ""}
+        ${L.demo ? `<a class="tarjeta-qr__probar" href="${esc(enlaceProbar(m))}" target="_blank" rel="noopener" title="Se abre como si fuera otro celular">Abrir la mesa ${m.n} ${icono("i-flecha", 13)}</a>` : ""}
       </article>`;
     }).join("")}</div>`;
 }
+
+/* ---------- Equipo: quién es quién y qué puede hacer cada uno ---------- */
+const MOTIVOS = {
+  nombre: "Poné un nombre.", nombre_repetido: "Ya hay alguien con ese nombre en el equipo.",
+  rol: "Elegí un puesto.", pin: "El PIN tiene que ser de 4 números.",
+  solo_dueno: "Eso lo puede hacer solo un dueño.", tu_permiso: "No te podés sacar a vos el permiso de manejar el equipo.",
+  sin_permiso: "No tenés permiso para manejar el equipo.", vos: "No te podés dar de baja a vos.",
+  no_existe: "Esa persona ya no está en el equipo.",
+};
+function pintarEquipo() {
+  const yoP = persona(yo);
+  return `
+    <div class="equipo-intro">
+      <p class="panel__ayuda">Cada persona entra con su nombre y su PIN, y ve solo lo que le toca. El puesto trae los permisos de entrada; después los podés ajustar persona por persona.</p>
+      <button type="button" class="boton-imprimir" data-persona="nueva">${icono("i-mas", 16)} Sumar a alguien</button>
+    </div>
+    <div class="fichas">${equipo().map(e => {
+      const tags = PERMISOS.filter(x => (e.permisos || []).includes(x.id)).map(x => `<i>${esc(x.corto)}</i>`).join("");
+      return `<article class="ficha">
+        ${avatarEquipo(e, "avatar--grande")}
+        <div class="ficha__info">
+          <p class="ficha__nombre"><b>${esc(e.nombre)}</b>${e.id === yo ? `<span class="ficha__vos">vos</span>` : ""}</p>
+          <p class="ficha__puesto">${esc(puestoDe(e))}${e.zona ? " · " + esc(e.zona) : ""}</p>
+          <p class="ficha__permisos">${tags || `<span class="ficha__nada">Todavía no puede hacer nada</span>`}</p>
+        </div>
+        ${puedeEditarA(e, yoP) ? `<button type="button" class="ficha__editar" data-persona="${e.id}" aria-label="Editar a ${esc(e.nombre)}">Editar</button>` : `<span class="ficha__nota">Lo cambia un dueño</span>`}
+      </article>`;
+    }).join("")}</div>`;
+}
+function abrirEditor(id) {
+  const e = id === "nueva" ? null : persona(id);
+  if (id !== "nueva" && (!e || !puedeEditarA(e))) return;
+  const usados = new Set(equipo().map(x => x.color));
+  const rol = (ROLES.find(r => r.id === "mozo") || ROLES[0]).id;
+  editor = e
+    ? { id: e.id, nombre: e.nombre, rol: e.rol, zona: e.zona || "", color: e.color, permisos: [...(e.permisos || [])] }
+    : { id: null, nombre: "", rol, zona: "", color: D.COLORES_EQUIPO.find(c => !usados.has(c)) || D.COLORES_EQUIPO[0], permisos: D.permisosDeRol(rol), pin: D.pinNuevo() };
+  mesaAbierta = null;
+  pintarEditor();
+  setTimeout(() => detalle.querySelector(e ? "[data-cerrar-detalle]" : "#ed-nombre")?.focus({ preventScroll: true }), 60);
+}
+function cerrarEditor() {
+  const volver = editor && editor.id;
+  editor = null;
+  clearTimeout(dobleT);
+  cerrarAside();
+  pintar();
+  if (volver) panel.querySelector(`[data-persona="${volver}"]`)?.focus({ preventScroll: true });
+}
+const clavesFoco = ["data-ed-rol", "data-ed-zona", "data-ed-color", "data-ed-permiso", "data-ed-cambiar-pin", "data-ed-otro-pin", "data-ed-baja", "data-ed-reset"];
+function pintarEditor() {
+  const a = document.activeElement;
+  let foco = null;
+  if (a && detalle.contains(a)) {
+    const k = clavesFoco.find(x => a.hasAttribute(x));
+    foco = k ? `[${k}="${a.getAttribute(k)}"]` : a.id ? "#" + a.id : null;
+  }
+  poner(detalle, editorHtml());
+  detalle.hidden = false;
+  veloDetalle.hidden = false;
+  if (foco) detalle.querySelector(foco)?.focus({ preventScroll: true });
+}
+function editorHtml() {
+  const x = editor, yoP = persona(yo), soyYo = x.id === yo;
+  const cabeza = `<header class="detalle__cabeza">
+      <div><p class="detalle__zona">Equipo</p><h3 class="detalle__titulo" id="detalle-titulo">${x.id && !x.hecho ? esc(x.nombre) : x.hecho ? "¡Listo!" : "Sumar a alguien"}</h3></div>
+      <button type="button" class="detalle__cerrar" data-cerrar-detalle aria-label="Cerrar">${icono("i-cerrar", 18)}</button>
+    </header>`;
+  if (x.hecho) {
+    return cabeza + `<div class="detalle__cuerpo ed-hecho" data-scroll="cuerpo">
+        ${avatarEquipo({ nombre: x.nombre, color: x.color }, "avatar--grande")}
+        <p class="ed-hecho__titulo"><b>${esc(x.nombre)}</b> ${x.hecho.nuevo ? "ya está en el equipo." : "tiene un PIN nuevo."}</p>
+        <p class="ed-rotulo">Su PIN para entrar</p>
+        <p class="ed-hecho__pin" aria-label="PIN: ${x.hecho.pin.split("").join(" ")}">${x.hecho.pin.split("").map(n => `<span>${n}</span>`).join("")}</p>
+        <p class="panel__ayuda">Pasáselo en persona. Por seguridad no se vuelve a mostrar: si se lo olvida, le das uno nuevo desde acá.</p>
+      </div>
+      <footer class="detalle__pie"><button type="button" class="detalle__liberar" data-cerrar-detalle>Listo</button></footer>`;
+  }
+  const rolX = ROLES.find(r => r.id === x.rol) || ROLES[0];
+  const preset = D.permisosDeRol(x.rol);
+  const aMedida = preset.length !== x.permisos.length || preset.some(p => !x.permisos.includes(p));
+  const zonas = [...new Set(mesasDelLocal().map(m => m.zona).filter(Boolean))];
+  const salon = SALON.some(p => x.permisos.includes(p));
+  const grupos = [...new Set(PERMISOS.map(p => p.grupo))];
+  return cabeza + `
+    <div class="detalle__cuerpo editor" data-scroll="cuerpo">
+      <div class="ed-campo">
+        <label class="ed-rotulo" for="ed-nombre">Nombre</label>
+        <div class="ed-nombre">${avatarEquipo({ nombre: x.nombre || "?", color: x.color }, "avatar--grande")}<input id="ed-nombre" type="text" maxlength="20" autocomplete="off" autocapitalize="words" value="${esc(x.nombre)}" placeholder="Como lo llaman en el local"></div>
+      </div>
+      <div class="ed-campo"><p class="ed-rotulo">Puesto</p>
+        <div class="ed-chips">${ROLES.map(r => {
+          const no = r.id === "dueno" && yoP.rol !== "dueno";
+          return `<button type="button" class="ed-chip" data-ed-rol="${r.id}" aria-pressed="${r.id === x.rol}"${no ? ` disabled title="Solo un dueño puede dar este puesto"` : ""}>${esc(r.nombre)}</button>`;
+        }).join("")}</div>
+      </div>
+      ${salon && zonas.length > 1 ? `<div class="ed-campo"><p class="ed-rotulo">Sus mesas</p>
+        <div class="ed-chips">${["", ...zonas].map(z => `<button type="button" class="ed-chip" data-ed-zona="${esc(z)}" aria-pressed="${z === x.zona}">${z ? esc(z) : "Todas"}</button>`).join("")}</div>
+        <p class="ed-ayuda">Las de su zona le aparecen primero y marcadas.</p></div>` : ""}
+      <div class="ed-campo"><p class="ed-rotulo">Color</p>
+        <div class="ed-colores">${D.COLORES_EQUIPO.map(c => `<button type="button" class="ed-color" style="--av:${c}" data-ed-color="${c}" aria-pressed="${c === x.color}" aria-label="Color ${c}"></button>`).join("")}</div>
+      </div>
+      <section class="ed-permisos" aria-labelledby="ed-permisos-titulo">
+        <div class="ed-permisos__cabeza">
+          <p class="ed-rotulo" id="ed-permisos-titulo">Qué puede ver y hacer</p>
+          ${aMedida ? `<span class="ed-medida">A medida</span><button type="button" class="ed-reset" data-ed-reset>Volver a lo de ${esc(rolX.nombre)}</button>` : ""}
+        </div>
+        ${grupos.map(g => `<h4>${esc(g)}</h4><ul>${PERMISOS.filter(p => p.grupo === g).map(p => {
+          const fijo = soyYo && p.id === "equipo";
+          return `<li><button type="button" class="ed-permiso" role="switch" aria-checked="${x.permisos.includes(p.id)}" data-ed-permiso="${p.id}"${fijo ? " disabled" : ""}>
+            <span><b>${esc(p.nombre)}</b><small>${fijo ? "No te lo podés sacar a vos." : esc(p.ayuda)}</small></span><i aria-hidden="true"></i></button></li>`;
+        }).join("")}</ul>`).join("")}
+      </section>
+      ${x.id ? `<div class="ed-campo"><p class="ed-rotulo">PIN</p>
+          <div class="ed-pin"><span class="ed-pin__oculto" aria-label="PIN oculto">••••</span>
+            <button type="button" class="ed-boton${x.confirmar === "pin" ? " confirmando" : ""}" data-ed-cambiar-pin>${x.confirmar === "pin" ? "Tocá de nuevo: el de ahora deja de andar" : "Darle un PIN nuevo"}</button></div></div>`
+        : `<div class="ed-campo"><label class="ed-rotulo" for="ed-pin">PIN para entrar</label>
+          <div class="ed-pin"><input id="ed-pin" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="4" autocomplete="off" value="${esc(x.pin)}" aria-describedby="ed-pin-ayuda"><button type="button" class="ed-boton" data-ed-otro-pin>Otro</button></div>
+          <p class="ed-ayuda" id="ed-pin-ayuda">4 números. Pasáselo en persona: con eso entra desde cualquier celular del local.</p></div>`}
+      ${x.error ? `<p class="ed-error" role="alert">${esc(x.error)}</p>` : ""}
+    </div>
+    <footer class="detalle__pie ed-pie">
+      <button type="button" class="detalle__liberar" data-ed-guardar>${x.id ? "Guardar" : "Sumar al equipo"}</button>
+      ${x.id && !soyYo ? `<button type="button" class="ed-baja${x.confirmar === "baja" ? " confirmando" : ""}" data-ed-baja>${x.confirmar === "baja" ? `Tocá de nuevo: ${esc(x.nombre)} ya no va a poder entrar` : "Dar de baja"}</button>` : ""}
+    </footer>`;
+}
+function confirmar(cual) {
+  clearTimeout(dobleT);
+  if (editor.confirmar === cual) { editor.confirmar = null; return true; }
+  editor.confirmar = cual;
+  pintarEditor();
+  dobleT = setTimeout(() => { if (editor && editor.confirmar === cual) { editor.confirmar = null; pintarEditor(); } }, 4000);
+  return false;
+}
+async function guardarEditor() {
+  const x = editor;
+  x.error = null;
+  if (!x.nombre.trim()) x.error = MOTIVOS.nombre;
+  else if (!x.id && !/^\d{4}$/.test(x.pin || "")) x.error = MOTIVOS.pin;
+  if (x.error) return pintarEditor();
+  const r = await D.guardarPersona(yo, { id: x.id, nombre: x.nombre, rol: x.rol, zona: x.zona, color: x.color, permisos: x.permisos, pin: x.id ? undefined : x.pin });
+  if (editor !== x) return;
+  if (!r || !r.ok) { x.error = MOTIVOS[r && r.motivo] || "No se pudo guardar. Probá de nuevo."; return pintarEditor(); }
+  if (!x.id) {
+    x.id = r.persona.id;
+    x.nombre = r.persona.nombre;
+    x.hecho = { pin: r.pin, nuevo: true };
+    return pintarEditor();
+  }
+  const nombre = r.persona.nombre;
+  cerrarEditor();
+  avisoPanel(`Listo: guardaste lo de ${nombre}.`);
+}
+async function editorClic(b) {
+  const x = editor;
+  if (!x) return;
+  if (b("[data-ed-guardar]")) return guardarEditor();
+  if (b("[data-ed-cambiar-pin]")) {
+    if (!confirmar("pin")) return;
+    const r = await D.cambiarPin(yo, x.id);
+    if (editor !== x) return;
+    if (r && r.ok) x.hecho = { pin: r.pin, nuevo: false };
+    else x.error = MOTIVOS[r && r.motivo] || "No se pudo cambiar el PIN.";
+    return pintarEditor();
+  }
+  if (b("[data-ed-baja]")) {
+    if (!confirmar("baja")) return;
+    const r = await D.bajaPersona(yo, x.id);
+    if (editor !== x) return;
+    if (r && r.ok) { const nombre = x.nombre; cerrarEditor(); return avisoPanel(`${nombre} ya no puede entrar al panel.`); }
+    x.error = MOTIVOS[r && r.motivo] || "No se pudo dar de baja.";
+    return pintarEditor();
+  }
+  const conEquipo = () => { if (x.id === yo && !x.permisos.includes("equipo")) x.permisos.push("equipo"); };
+  if (b("[data-ed-rol]")) {
+    x.rol = b("[data-ed-rol]").dataset.edRol;
+    x.permisos = D.permisosDeRol(x.rol);
+    conEquipo();
+    if (!SALON.some(p => x.permisos.includes(p))) x.zona = "";
+  } else if (b("[data-ed-zona]")) x.zona = b("[data-ed-zona]").dataset.edZona;
+  else if (b("[data-ed-color]")) x.color = b("[data-ed-color]").dataset.edColor;
+  else if (b("[data-ed-permiso]")) {
+    const p = b("[data-ed-permiso]").dataset.edPermiso;
+    x.permisos = x.permisos.includes(p) ? x.permisos.filter(y => y !== p) : [...x.permisos, p];
+  } else if (b("[data-ed-reset]")) { x.permisos = D.permisosDeRol(x.rol); conEquipo(); }
+  else if (b("[data-ed-otro-pin]")) x.pin = D.pinNuevo();
+  else return;
+  x.error = null;
+  pintarEditor();
+}
+detalle.addEventListener("input", e => {
+  if (!editor) return;
+  if (e.target.id === "ed-nombre") {
+    editor.nombre = e.target.value;
+    const av = detalle.querySelector(".ed-nombre .avatar");
+    if (av) av.textContent = (editor.nombre.trim()[0] || "?").toUpperCase();
+  }
+  if (e.target.id === "ed-pin") {
+    const limpio = e.target.value.replace(/\D/g, "").slice(0, 4);
+    if (limpio !== e.target.value) e.target.value = limpio;
+    editor.pin = limpio;
+  }
+});
+detalle.addEventListener("keydown", e => {
+  if (editor && e.key === "Enter" && e.target.matches("#ed-nombre, #ed-pin")) { e.preventDefault(); guardarEditor(); }
+});
 
 /* ---------- Entrar: ¿quién sos? ---------- */
 function pintarEntrada() {
@@ -5252,22 +6230,22 @@ function pintarEntrada() {
       <div class="gente-equipo">${equipo().map(e => `
         <button type="button" class="persona-equipo" data-elegir="${e.id}">
           ${avatarEquipo(e, "avatar--grande")}
-          <b>${esc(e.nombre)}</b><small>${esc(e.puesto)}${e.zona ? " · " + esc(e.zona) : ""}</small>
+          <b>${esc(e.nombre)}</b><small>${esc(puestoDe(e))}${e.zona ? " · " + esc(e.zona) : ""}</small>
         </button>`).join("")}
       </div>
-      <p class="entrada-equipo__ayuda">Cada uno entra desde su celular o desde la tablet de la cocina, con su PIN. Todo lo que hace queda con su nombre.</p>
+      <p class="entrada-equipo__ayuda">Cada uno entra desde su celular o desde la tablet de la cocina, con su PIN. Ve lo que le toca y todo lo que hace queda con su nombre.</p>
       <a class="panel__salir" href="#carta">Volver a la carta ${icono("i-flecha", 14)}</a>
     </div>` : `
     <div class="entrada-equipo__marco entrada-equipo__marco--pin">
       <button type="button" class="entrada-equipo__volver" data-volver>${icono("i-volver", 14)} Volver</button>
       ${avatarEquipo(p, "avatar--grande")}
       <p class="entrada-equipo__pregunta">Hola, ${esc(p.nombre)}</p>
-      <p class="entrada-equipo__rol">${esc(p.puesto)}${p.zona ? " · " + esc(p.zona) : ""}</p>
+      <p class="entrada-equipo__rol">${esc(puestoDe(p))}${p.zona ? " · " + esc(p.zona) : ""}</p>
       <div class="pin__puntos${pinMal ? " mal" : ""}" role="status" aria-label="${pin.length} de 4 números${pinMal ? ": PIN incorrecto" : ""}">${[0, 1, 2, 3].map(i => `<i class="${i < pin.length ? "lleno" : ""}"></i>`).join("")}</div>
       <div class="pin__teclado">${["1", "2", "3", "4", "5", "6", "7", "8", "9", "", "0", "borrar"].map(k =>
         k === "" ? "<span></span>" : `<button type="button" data-tecla="${k}"${k === "borrar" ? ' aria-label="Borrar"' : ""}>${k === "borrar" ? icono("i-borrar", 22) : k}</button>`).join("")}
       </div>
-      <p class="entrada-equipo__ayuda">${pinMal ? "Ese PIN no es. Probá de nuevo." : L.demo ? "En la demo, el PIN de todos es 1234." : "Tu PIN de 4 números."}</p>
+      <p class="entrada-equipo__ayuda">${pinMal ? "Ese PIN no es. Probá de nuevo." : L.demo ? "En la demo, el PIN de los de ejemplo es 1234." : "Tu PIN de 4 números."}</p>
     </div>`;
 }
 function tecla(k) {
@@ -5293,8 +6271,9 @@ function entrarComo(id) {
   pin = "";
   const vs = vistasDe(persona(id));
   const pedida = location.hash.slice(1);
-  vista = vs.includes(pedida) ? pedida : vs[0];
+  vista = vs.includes(pedida) ? pedida : vs[0] || "mesas";
   vistos = null;
+  verTodo = false;
   despertarAudio();
   mostrar();
 }
@@ -5302,111 +6281,221 @@ function salir(aOtro) {
   yo = null;
   D.salirEquipo();
   mesaAbierta = null;
+  editor = null;
   eligiendo = aOtro || null;
   pin = "";
+  ocultarAlerta();
+  pantallaPrendida(false);
   mostrar();
 }
 
-/* ---------- Arriba: quién sos, quién más está y el sonido ---------- */
+/* ---------- Arriba: quién sos y el sonido (en la demo, entrar como otro) ---------- */
 function pintarTurno() {
   const p = persona(yo);
   return `
     <div class="turno__yo">
       ${avatarEquipo(p)}
-      <span><b>${esc(p.nombre)}</b><small>${esc(p.puesto)}${p.zona ? " · " + esc(p.zona) : ""}</small></span>
-      <button type="button" class="turno__boton" data-salir>Cambiar</button>
+      <span><b>${esc(p.nombre)}</b><small>${esc(puestoDe(p))}${p.zona ? " · " + esc(p.zona) : ""}</small></span>
+      <button type="button" class="turno__boton" data-salir>Salir</button>
     </div>
-    <div class="turno__equipo">
-      <span class="turno__rotulo">En turno</span>
-      ${equipo().filter(e => e.id !== yo).map(e => `<button type="button" class="turno__otro" data-cambiar="${e.id}" title="Entrar como ${esc(e.nombre)} (${esc(e.puesto)})" aria-label="Entrar como ${esc(e.nombre)}, ${esc(e.puesto)}">${avatarEquipo(e)}</button>`).join("")}
-    </div>
+    ${L.demo ? `<div class="turno__equipo">
+      <span class="turno__rotulo">Probar como</span>
+      ${equipo().filter(e => e.id !== yo).map(e => `<button type="button" class="turno__otro" data-cambiar="${e.id}" title="Entrar como ${esc(e.nombre)} (${esc(puestoDe(e))})" aria-label="Entrar como ${esc(e.nombre)}, ${esc(puestoDe(e))}">${avatarEquipo(e)}</button>`).join("")}
+    </div>` : ""}
     <button type="button" class="turno__boton turno__sonido" data-sonido aria-pressed="${sonido}">${icono(sonido ? "i-sonido" : "i-mudo", 16)}<span>${sonido ? "Con sonido" : "Sin sonido"}</span></button>`;
 }
 function pintarTabs(d) {
   const p = persona(yo);
-  const vs = vistasDe(p);
-  const mesas = mesasDelLocal().map(m => mesaInfo(m, d));
-  const pendientes = tareas(d, mesas).length;
-  return vs.map(v => {
+  const pendientes = deSalon(p) ? tareas(d, mesasDelLocal().map(m => mesaInfo(m, d)), p).length : 0;
+  return vistasDe(p).map(v => {
     let n = "";
     if (v === "mesas" && pendientes) n = `<span class="insignia insignia--alerta">${pendientes}</span>`;
     if (EST.includes(v)) {
       const c = comandas(d, v).filter(x => x.pa.estado === "nuevo" || x.pa.estado === "preparando").length;
       if (c) n = `<span class="insignia">${c}</span>`;
     }
-    return `<button role="tab" type="button" id="tab-${v}" aria-selected="${v === vista}" aria-controls="vista-${v}" data-vista="${v}">${VISTAS[v]}${n}</button>`;
+    return `<button role="tab" type="button" id="tab-${v}" aria-selected="${v === vista}" aria-controls="vistas" data-vista="${v}">${nombreVista(v, p)}${n}</button>`;
   }).join("");
 }
 
-/* ---------- Sonido: un "ding" cuando hay algo nuevo para vos ---------- */
+/* ---------- Lo nuevo: suena, vibra y aparece en un cartel ---------- */
 let sonido = (() => { try { return localStorage.getItem("cartaviva.sonido") !== "no"; } catch { return true; } })();
-let audio = null, vistos = null;
+let audio = null, vistos = null, silencio = 0;
 function despertarAudio() {
   try {
     audio = audio || new (window.AudioContext || window.webkitAudioContext)();
     if (audio.state === "suspended") audio.resume();
   } catch { /* sin audio */ }
 }
-function ding() {
+// Cada cosa suena distinto: lo que sale de la cocina, un llamado, una comanda nueva
+const SONIDOS = {
+  listo:   { notas: [1047, 1319, 1568], paso: 0.11, vibrar: [70, 40, 70, 40, 70] },
+  mozo:    { notas: [988, 1319],        paso: 0.13, vibrar: [60, 40, 60] },
+  cuenta:  { notas: [1319, 988],        paso: 0.13, vibrar: [60, 40, 60] },
+  comanda: { notas: [659, 659],         paso: 0.17, vibrar: [140] },
+};
+function sonar(tipo) {
+  const s = SONIDOS[tipo] || SONIDOS.mozo;
+  try { navigator.vibrate && navigator.vibrate(s.vibrar); } catch { /* sin vibración */ }
   if (!sonido || !audio) return;
   try {
     const t = audio.currentTime;
-    [988, 1319].forEach((f, i) => {
+    s.notas.forEach((f, i) => {
       const o = audio.createOscillator(), g = audio.createGain();
       o.type = "sine";
       o.frequency.value = f;
-      g.gain.setValueAtTime(0.0001, t + i * 0.13);
-      g.gain.exponentialRampToValueAtTime(0.16, t + i * 0.13 + 0.02);
-      g.gain.exponentialRampToValueAtTime(0.0001, t + i * 0.13 + 0.4);
+      g.gain.setValueAtTime(0.0001, t + i * s.paso);
+      g.gain.exponentialRampToValueAtTime(0.18, t + i * s.paso + 0.02);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + i * s.paso + 0.42);
       o.connect(g).connect(audio.destination);
-      o.start(t + i * 0.13);
-      o.stop(t + i * 0.13 + 0.45);
+      o.start(t + i * s.paso);
+      o.stop(t + i * s.paso + 0.46);
     });
-    navigator.vibrate && navigator.vibrate([60, 40, 60]);
   } catch { /* sin audio */ }
 }
+const claveTarea = x => (x.tipo === "listo" ? `r${x.p.id}${x.est}` : x.tipo === "comanda" ? `n${x.p.id}${x.est}` : `${x.tipo}${x.l.id}`);
+const PRIORIDAD = ["listo", "mozo", "cuenta", "comanda"];
 function novedades(d) {
   const p = persona(yo);
+  const actuales = new Map();
+  tareas(d, mesasDelLocal().map(m => mesaInfo(m, d)), p).forEach(x => actuales.set(claveTarea(x), x));
   const abiertas = new Set(d.sesiones.filter(s => !s.cerrada).map(s => s.id));
-  const claves = new Set();
-  const atiende = p.rol === "mozo" || p.rol === "encargado";
-  d.llamados.forEach(l => { if (atiende && !l.atendido && !l.toma && abiertas.has(l.sesion)) claves.add("l" + l.id); });
   d.pedidos.forEach(x => {
     if (x.rechazado || !abiertas.has(x.sesion)) return;
     Object.entries(x.partes).forEach(([est, pa]) => {
-      if (pa.estado === "nuevo" && (p.rol === est || p.rol === "encargado")) claves.add(`n${x.id}${est}`);
-      if (pa.estado === "listo" && p.rol === "mozo") claves.add(`r${x.id}${est}`);
+      if (pa.estado === "nuevo" && puede(est, p)) {
+        const t = { tipo: "comanda", p: x, est, t: x.creado, m: datosMesa(x.mesa) };
+        actuales.set(claveTarea(t), t);
+      }
     });
   });
-  if (vistos && [...claves].some(k => !vistos.has(k))) ding();
-  vistos = claves;
+  if (vistos && Date.now() - silencio > 1500) {
+    // Lo que terminó uno mismo en la cocina (o lo que vuelve porque uno lo deshizo) no le suena a uno mismo
+    const nuevas = [...actuales].filter(([k, x]) => !vistos.has(k) && !(x.tipo === "listo" && x.quien === yo)).map(([, x]) => x);
+    if (nuevas.length) {
+      nuevas.sort((a, b) => PRIORIDAD.indexOf(a.tipo) - PRIORIDAD.indexOf(b.tipo));
+      sonar(nuevas[0].tipo);
+      mostrarAlerta(nuevas[0], nuevas.length - 1, d);
+    }
+  }
+  vistos = new Set(actuales.keys());
+}
+let alertaT = null, alertaDe = null;
+function alertaHtml(x, mas, d) {
+  const items = x.p ? x.p.items.filter(i => i.estacion === x.est) : [];
+  const titulo = { listo: `¡Sale! Mesa ${x.m.n}`, mozo: `Mesa ${x.m.n} llama al mozo`, cuenta: `Mesa ${x.m.n} pide la cuenta`, comanda: `Comanda nueva · Mesa ${x.m.n}` }[x.tipo];
+  const quien = x.l && comensalDe(d, x.l.comensal);
+  const sub = x.tipo === "listo" ? `${nombreEst(x.est)}: ${resumenItems(items)}`
+    : x.tipo === "comanda" ? resumenItems(items)
+    : x.tipo === "cuenta" ? `${x.l.pago} · ${plata(x.l.total)}`
+    : [quien && quien.nombre, x.m.zona].filter(Boolean).join(" · ");
+  const boton = x.tipo === "listo" ? `<button type="button" data-mover="${x.p.id}" data-estacion="${x.est}" data-a="entregado">Llevado</button>`
+    : x.tipo === "mozo" ? `<button type="button" data-atender="${x.l.id}">Voy</button>`
+    : x.tipo === "cuenta" ? `<button type="button" data-atender="${x.l.id}">Llevo la cuenta</button>`
+    : vista !== x.est ? `<button type="button" data-vista="${x.est}">Ver</button>` : "";
+  const zona = x.m && persona(yo).zona && persona(yo).zona === x.m.zona;
+  return `<div class="alerta__caja alerta--${x.tipo}" role="alert">
+    <span class="alerta__icono">${icono(ICONO_TAREA[x.tipo], 22)}</span>
+    <span class="alerta__texto"><b>${esc(titulo)}${zona ? ` <span class="aviso-fila__zona">Tu zona</span>` : ""}</b><small>${esc(sub)}${mas ? ` · y ${mas} ${mas === 1 ? "cosa" : "cosas"} más` : ""}</small></span>
+    ${boton}
+    <button type="button" class="alerta__cerrar" data-cerrar-alerta aria-label="Cerrar el aviso">${icono("i-cerrar", 16)}</button>
+  </div>`;
+}
+function mostrarAlerta(x, mas, d) {
+  if (panel.hidden) return;
+  alertaDe = claveTarea(x);
+  alertaEl.innerHTML = alertaHtml(x, mas, d);
+  alertaEl.hidden = false;
+  alertaEl.classList.remove("visible");
+  void alertaEl.offsetWidth;
+  alertaEl.classList.add("visible");
+  clearTimeout(alertaT);
+  alertaT = setTimeout(ocultarAlerta, 9000);
+}
+function ocultarAlerta() {
+  clearTimeout(alertaT);
+  alertaDe = null;
+  if (alertaEl.hidden) return;
+  alertaEl.classList.remove("visible");
+  alertaT = setTimeout(() => { alertaEl.hidden = true; }, 300);
+}
+
+/* ---------- Deshacer y avisos cortos, abajo ---------- */
+let avisoT = null, ultima = null;
+function mostrarAviso(html) {
+  avisoEl.innerHTML = html;
+  avisoEl.hidden = false;
+  requestAnimationFrame(() => avisoEl.classList.add("visible"));
+  clearTimeout(avisoT);
+}
+function ofrecerDeshacer(accion, texto) {
+  ultima = accion;
+  mostrarAviso(`<span>${esc(texto)}</span><button type="button" data-deshacer>${icono("i-deshacer", 16)} Deshacer</button>`);
+  avisoT = setTimeout(ocultarAviso, 8000);
+}
+function avisoPanel(texto) {
+  ultima = null;
+  mostrarAviso(`<span>${esc(texto)}</span>`);
+  avisoT = setTimeout(ocultarAviso, 3800);
+}
+function ocultarAviso() {
+  clearTimeout(avisoT);
+  ultima = null;
+  avisoEl.classList.remove("visible");
+  avisoT = setTimeout(() => { avisoEl.hidden = true; }, 300);
+}
+
+/* ---------- La pantalla de la cocina no se apaga ---------- */
+let candado = null, pidiendoCandado = false;
+async function pantallaPrendida(si) {
+  if (!("wakeLock" in navigator)) return;
+  try {
+    if (si && !candado && !pidiendoCandado && document.visibilityState === "visible") {
+      pidiendoCandado = true;
+      candado = await navigator.wakeLock.request("screen");
+      candado.addEventListener("release", () => { candado = null; });
+    } else if (!si && candado) {
+      const c = candado;
+      candado = null;
+      await c.release();
+    }
+  } catch { candado = null; } finally { pidiendoCandado = false; }
 }
 
 /* ---------- Armado general ---------- */
 function mostrar() {
   if (panel.hidden) return;
-  yo = yo && persona(yo) ? yo : null;
+  yo = yo && persona(yo) && persona(yo).activo !== false ? yo : null;
   entrada.hidden = !!yo;
   adentro.hidden = !yo;
   if (!yo) {
-    detalle.hidden = veloDetalle.hidden = true;
+    cerrarAside();
+    ahoraEl.innerHTML = "";
+    ahoraEl._html = null;
     pintarEntrada();
     return;
   }
   const vs = vistasDe(persona(yo));
-  if (!vs.includes(vista)) vista = vs[0];
+  if (!vs.includes(vista)) vista = vs[0] || "mesas";
   pintar();
 }
 function pintar() {
   if (panel.hidden || !yo) return;
+  const p = persona(yo);
+  if (!p || p.activo === false) return salir();       // lo dieron de baja mientras estaba adentro
   const d = D.todo();
+  const vs = vistasDe(p);
+  if (vs.length && !vs.includes(vista)) { vista = vs[0]; mesaAbierta = null; }
   $("#panel-titulo").textContent = L.nombre;
   poner($("#panel-tabs"), pintarTabs(d));
   poner($("#turno"), pintarTurno());
+  poner(ahoraEl, vs.length ? pintarAhora(d) : "");
   const cont = $("#vistas");
-  const html = vista === "mesas" ? pintarMesas(d)
+  const html = !vs.length ? `<p class="todo-tranqui">${icono("i-listo", 16)} Todavía no tenés nada asignado. Pedile a quien maneja el equipo que te dé permisos.</p>`
+    : vista === "mesas" ? pintarMesas(d)
     : vista === "carta" ? pintarStock(d)
     : vista === "qr" ? pintarQR()
+    : vista === "equipo" ? pintarEquipo()
     : pintarEstacion(d, vista);
   cont.setAttribute("aria-labelledby", "tab-" + vista);
   if (cont._vista !== vista) { cont._html = null; cont._vista = vista; }
@@ -5414,23 +6503,32 @@ function pintar() {
   pintarDetalle(d);
   $("#panel-pie").hidden = !L.demo;
   novedades(d);
+  pantallaPrendida(EST.includes(vista));
 }
 function elegirVista(v) {
   if (!vistasDe(persona(yo)).includes(v)) return;
+  if (editor) cerrarEditor();
   vista = v;
   if (v !== "mesas") mesaAbierta = null;
   pintar();
   panel.scrollTop = 0;
 }
 
-const RUTAS = ["panel", "mesas", "qr", ...EST];
+const RUTAS = ["panel", "mesas", "qr", "equipo", ...EST];
 function segunDireccion() {
   const h = location.hash.slice(1);
   const ver = RUTAS.includes(h);
   panel.hidden = !ver;
   document.body.classList.toggle("con-panel", ver);
   E.pausar(ver);
-  if (!ver) { mesaAbierta = null; detalle.hidden = veloDetalle.hidden = true; return; }
+  if (!ver) {
+    mesaAbierta = null;
+    editor = null;
+    cerrarAside();
+    ocultarAlerta();
+    pantallaPrendida(false);
+    return;
+  }
   yo = yo || D.soyEquipo();
   if (yo) {
     const vs = vistasDe(persona(yo));
@@ -5440,44 +6538,71 @@ function segunDireccion() {
   panel.scrollTop = 0;
 }
 
-panel.addEventListener("click", e => {
+panel.addEventListener("click", async e => {
   const t = e.target;
   const b = sel => t.closest(sel);
   if (b("[data-elegir]")) { eligiendo = b("[data-elegir]").dataset.elegir; pin = ""; pinMal = false; return pintarEntrada(); }
   if (b("[data-volver]")) { eligiendo = null; pin = ""; pinMal = false; return pintarEntrada(); }
   if (b("[data-tecla]")) return tecla(b("[data-tecla]").dataset.tecla);
-  if (b("[data-vista]")) return elegirVista(b("[data-vista]").dataset.vista);
+  if (b("[data-cerrar-alerta]")) return ocultarAlerta();
+  if (b("[data-deshacer]")) {
+    const accion = ultima;
+    ocultarAviso();
+    if (!accion) return;
+    silencio = Date.now();
+    const r = await D.deshacer(accion, yo);
+    if (!r) avisoPanel("Ya no se puede deshacer: pasó el tiempo o alguien lo cambió.");
+    return;
+  }
+  if (b("[data-vista]")) { ocultarAlerta(); return elegirVista(b("[data-vista]").dataset.vista); }
   if (b("[data-salir]")) return salir();
   if (b("[data-cambiar]")) return salir(b("[data-cambiar]").dataset.cambiar);
   if (b("[data-sonido]")) {
     sonido = !sonido;
     try { localStorage.setItem("cartaviva.sonido", sonido ? "si" : "no"); } catch { /* nada */ }
-    if (sonido) { despertarAudio(); ding(); }
+    if (sonido) { despertarAudio(); sonar("mozo"); }
     return pintar();
   }
   if (t === veloDetalle || b("[data-cerrar-detalle]")) return cerrarDetalle();
-  if (b("[data-mover]")) { const x = b("[data-mover]").dataset; return D.mover(x.mover, x.estacion, x.a, yo); }
+  if (b("[data-ver-todo]")) { verTodo = !verTodo; return pintar(); }
+  if (b("[data-mover]")) {
+    const x = b("[data-mover]").dataset;
+    if (b("#alerta")) ocultarAlerta();
+    const r = await D.mover(x.mover, x.estacion, x.a, yo);
+    if (r) ofrecerDeshacer({ tipo: "mover", pedido: x.mover, estacion: x.estacion }, `Mesa ${r.mesa} · ${nombreEst(x.estacion)}: ${HECHO[x.a]}`);
+    return;
+  }
   if (b("[data-rechazar]")) { const id = b("[data-rechazar]").dataset.rechazar; return dosToques("rechazar", id, () => D.rechazar(id, yo)); }
-  if (b("[data-atender]")) return D.atender(b("[data-atender]").dataset.atender, yo);
+  if (b("[data-atender]")) {
+    const id = b("[data-atender]").dataset.atender;
+    if (b("#alerta")) ocultarAlerta();
+    const r = await D.atender(id, yo);
+    if (r) ofrecerDeshacer({ tipo: "atender", llamado: id }, r.tipo === "mozo" ? `Vas a la mesa ${r.mesa}` : `Llevás la cuenta de la mesa ${r.mesa}`);
+    return;
+  }
   if (b("[data-liberar]")) {
     const n = +b("[data-liberar]").dataset.liberar;
-    return dosToques("liberar", n, () => { mesaAbierta = null; D.cerrarMesa(n, yo); });
+    return dosToques("liberar", n, () => { mesaAbierta = null; D.cerrarMesa(n, yo); avisoPanel(`Mesa ${n} libre.`); });
   }
   if (b("[data-mesa]")) return abrirMesa(+b("[data-mesa]").dataset.mesa);
   if (b("[data-agotar]")) { const id = b("[data-agotar]").dataset.agotar; return D.agotar(id, !D.agotado(id), yo); }
   if (b("[data-imprimir]")) { try { window.print(); } catch { /* sin impresora */ } return; }
-  if (b("#panel-reiniciar")) { mesaAbierta = null; D.reiniciar(); }
+  if (b("[data-persona]")) return abrirEditor(b("[data-persona]").dataset.persona);
+  if (editor && b("#detalle")) return editorClic(b);
+  if (b("#panel-reiniciar")) { mesaAbierta = null; editor = null; cerrarAside(); D.reiniciar(); }
 });
 panel.addEventListener("toggle", e => { if (e.target.matches && e.target.matches(".historia")) historiaAbierta = e.target.open; }, true);
 document.addEventListener("keydown", e => {
   if (panel.hidden) return;
   if (!yo && eligiendo && (/^\d$/.test(e.key) || e.key === "Backspace")) { e.preventDefault(); return tecla(e.key === "Backspace" ? "borrar" : e.key); }
-  if (e.key === "Escape" && mesaAbierta != null) cerrarDetalle();
+  if (e.key === "Escape" && (mesaAbierta != null || editor)) cerrarDetalle();
 });
+document.addEventListener("visibilitychange", () => { if (!panel.hidden && yo) pantallaPrendida(EST.includes(vista) && document.visibilityState === "visible"); });
 
 addEventListener("hashchange", segunDireccion);
 addEventListener("carta:datos", pintar);
-setInterval(pintar, 20000);
+addEventListener("carta:error", e => { if (!panel.hidden) avisoPanel(e.detail || "No se pudo. Probá de nuevo."); });
+setInterval(pintar, 15000);
 segunDireccion();
 
 </script>

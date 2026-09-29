@@ -8,6 +8,8 @@
    Escena.vincular(div, plato)             el plato vive en ese div
    Escena.cambiar(div, eleccion)           lo arma a gusto del comensal (con un saltito)
    Escena.explotar(div, si)                separa las capas y las nombra
+   Escena.mudar(div, otroDiv)              el plato se va volando a otro lugar (la bienvenida)
+   Escena.presentar(div) · saltar(div)     se arma solo al aparecer · pega un salto
    Escena.tono(luz, sombra)                la luz de atrás y la sombra toman el color del plato
    Escena.estilo(nombre)                   brasa · jugo · estudio: cómo se ilumina todo
    Escena.foto(plato, eleccion)            → Promise<dataURL> para listas y el pedido
@@ -195,8 +197,8 @@ function vincular(el, plato) {
   p.pivote.visible = false;
   scene.add(p.pivote);
   aplicarSombra(p);
-  gestos(p);
   puestos.set(el, p);
+  gestos(el);
 }
 
 function armarModelo(p) {
@@ -214,18 +216,20 @@ function armarModelo(p) {
   p.sucio = false;
 }
 
-// Girar con el dedo (lo vertical queda para deslizar la carta) y tocar para un saltito
-function gestos(p) {
-  const el = p.el;
-  let x0 = 0, t0 = 0, recorrido = 0, dedo = null;
+// Girar con el dedo (lo vertical queda para deslizar la carta) y tocar para un saltito.
+// Los gestos son del lugar (el div): el plato que esté ahí en ese momento es el que gira.
+function gestos(el) {
+  el._gestos = true;
+  let x0 = 0, t0 = 0, recorrido = 0, dedo = null, p = null;
   el.addEventListener("pointerdown", e => {
-    if (e.target.closest("button, a")) return;
+    p = puestos.get(el);
+    if (!p || e.target.closest("button, a, input")) return;
     dedo = e.pointerId; x0 = e.clientX; t0 = performance.now(); recorrido = 0;
     p.arrastrando = true;
     if (e.pointerType === "mouse") el.setPointerCapture(dedo);
   });
   el.addEventListener("pointermove", e => {
-    if (e.pointerId !== dedo || !p.arrastrando) return;
+    if (!p || e.pointerId !== dedo || !p.arrastrando) return;
     const dx = e.clientX - x0, ahora = performance.now();
     const dt = Math.max(8, ahora - t0) / 1000;
     x0 = e.clientX; t0 = ahora;
@@ -236,7 +240,7 @@ function gestos(p) {
     if (recorrido > 12) el.dispatchEvent(new CustomEvent("escena:giro", { bubbles: true }));
   });
   const fin = e => {
-    if (e.pointerId !== dedo) return;
+    if (!p || e.pointerId !== dedo) return;
     p.arrastrando = false;
     dedo = null;
     if (performance.now() - t0 > 120) p.vel *= 0.3;     // si soltó quieto, no sale disparado
@@ -294,12 +298,15 @@ function cuadro(ahora) {
 
     // Dónde y de qué tamaño
     const inc = m.userData.inclinacion;
-    const altoVisto = h * Math.cos(inc) + med.ancho * Math.sin(inc);
+    // Al presentarse (se arma solo) cuenta el tamaño del plato armado y no se corre
+    if (p.presentando && p.exp < 0.01) p.presentando = false;
+    const ex = p.presentando ? 0 : p.exp;
+    const altoVisto = (p.presentando ? med.alto : h) * Math.cos(inc) + med.ancho * Math.sin(inc);
     // En pantallas angostas, al explotar, el plato se corre a la izquierda y los
     // carteles van todos a la derecha
     const angosto = ancho < 640;
-    p.cx = r.left + r.width / 2 - (angosto ? r.width * 0.22 * p.exp : 0);
-    const lugarAncho = r.width * wpp * (angosto ? 1.3 - 0.82 * p.exp : 1.08 - 0.6 * p.exp);
+    p.cx = r.left + r.width / 2 - (angosto ? r.width * 0.22 * ex : 0);
+    const lugarAncho = r.width * wpp * (angosto ? 1.3 - 0.82 * ex : 1.08 - 0.6 * ex);
     const lugarAlto = r.height * wpp * (angosto ? 1.06 : 1.04);
     const esc = Math.min(lugarAncho / med.ancho, lugarAlto / altoVisto);
     v.set((p.cx - ancho / 2) * wpp, -(r.top + r.height / 2 - alto / 2) * wpp, 0);
@@ -328,7 +335,7 @@ function cuadro(ahora) {
     p.sombra.material.color.copy(colorSombra);
 
     if (m.userData.animar && MOVIMIENTO) m.userData.animar(t);
-    if (p.exp > 0.02) ponerEtiquetas(p, r, wpp); else quitarEtiquetas(p);
+    if (p.exp > 0.02 && !p.presentando) ponerEtiquetas(p, r, wpp); else quitarEtiquetas(p);
   }
   renderer.render(scene, camera);
 }
@@ -447,7 +454,33 @@ window.Escena = {
   },
   explotar(el, si) {
     const p = puestos.get(el);
-    if (p) p.expObj = si ? 1 : 0;
+    if (p) { p.expObj = si ? 1 : 0; p.presentando = false; }
+  },
+  // Pasar el plato de un lugar a otro (la bienvenida lo toma prestado de la carta): va volando
+  mudar(de, a) {
+    const p = puestos.get(de);
+    if (!p || !a || puestos.has(a)) return false;
+    puestos.delete(de);
+    quitarEtiquetas(p);
+    p.el = a;
+    puestos.set(a, p);
+    if (!a._gestos) gestos(a);
+    return true;
+  },
+  // Se arma solo: las capas llegan separadas y caen en su lugar, girando
+  presentar(el) {
+    const p = puestos.get(el);
+    if (!p || !MOVIMIENTO) return;
+    p.exp = 1;
+    p.expObj = 0;
+    p.presentando = true;
+    p.vel = 5;
+  },
+  saltar(el, fuerza = 1) {
+    const p = puestos.get(el);
+    if (!p) return;
+    p.salto = Math.max(p.salto, fuerza);
+    p.vel += 5 * fuerza;
   },
   pausar(si) { pausa = !!si; },
   estilo,

@@ -33,11 +33,14 @@ const carta = {
   armados: L.armados,
   pagos: L.pagos,
   propinas: L.propinas,
+  roles: L.roles || [],               // los puestos y sus permisos de entrada
 };
 
 const mesas = L.mesas.map(m => `(${m.n}, ${txt(m.zona)}, ${m.lugares})`).join(",\n    ");
+const permisosDe = e => e.permisos || ((L.roles || []).find(r => r.id === e.rol) || { permisos: [] }).permisos;
+const arreglo = xs => `array[${xs.map(txt).join(", ")}]::text[]`;
 const equipo = (L.equipo || []).map((e, i) =>
-  `(${txt(e.nombre)}, ${txt(e.rol)}, ${txt(e.puesto)}, ${e.zona ? txt(e.zona) : "null"}, ${txt(e.color)}, ${txt(e.pin || "1234")}, ${i})`).join(",\n    ");
+  `(${txt(e.nombre)}, ${txt(e.rol)}, ${txt(e.puesto)}, ${e.zona ? txt(e.zona) : "null"}, ${txt(e.color)}, ${txt(e.pin || "1234")}, ${arreglo(permisosDe(e))}, ${i})`).join(",\n    ");
 
 const sql = `-- =============================================================================
 --  CARTA VIVA — ${L.nombre}: el local, su carta, sus mesas y su equipo
@@ -59,16 +62,22 @@ select l.id, m.numero, m.zona, m.lugares
  where l.slug = ${txt(slug)}
 on conflict (local_id, numero) do update set zona = excluded.zona, lugares = excluded.lugares;
 
--- El equipo. Los PIN de la demo son 1234: cambialos con
+-- El equipo de arranque. Los PIN de la demo son 1234: cambialos desde el panel (Equipo) o con
 --   select interno.cambiar_pin(${txt(slug)}, 'Carla', '4821');
-insert into public.equipo (local_id, nombre, rol, puesto, zona, color, pin_sal, pin_hash, orden)
-select l.id, e.nombre, e.rol, e.puesto, e.zona, e.color, s.sal, interno.hash_pin(s.sal, e.pin), e.orden
+-- A quien ya existe no se lo toca: el equipo se maneja desde el panel.
+insert into public.equipo (local_id, nombre, rol, puesto, zona, color, pin_sal, pin_hash, permisos, orden)
+select l.id, e.nombre, e.rol, e.puesto, e.zona, e.color, s.sal, interno.hash_pin(s.sal, e.pin), e.permisos, e.orden
   from public.locales l, (values
     ${equipo}
-  ) as e(nombre, rol, puesto, zona, color, pin, orden),
+  ) as e(nombre, rol, puesto, zona, color, pin, permisos, orden),
   lateral (select replace(gen_random_uuid()::text, '-', '') || e.nombre as sal) s
  where l.slug = ${txt(slug)}
-on conflict (local_id, nombre) do update set rol = excluded.rol, puesto = excluded.puesto, zona = excluded.zona, color = excluded.color, orden = excluded.orden;
+on conflict (local_id, nombre) do nothing;
+
+-- Bases de la versión anterior (sin permisos por persona): cada uno recibe los de su puesto
+update public.equipo e set permisos = interno.permisos_rol(l.carta, e.rol)
+  from public.locales l
+ where e.local_id = l.id and l.slug = ${txt(slug)} and e.permisos = '{}';
 
 -- Los códigos de las mesas (van en los QR):
 select m.numero as mesa, m.zona, m.codigo from public.mesas m join public.locales l on l.id = m.local_id where l.slug = ${txt(slug)} order by m.numero;

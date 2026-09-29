@@ -77,6 +77,40 @@ mismo tiempo, y que la gente entre escaneando un código en la mesa.
 
 Las personas del equipo y las estaciones también se cargan en `local.js` (`equipo`, `estaciones`).
 
+### El equipo con permisos, la bienvenida y las horas pico (29-sep-2026)
+
+Pedido de Gaby (con Juanma): que el dueño o el encargado cree los usuarios y le dé a cada uno
+permiso para ver y hacer lo de su puesto (el mozo no entra a la cocina: le aparece cuando la
+comida está hecha); una bienvenida interactiva al escanear el QR; que "pide la cuenta" se vea
+más; arreglar las horas que no coincidían; y pensar todo para el ritmo de las horas pico.
+- **Equipo, en el panel.** El dueño o el encargado suman personas, les dan un PIN y eligen qué
+  ve y hace cada una. Cada puesto trae sus permisos de entrada (Dueño/a, Encargado/a, Mozo/a,
+  Cocina, Barra, Caja) y se ajustan persona por persona: ver las mesas, atender llamados,
+  llevar, cobrar, cada estación, agotados, QR y manejar el equipo. A un dueño lo cambia solo
+  otro dueño; nadie se saca a sí mismo el permiso de manejar el equipo; el PIN se muestra una
+  sola vez; dar de baja saca a la persona del panel aunque esté adentro.
+- **El mozo no ve la cocina.** Cuando algo está listo le aparece "¡Sale! Mesa 9" arriba de todo,
+  con sonido, vibración y el botón "Llevado". La cocina y la barra empiezan y terminan; llevar a
+  la mesa es de quien tiene el permiso "llevar".
+- **Las horas que no coincidían.** Era de la demo: guarda todo en el navegador y, al volver horas
+  después, la cocina simulada terminaba de golpe lo pendiente con la hora de ese momento,
+  mezclada con las horas viejas (por eso "empezó 21:40, terminó 10:15" o mesas con "35 h").
+  Ahora, si nadie mira la demo, el local queda en pausa y al volver todo se corre junto; si
+  pasaron más de 6 horas, arranca un servicio nuevo con el mismo equipo. En la versión real no
+  pasa: las horas las pone la base.
+- **Bienvenida al escanear el QR.** El plato de la carta aparece en el medio y se arma solo; se
+  gira con el dedo y salta con un toque. El saludo va según la hora y se completa con tu nombre
+  mientras lo escribís, elegís tu color, ves quiénes ya están (y qué pidieron) y al entrar el
+  plato vuelve volando a su lugar en la carta.
+- **"Pide la cuenta" y "llama al mozo"**: una franja de color al costado de la mesa que sobresale
+  por arriba, con los minutos que lleva esperando.
+- **Para las horas pico.** Arriba de todo, "Para hacer ahora" (lo de tu zona primero y en rojo lo
+  que espera de más); un sonido distinto para cada cosa; lo tocado sin querer se deshace durante
+  20 segundos; en la cocina, "A preparar" suma todo lo pendiente (para hacer de a tandas), la
+  pantalla no se apaga y los botones son grandes.
+
+La base real (`supabase/esquema.sql`) hace cumplir lo mismo: permisos, equipo y deshacer.
+
 ## 2. Qué se reutiliza de Fena y qué cambia
 
 | | Fena (turnos) | Carta Viva |
@@ -130,7 +164,7 @@ nueva" y se puede no tomar. Si hiciera falta más, el código de la mesa puede c
 2. Escanear los platos (o elegir cuáles van en 3D y cuáles con foto).
 3. Un color por plato (o la paleta del local).
 4. Imprimir los QR de las mesas.
-5. Usuarios del panel para cocina y mozos.
+5. El equipo: se suma desde el panel (sección Equipo), cada uno con su PIN y sus permisos.
 
 ## 5. Decidido y por decidir
 
@@ -157,6 +191,9 @@ Supabase.
 1. Cargar un plato **escaneado de verdad** (.glb) en la demo, al lado de los modelados.
 2. Base multi-local en Supabase: **escrita y probada**. Falta conectarla a la app y probar
    pedidos en tiempo real entre celulares de verdad.
-3. Panel del dueño: editar carta, precios, agotados, colores y QR de las mesas.
-4. "Ver en tu mesa" (realidad aumentada).
-5. Mercado Pago.
+3. Avisos al celular del mozo aunque tenga la app cerrada (como los turnos de Fena): "¡Sale!
+   Mesa 9" en la pantalla bloqueada.
+4. Panel del dueño: editar carta, precios, colores y mesas (el equipo, los agotados y los QR ya
+   están en el panel).
+5. "Ver en tu mesa" (realidad aumentada).
+6. Mercado Pago.

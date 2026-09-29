@@ -639,6 +639,9 @@ svg { flex: none; }
 .total span { font: var(--rotulo-peso) var(--rotulo-tam)/1.2 var(--rotulo); letter-spacing: var(--rotulo-espacio); text-transform: uppercase; color: var(--hoja-suave); }
 .total b { font-family: var(--precio-fuente); font-weight: var(--precio-peso); font-size: 28px; line-height: 1; font-variant-numeric: tabular-nums; }
 .nota-pie { margin: 0; text-align: center; font-size: 13px; color: var(--hoja-suave); }
+.avisos-mesa { justify-self: center; display: inline-flex; align-items: center; gap: 6px; height: 36px; padding: 0 12px; border-radius: 99px; border: 1px solid var(--hoja-chip-borde); background: none; color: var(--hoja-tinta); font-size: 13px; font-weight: 600; }
+.avisos-mesa[aria-pressed="false"] { color: var(--hoja-suave); }
+.avisos-mesa[aria-pressed="false"] span { text-decoration: line-through; }
 
 /* Carta completa: cada tarjeta con los tonos de su plato */
 .carta-cat { margin: 16px 0 10px; font: var(--rotulo-peso) var(--rotulo-tam)/1.2 var(--rotulo); letter-spacing: var(--rotulo-espacio); text-transform: uppercase; color: var(--hoja-suave); }
@@ -1275,7 +1278,9 @@ svg { flex: none; }
 .turno__otro { padding: 0; border: 0; background: none; border-radius: 32%; opacity: .9; transition: transform .15s, opacity .15s; }
 .turno__otro:hover { transform: translateY(-1px); opacity: 1; }
 .turno__otro .avatar { width: 30px; height: 30px; font-size: 13px; }
-.turno__sonido[aria-pressed="false"] { color: var(--p-suave); }
+.turno__sonido[aria-pressed="false"], .turno__carteles[aria-pressed="false"] { color: var(--p-suave); text-decoration: line-through; }
+.turno__carteles { margin-left: auto; }
+.turno__equipo + .turno__carteles { margin-left: 0; }
 @media (max-width: 440px) {
   .panel__tabs { gap: 2px; padding: 3px; }
   .panel__tabs button { padding: 0 7px; gap: 5px; font-size: 14px; }
@@ -1289,7 +1294,8 @@ svg { flex: none; }
 @media (max-width: 560px) {
   .turno__equipo { margin-left: 0; order: 3; }
   .turno__sonido span { display: none; }
-  .turno__sonido { width: 34px; padding: 0; justify-content: center; margin-left: auto; }
+  .turno__sonido { width: 34px; padding: 0; justify-content: center; }
+  .turno__carteles { margin-left: auto !important; }
 }
 
 /* Mesas: la gente sentada, lo que hay que llevar y lo que es de tu zona */

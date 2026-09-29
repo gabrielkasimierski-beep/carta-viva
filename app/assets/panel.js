@@ -826,6 +826,7 @@ function pintarTurno() {
       <span class="turno__rotulo">Probar como</span>
       ${equipo().filter(e => e.id !== yo).map(e => `<button type="button" class="turno__otro" data-cambiar="${e.id}" title="Entrar como ${esc(e.nombre)} (${esc(puestoDe(e))})" aria-label="Entrar como ${esc(e.nombre)}, ${esc(puestoDe(e))}">${avatarEquipo(e)}</button>`).join("")}
     </div>` : ""}
+    <button type="button" class="turno__boton turno__carteles" data-carteles aria-pressed="${carteles}" title="${carteles ? "Apagar" : "Prender"} los carteles de lo nuevo">${icono("i-campana", 16)}<span>${carteles ? "Avisos prendidos" : "Avisos apagados"}</span></button>
     <button type="button" class="turno__boton turno__sonido" data-sonido aria-pressed="${sonido}">${icono(sonido ? "i-sonido" : "i-mudo", 16)}<span>${sonido ? "Con sonido" : "Sin sonido"}</span></button>`;
 }
 function pintarTabs(d) {
@@ -845,6 +846,8 @@ function pintarTabs(d) {
 /* ---------- Lo nuevo: suena, vibra y aparece en un cartel ---------- */
 let sonido = (() => { try { return localStorage.getItem("cartaviva.sonido") !== "no"; } catch { return true; } })();
 let audio = null, vistos = null, silencio = 0;
+// Los carteles que aparecen arriba (y la vibración): cada uno los prende o apaga en su celu
+let carteles = (() => { try { return localStorage.getItem("cartaviva.carteles") !== "no"; } catch { return true; } })();
 function despertarAudio() {
   try {
     audio = audio || new (window.AudioContext || window.webkitAudioContext)();
@@ -860,7 +863,7 @@ const SONIDOS = {
 };
 function sonar(tipo) {
   const s = SONIDOS[tipo] || SONIDOS.mozo;
-  try { navigator.vibrate && navigator.vibrate(s.vibrar); } catch { /* sin vibración */ }
+  if (carteles) { try { navigator.vibrate && navigator.vibrate(s.vibrar); } catch { /* sin vibración */ } }
   if (!sonido || !audio) return;
   try {
     const t = audio.currentTime;
@@ -926,7 +929,7 @@ function alertaHtml(x, mas, d) {
   </div>`;
 }
 function mostrarAlerta(x, mas, d) {
-  if (panel.hidden) return;
+  if (panel.hidden || !carteles) return;
   alertaDe = claveTarea(x);
   alertaEl.innerHTML = alertaHtml(x, mas, d);
   alertaEl.hidden = false;
@@ -1081,6 +1084,13 @@ panel.addEventListener("click", async e => {
   if (b("[data-vista]")) { ocultarAlerta(); return elegirVista(b("[data-vista]").dataset.vista); }
   if (b("[data-salir]")) return salir();
   if (b("[data-cambiar]")) return salir(b("[data-cambiar]").dataset.cambiar);
+  if (b("[data-carteles]")) {
+    carteles = !carteles;
+    try { localStorage.setItem("cartaviva.carteles", carteles ? "si" : "no"); } catch { /* nada */ }
+    if (!carteles) ocultarAlerta();
+    avisoPanel(carteles ? "Avisos prendidos: lo nuevo aparece arriba y vibra." : "Avisos apagados: lo nuevo solo queda en la lista de Para hacer.");
+    return pintar();
+  }
   if (b("[data-sonido]")) {
     sonido = !sonido;
     try { localStorage.setItem("cartaviva.sonido", sonido ? "si" : "no"); } catch { /* nada */ }

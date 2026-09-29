@@ -996,6 +996,22 @@ function siguienteAviso() {
   else poner();
 }
 
+// Los avisos de lo que pasa en la mesa se pueden apagar (queda guardado en ese celu)
+let avisosMesa = (() => { try { return localStorage.getItem("cartaviva.avisos.mesa") !== "no"; } catch { return true; } })();
+const avisarMesa = (texto, persona) => { if (avisosMesa) avisar(texto, persona); };
+function pintarAvisosMesa() {
+  const b = $("#avisos-mesa");
+  b.setAttribute("aria-pressed", avisosMesa);
+  b.querySelector("span").textContent = avisosMesa ? "Avisos prendidos" : "Avisos apagados";
+}
+$("#avisos-mesa").addEventListener("click", () => {
+  avisosMesa = !avisosMesa;
+  try { localStorage.setItem("cartaviva.avisos.mesa", avisosMesa ? "si" : "no"); } catch { /* nada */ }
+  pintarAvisosMesa();
+  if (avisosMesa) avisar("Listo: te avisamos lo que hacen los demás y cómo va el pedido.");
+});
+pintarAvisosMesa();
+
 // Compara cómo estaba la mesa con cómo está y cuenta lo que hicieron los demás.
 let antes = null;
 function vigilar() {
@@ -1015,36 +1031,36 @@ function vigilar() {
   if (ahora.cerrada && (!a || !a.cerrada)) return mostrarGracias();
   if (!a || a.sesion !== ahora.sesion) return;
   const quien = id => m.comensales.find(x => x.id === id);
-  m.comensales.forEach(x => { if (!a.gente.has(x.id) && x.id !== yo) avisar(`${x.nombre} se sumó a la mesa`, x); });
+  m.comensales.forEach(x => { if (!a.gente.has(x.id) && x.id !== yo) avisarMesa(`${x.nombre} se sumó a la mesa`, x); });
   m.carrito.forEach(l => {
-    if (l.comensal !== yo && l.cant > (a.lineas.get(l.id) || 0)) avisar(`${nombreEn(m, l.comensal)} sumó ${porId(l.plato).nombre}`, quien(l.comensal));
+    if (l.comensal !== yo && l.cant > (a.lineas.get(l.id) || 0)) avisarMesa(`${nombreEn(m, l.comensal)} sumó ${porId(l.plato).nombre}`, quien(l.comensal));
   });
   m.pedidos.forEach(p => {
     const prev = a.rondas.get(p.id);
     const e = D.estadoPedido(p);
     if (!prev) {
-      if (p.por !== yo) avisar(`${nombreEn(m, p.por)} mandó el pedido de la mesa`, quien(p.por));
+      if (p.por !== yo) avisarMesa(`${nombreEn(m, p.por)} mandó el pedido de la mesa`, quien(p.por));
       return;
     }
     if (!seg.hidden) return;                        // si está mirando el seguimiento, ya lo ve
-    if (e === "rechazado" && prev.estado !== "rechazado") return avisar(`No se tomó la ronda ${p.ronda}: llamá al mozo.`);
+    if (e === "rechazado" && prev.estado !== "rechazado") return avisarMesa(`No se tomó la ronda ${p.ronda}: llamá al mozo.`);
     Object.entries(p.partes).forEach(([est, pa]) => {
-      if (pa.estado === "listo" && prev.partes[est] !== "listo" && e !== "listo") avisar(estacion(est).sale);
+      if (pa.estado === "listo" && prev.partes[est] !== "listo" && e !== "listo") avisarMesa(estacion(est).sale);
     });
     if (e !== prev.estado) {
-      if (e === "preparando") avisar("Ya están preparando el pedido.");
-      if (e === "listo") avisar("¡Sale el pedido! Va camino a la mesa.");
-      if (e === "entregado") avisar("¡Buen provecho!");
+      if (e === "preparando") avisarMesa("Ya están preparando el pedido.");
+      if (e === "listo") avisarMesa("¡Sale el pedido! Va camino a la mesa.");
+      if (e === "entregado") avisarMesa("¡Buen provecho!");
     }
   });
   m.llamados.forEach(l => {
     const prev = a.llamados.get(l.id);
     if (!prev) {
-      if (l.comensal !== yo) avisar(l.tipo === "mozo" ? `${nombreEn(m, l.comensal)} llamó al mozo` : `${nombreEn(m, l.comensal)} pidió la cuenta`, quien(l.comensal));
+      if (l.comensal !== yo) avisarMesa(l.tipo === "mozo" ? `${nombreEn(m, l.comensal)} llamó al mozo` : `${nombreEn(m, l.comensal)} pidió la cuenta`, quien(l.comensal));
       return;
     }
-    if (l.tipo === "mozo" && l.atendido && !prev.atendido) avisar(`${D.nombreEquipo(l.atendido.quien)} va para la mesa`);
-    if (l.tipo === "cuenta" && l.toma && !prev.toma) avisar(`${D.nombreEquipo(l.toma)} les trae la cuenta`);
+    if (l.tipo === "mozo" && l.atendido && !prev.atendido) avisarMesa(`${D.nombreEquipo(l.atendido.quien)} va para la mesa`);
+    if (l.tipo === "cuenta" && l.toma && !prev.toma) avisarMesa(`${D.nombreEquipo(l.toma)} les trae la cuenta`);
   });
 }
 

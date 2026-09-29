@@ -653,6 +653,9 @@ svg { flex: none; }
 .total span { font: var(--rotulo-peso) var(--rotulo-tam)/1.2 var(--rotulo); letter-spacing: var(--rotulo-espacio); text-transform: uppercase; color: var(--hoja-suave); }
 .total b { font-family: var(--precio-fuente); font-weight: var(--precio-peso); font-size: 28px; line-height: 1; font-variant-numeric: tabular-nums; }
 .nota-pie { margin: 0; text-align: center; font-size: 13px; color: var(--hoja-suave); }
+.avisos-mesa { justify-self: center; display: inline-flex; align-items: center; gap: 6px; height: 36px; padding: 0 12px; border-radius: 99px; border: 1px solid var(--hoja-chip-borde); background: none; color: var(--hoja-tinta); font-size: 13px; font-weight: 600; }
+.avisos-mesa[aria-pressed="false"] { color: var(--hoja-suave); }
+.avisos-mesa[aria-pressed="false"] span { text-decoration: line-through; }
 
 /* Carta completa: cada tarjeta con los tonos de su plato */
 .carta-cat { margin: 16px 0 10px; font: var(--rotulo-peso) var(--rotulo-tam)/1.2 var(--rotulo); letter-spacing: var(--rotulo-espacio); text-transform: uppercase; color: var(--hoja-suave); }
@@ -1289,7 +1292,9 @@ svg { flex: none; }
 .turno__otro { padding: 0; border: 0; background: none; border-radius: 32%; opacity: .9; transition: transform .15s, opacity .15s; }
 .turno__otro:hover { transform: translateY(-1px); opacity: 1; }
 .turno__otro .avatar { width: 30px; height: 30px; font-size: 13px; }
-.turno__sonido[aria-pressed="false"] { color: var(--p-suave); }
+.turno__sonido[aria-pressed="false"], .turno__carteles[aria-pressed="false"] { color: var(--p-suave); text-decoration: line-through; }
+.turno__carteles { margin-left: auto; }
+.turno__equipo + .turno__carteles { margin-left: 0; }
 @media (max-width: 440px) {
   .panel__tabs { gap: 2px; padding: 3px; }
   .panel__tabs button { padding: 0 7px; gap: 5px; font-size: 14px; }
@@ -1303,7 +1308,8 @@ svg { flex: none; }
 @media (max-width: 560px) {
   .turno__equipo { margin-left: 0; order: 3; }
   .turno__sonido span { display: none; }
-  .turno__sonido { width: 34px; padding: 0; justify-content: center; margin-left: auto; }
+  .turno__sonido { width: 34px; padding: 0; justify-content: center; }
+  .turno__carteles { margin-left: auto !important; }
 }
 
 /* Mesas: la gente sentada, lo que hay que llevar y lo que es de tu zona */
@@ -1724,6 +1730,7 @@ svg { flex: none; }
     <div class="total"><span>Total</span><b id="pedido-total"></b></div>
     <button class="boton-principal" id="pedido-mandar" type="button">Mandar el pedido</button>
     <p class="nota-pie" id="pedido-aclara"></p>
+    <button class="avisos-mesa" id="avisos-mesa" type="button" aria-pressed="true" title="Los carteles de arriba: lo que suman los demás y cómo va el pedido"><svg width="15" height="15" aria-hidden="true"><use href="#i-campana"/></svg><span>Avisos prendidos</span></button>
   </footer>
 </section>
 
@@ -5292,6 +5299,22 @@ function siguienteAviso() {
   else poner();
 }
 
+// Los avisos de lo que pasa en la mesa se pueden apagar (queda guardado en ese celu)
+let avisosMesa = (() => { try { return localStorage.getItem("cartaviva.avisos.mesa") !== "no"; } catch { return true; } })();
+const avisarMesa = (texto, persona) => { if (avisosMesa) avisar(texto, persona); };
+function pintarAvisosMesa() {
+  const b = $("#avisos-mesa");
+  b.setAttribute("aria-pressed", avisosMesa);
+  b.querySelector("span").textContent = avisosMesa ? "Avisos prendidos" : "Avisos apagados";
+}
+$("#avisos-mesa").addEventListener("click", () => {
+  avisosMesa = !avisosMesa;
+  try { localStorage.setItem("cartaviva.avisos.mesa", avisosMesa ? "si" : "no"); } catch { /* nada */ }
+  pintarAvisosMesa();
+  if (avisosMesa) avisar("Listo: te avisamos lo que hacen los demás y cómo va el pedido.");
+});
+pintarAvisosMesa();
+
 // Compara cómo estaba la mesa con cómo está y cuenta lo que hicieron los demás.
 let antes = null;
 function vigilar() {
@@ -5311,36 +5334,36 @@ function vigilar() {
   if (ahora.cerrada && (!a || !a.cerrada)) return mostrarGracias();
   if (!a || a.sesion !== ahora.sesion) return;
   const quien = id => m.comensales.find(x => x.id === id);
-  m.comensales.forEach(x => { if (!a.gente.has(x.id) && x.id !== yo) avisar(`${x.nombre} se sumó a la mesa`, x); });
+  m.comensales.forEach(x => { if (!a.gente.has(x.id) && x.id !== yo) avisarMesa(`${x.nombre} se sumó a la mesa`, x); });
   m.carrito.forEach(l => {
-    if (l.comensal !== yo && l.cant > (a.lineas.get(l.id) || 0)) avisar(`${nombreEn(m, l.comensal)} sumó ${porId(l.plato).nombre}`, quien(l.comensal));
+    if (l.comensal !== yo && l.cant > (a.lineas.get(l.id) || 0)) avisarMesa(`${nombreEn(m, l.comensal)} sumó ${porId(l.plato).nombre}`, quien(l.comensal));
   });
   m.pedidos.forEach(p => {
     const prev = a.rondas.get(p.id);
     const e = D.estadoPedido(p);
     if (!prev) {
-      if (p.por !== yo) avisar(`${nombreEn(m, p.por)} mandó el pedido de la mesa`, quien(p.por));
+      if (p.por !== yo) avisarMesa(`${nombreEn(m, p.por)} mandó el pedido de la mesa`, quien(p.por));
       return;
     }
     if (!seg.hidden) return;                        // si está mirando el seguimiento, ya lo ve
-    if (e === "rechazado" && prev.estado !== "rechazado") return avisar(`No se tomó la ronda ${p.ronda}: llamá al mozo.`);
+    if (e === "rechazado" && prev.estado !== "rechazado") return avisarMesa(`No se tomó la ronda ${p.ronda}: llamá al mozo.`);
     Object.entries(p.partes).forEach(([est, pa]) => {
-      if (pa.estado === "listo" && prev.partes[est] !== "listo" && e !== "listo") avisar(estacion(est).sale);
+      if (pa.estado === "listo" && prev.partes[est] !== "listo" && e !== "listo") avisarMesa(estacion(est).sale);
     });
     if (e !== prev.estado) {
-      if (e === "preparando") avisar("Ya están preparando el pedido.");
-      if (e === "listo") avisar("¡Sale el pedido! Va camino a la mesa.");
-      if (e === "entregado") avisar("¡Buen provecho!");
+      if (e === "preparando") avisarMesa("Ya están preparando el pedido.");
+      if (e === "listo") avisarMesa("¡Sale el pedido! Va camino a la mesa.");
+      if (e === "entregado") avisarMesa("¡Buen provecho!");
     }
   });
   m.llamados.forEach(l => {
     const prev = a.llamados.get(l.id);
     if (!prev) {
-      if (l.comensal !== yo) avisar(l.tipo === "mozo" ? `${nombreEn(m, l.comensal)} llamó al mozo` : `${nombreEn(m, l.comensal)} pidió la cuenta`, quien(l.comensal));
+      if (l.comensal !== yo) avisarMesa(l.tipo === "mozo" ? `${nombreEn(m, l.comensal)} llamó al mozo` : `${nombreEn(m, l.comensal)} pidió la cuenta`, quien(l.comensal));
       return;
     }
-    if (l.tipo === "mozo" && l.atendido && !prev.atendido) avisar(`${D.nombreEquipo(l.atendido.quien)} va para la mesa`);
-    if (l.tipo === "cuenta" && l.toma && !prev.toma) avisar(`${D.nombreEquipo(l.toma)} les trae la cuenta`);
+    if (l.tipo === "mozo" && l.atendido && !prev.atendido) avisarMesa(`${D.nombreEquipo(l.atendido.quien)} va para la mesa`);
+    if (l.tipo === "cuenta" && l.toma && !prev.toma) avisarMesa(`${D.nombreEquipo(l.toma)} les trae la cuenta`);
   });
 }
 
@@ -6302,6 +6325,7 @@ function pintarTurno() {
       <span class="turno__rotulo">Probar como</span>
       ${equipo().filter(e => e.id !== yo).map(e => `<button type="button" class="turno__otro" data-cambiar="${e.id}" title="Entrar como ${esc(e.nombre)} (${esc(puestoDe(e))})" aria-label="Entrar como ${esc(e.nombre)}, ${esc(puestoDe(e))}">${avatarEquipo(e)}</button>`).join("")}
     </div>` : ""}
+    <button type="button" class="turno__boton turno__carteles" data-carteles aria-pressed="${carteles}" title="${carteles ? "Apagar" : "Prender"} los carteles de lo nuevo">${icono("i-campana", 16)}<span>${carteles ? "Avisos prendidos" : "Avisos apagados"}</span></button>
     <button type="button" class="turno__boton turno__sonido" data-sonido aria-pressed="${sonido}">${icono(sonido ? "i-sonido" : "i-mudo", 16)}<span>${sonido ? "Con sonido" : "Sin sonido"}</span></button>`;
 }
 function pintarTabs(d) {
@@ -6321,6 +6345,8 @@ function pintarTabs(d) {
 /* ---------- Lo nuevo: suena, vibra y aparece en un cartel ---------- */
 let sonido = (() => { try { return localStorage.getItem("cartaviva.sonido") !== "no"; } catch { return true; } })();
 let audio = null, vistos = null, silencio = 0;
+// Los carteles que aparecen arriba (y la vibración): cada uno los prende o apaga en su celu
+let carteles = (() => { try { return localStorage.getItem("cartaviva.carteles") !== "no"; } catch { return true; } })();
 function despertarAudio() {
   try {
     audio = audio || new (window.AudioContext || window.webkitAudioContext)();
@@ -6336,7 +6362,7 @@ const SONIDOS = {
 };
 function sonar(tipo) {
   const s = SONIDOS[tipo] || SONIDOS.mozo;
-  try { navigator.vibrate && navigator.vibrate(s.vibrar); } catch { /* sin vibración */ }
+  if (carteles) { try { navigator.vibrate && navigator.vibrate(s.vibrar); } catch { /* sin vibración */ } }
   if (!sonido || !audio) return;
   try {
     const t = audio.currentTime;
@@ -6402,7 +6428,7 @@ function alertaHtml(x, mas, d) {
   </div>`;
 }
 function mostrarAlerta(x, mas, d) {
-  if (panel.hidden) return;
+  if (panel.hidden || !carteles) return;
   alertaDe = claveTarea(x);
   alertaEl.innerHTML = alertaHtml(x, mas, d);
   alertaEl.hidden = false;
@@ -6557,6 +6583,13 @@ panel.addEventListener("click", async e => {
   if (b("[data-vista]")) { ocultarAlerta(); return elegirVista(b("[data-vista]").dataset.vista); }
   if (b("[data-salir]")) return salir();
   if (b("[data-cambiar]")) return salir(b("[data-cambiar]").dataset.cambiar);
+  if (b("[data-carteles]")) {
+    carteles = !carteles;
+    try { localStorage.setItem("cartaviva.carteles", carteles ? "si" : "no"); } catch { /* nada */ }
+    if (!carteles) ocultarAlerta();
+    avisoPanel(carteles ? "Avisos prendidos: lo nuevo aparece arriba y vibra." : "Avisos apagados: lo nuevo solo queda en la lista de Para hacer.");
+    return pintar();
+  }
   if (b("[data-sonido]")) {
     sonido = !sonido;
     try { localStorage.setItem("cartaviva.sonido", sonido ? "si" : "no"); } catch { /* nada */ }

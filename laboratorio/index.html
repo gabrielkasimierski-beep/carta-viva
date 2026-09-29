@@ -1,35 +1,100 @@
 <!doctype html>
-<html lang="es-AR">
+<html lang="es-AR" data-estilo="brasa">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Carta Viva · laboratorio</title>
-<meta name="description" content="Laboratorio de diseño de Carta Viva: animaciones con fotos reales, aparte de la app.">
-<meta name="theme-color" content="#0E0B0A">
+<meta name="description" content="Laboratorio de Carta Viva: la carta de la app, con fotos reales de los platos en lugar del 3D.">
+<meta name="theme-color" id="meta-tema" content="#170904">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Onest:wght@400;500;600;700;800&family=Unbounded:wght@800&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..900&family=DM+Mono:wght@400;500&family=Instrument+Serif:ital@0;1&family=Onest:wght@400;500;600;700&family=Unbounded:wght@500;700;800&display=swap">
+<!-- El diseño es el de la app (se lee de ahí, no se toca). Lo del laboratorio va encima. -->
+<link rel="stylesheet" href="../app/assets/estilos.css">
 <link rel="stylesheet" href="assets/lab.css">
 </head>
 <body>
 
 <svg width="0" height="0" style="position:absolute" aria-hidden="true">
-  <symbol id="i-capas" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"><path d="M12 3l9 5-9 5-9-5 9-5z"/><path d="M3 13l9 5 9-5"/></symbol>
   <symbol id="i-grilla" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"><rect x="3.5" y="3.5" width="7" height="7" rx="2"/><rect x="13.5" y="3.5" width="7" height="7" rx="2"/><rect x="3.5" y="13.5" width="7" height="7" rx="2"/><rect x="13.5" y="13.5" width="7" height="7" rx="2"/></symbol>
+  <symbol id="i-cerrar" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></symbol>
+  <symbol id="i-capas" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"><path d="M12 3l9 5-9 5-9-5 9-5z"/><path d="M3 13l9 5 9-5"/></symbol>
+  <symbol id="i-lapiz" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4L19 9l-4-4L4 16v4z"/><path d="M13.5 6.5l4 4"/></symbol>
+  <symbol id="i-giro" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12c0-2.8 4-5 9-5s9 2.2 9 5-4 5-9 5"/><path d="M9 14l3 3-3 3"/></symbol>
+  <symbol id="i-camara" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h3l1.6-2.5h6.8L17 8h3v11H4z"/><circle cx="12" cy="13.2" r="3.4"/></symbol>
 </svg>
 
-<header class="lab-barra">
-  <p class="lab-marca">Laboratorio<small>Carta Viva · prueba</small></p>
-  <nav class="lab-experimentos" id="lab-experimentos" aria-label="Diseños para probar"></nav>
-  <button class="lab-foto" id="lab-foto" type="button" aria-label="Probar con tu foto el plato que estás viendo">📷<span>Tu foto</span></button>
-  <input id="lab-archivo" type="file" accept="image/*" hidden>
-</header>
+<div class="fondo" id="fondo" aria-hidden="true"><div class="fondo__palabra" id="palabra"></div></div>
 
-<main class="escenario" id="escenario"></main>
-<div class="lab-nota" id="lab-nota" role="status" aria-live="polite"></div>
+<!-- La cinta del laboratorio (en la app, acá está la de la demo) -->
+<div class="cinta" id="cinta">
+  <span class="cinta__demo">Lab</span>
+  <div class="estilos" id="estilos" role="group" aria-label="Estilo de la carta">
+    <button type="button" data-estilo="brasa" aria-pressed="true">Brasa</button>
+    <button type="button" data-estilo="jugo" aria-pressed="false">Jugo</button>
+    <button type="button" data-estilo="estudio" aria-pressed="false">Estudio</button>
+  </div>
+  <button class="cinta__foto" id="lab-foto" type="button" aria-label="Probar con tu foto el plato que estás viendo"><svg width="16" height="16" aria-hidden="true"><use href="#i-camara"/></svg><span>Tu foto</span></button>
+  <input id="lab-archivo" type="file" accept="image/*" hidden>
+</div>
+
+<header class="barra" id="barra">
+  <div class="marca">
+    <span class="marca__nombre" id="marca-nombre"></span>
+    <span class="marca__mesa"><span id="marca-mesa"></span></span>
+  </div>
+  <div class="barra__acciones">
+    <button class="boton-icono" id="btn-carta" type="button" aria-label="Ver toda la carta"><svg width="20" height="20"><use href="#i-grilla"/></svg></button>
+  </div>
+</header>
+<nav class="categorias" id="categorias" aria-label="Secciones de la carta"></nav>
+
+<main class="feed" id="feed" aria-label="La carta"></main>
+
+<!-- Los nombres de cada capa o parte cuando el plato se abre ("¿Qué tiene?") -->
+<div class="etiquetas" id="etiquetas" aria-hidden="true"><svg class="lupas-lineas" id="lupas-lineas"></svg></div>
+
+<div class="explosion-pie" id="explosion-pie" hidden>
+  <p><span id="explosion-nombre"></span><small id="explosion-bajada">Así viene, capa por capa</small></p>
+  <button class="boton-principal boton-principal--corto" id="explosion-cerrar" type="button">Listo</button>
+</div>
+
+<div class="acciones" id="acciones">
+  <button class="acciones__agregar" id="agregar" type="button">
+    <span class="mas" aria-hidden="true">+</span><span class="acciones__textos"><span id="agregar-texto">Agregar</span><span class="acciones__precio" id="agregar-precio"></span></span>
+  </button>
+  <button class="pastilla" id="pastilla" type="button" hidden>
+    <span class="pastilla__fotos" id="pastilla-fotos"></span>
+    <span class="pastilla__texto"><b id="pastilla-cant"></b><span id="pastilla-total"></span></span>
+  </button>
+</div>
+
+<div class="velo" id="velo" hidden></div>
+
+<section class="hoja" id="hoja-armar" role="dialog" aria-modal="true" aria-labelledby="armar-titulo" hidden>
+  <header class="hoja__cabeza">
+    <div><p class="hoja__sobre">Armala a tu gusto</p><h2 class="hoja__titulo" id="armar-titulo"></h2></div>
+    <button class="boton-icono boton-icono--hoja" type="button" data-cerrar aria-label="Cerrar"><svg width="18" height="18"><use href="#i-cerrar"/></svg></button>
+  </header>
+  <div class="hoja__cuerpo" id="armar-opciones"></div>
+  <footer class="hoja__pie"><button class="boton-principal" id="armar-agregar" type="button"></button></footer>
+</section>
+
+<section class="hoja hoja--alta" id="hoja-carta" role="dialog" aria-modal="true" aria-labelledby="carta-titulo" hidden>
+  <header class="hoja__cabeza">
+    <div><p class="hoja__sobre" id="carta-sobre"></p><h2 class="hoja__titulo" id="carta-titulo">Toda la carta</h2></div>
+    <button class="boton-icono boton-icono--hoja" type="button" data-cerrar aria-label="Cerrar"><svg width="18" height="18"><use href="#i-cerrar"/></svg></button>
+  </header>
+  <div class="hoja__cuerpo" id="carta-grilla"></div>
+</section>
+
+<div class="aviso" id="aviso" role="status" aria-live="polite"></div>
 
 <!-- Los platos salen de la app (solo se leen: el laboratorio no la toca) -->
 <script src="../app/assets/local.js"></script>
-<script src="assets/lab.js"></script>
+<script src="assets/fotos.js"></script>
+<script src="assets/recorte.js"></script>
+<script src="assets/escena-fotos.js"></script>
+<script src="assets/carta.js"></script>
 </body>
 </html>

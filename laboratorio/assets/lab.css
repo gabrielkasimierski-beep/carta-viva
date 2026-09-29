@@ -1,178 +1,130 @@
 /* =============================================================================
-   CARTA VIVA — laboratorio de diseño (aparte de la app: acá se prueba y se rompe)
+   CARTA VIVA · laboratorio — lo que va encima del diseño de la app
+   (el diseño en sí es el de app/assets/estilos.css: acá solo el plato de la foto,
+   las lupas del "¿Qué tiene?" y la cinta del laboratorio)
    ============================================================================= */
-:root {
-  --fondo: #0E0B0A;
-  --tinta: #FFF4EA;
-  --suave: rgba(255, 244, 234, .7);
-  --c: #F08A24;                        /* el color del plato que se está viendo (sale de la foto) */
-  --ease: cubic-bezier(.2, .9, .25, 1);
-  --arriba: env(safe-area-inset-top, 0px);
-  --abajo: env(safe-area-inset-bottom, 0px);
-  --barra: 56px;
-  --display: "Instrument Serif", "Times New Roman", serif;
-  --texto: "Onest", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-  color-scheme: dark;
-}
-* { box-sizing: border-box; }
-[hidden] { display: none !important; }
-html, body { height: 100%; margin: 0; }
-body { background: var(--fondo); color: var(--tinta); font: 400 16px/1.45 var(--texto); overflow: hidden; -webkit-tap-highlight-color: transparent; -webkit-font-smoothing: antialiased; }
-button { font: inherit; color: inherit; cursor: pointer; }
-:focus-visible { outline: 2px solid var(--tinta); outline-offset: 3px; }
-img { display: block; -webkit-user-drag: none; user-select: none; }
+:root { --alto-cinta: 40px; }
+body { background: #0D0605; }
 
-/* ---------- Arriba: qué experimento y probar con tu foto ---------- */
-.lab-barra {
-  position: fixed; z-index: 50; top: 0; left: 0; right: 0;
-  height: calc(var(--arriba) + var(--barra)); padding: var(--arriba) 10px 0;
-  display: flex; align-items: center; gap: 8px;
-  background: rgba(8, 7, 7, .7); -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px);
-  border-bottom: 1px solid rgba(255, 255, 255, .08);
+/* ---------- La cinta del laboratorio ---------- */
+.cinta__foto {
+  margin-left: auto; flex: none; height: 30px; padding: 0 11px; border-radius: 99px;
+  border: 1px solid rgba(255, 255, 255, .24); background: none; color: #F2F2F2;
+  font-size: 13px; font-weight: 600; white-space: nowrap;
+  display: inline-flex; align-items: center; gap: 6px;
 }
-.lab-marca { flex: none; margin: 0; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; font-size: 10.5px; line-height: 1.15; opacity: .85; }
-.lab-marca small { display: block; font-weight: 500; letter-spacing: .05em; opacity: .75; }
-.lab-experimentos { flex: 1; min-width: 0; display: flex; gap: 2px; padding: 3px; border-radius: 99px; background: rgba(255, 255, 255, .1); overflow-x: auto; scrollbar-width: none; }
-.lab-experimentos::-webkit-scrollbar { display: none; }
-.lab-experimentos button { flex: 1 0 auto; height: 32px; padding: 0 12px; border: 0; border-radius: 99px; background: none; font-weight: 600; font-size: 13.5px; white-space: nowrap; }
-.lab-experimentos button[aria-pressed="true"] { background: #F4F1EC; color: #111; }
-.lab-foto { flex: none; height: 38px; padding: 0 12px; border-radius: 99px; border: 1px solid rgba(255, 255, 255, .24); background: none; font-weight: 600; font-size: 13px; display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
-.lab-foto span { display: none; }
-@media (min-width: 700px) { .lab-foto span { display: inline; } .lab-marca { margin-right: 6px; } }
-@media (max-width: 400px) { .lab-marca { display: none; } }
-.lab-nota {
-  position: fixed; z-index: 60; left: 50%; top: calc(var(--arriba) + var(--barra) + 10px); transform: translate(-50%, -20px);
-  max-width: calc(100% - 32px); width: max-content; padding: 10px 16px; border-radius: 14px;
-  background: #F4F1EC; color: #16101A; font-weight: 600; font-size: 14px; line-height: 1.35; text-align: center;
-  box-shadow: 0 16px 40px -10px rgba(0, 0, 0, .6);
-  opacity: 0; transition: transform .35s var(--ease), opacity .25s; pointer-events: none;
-}
-.lab-nota.visible { transform: translate(-50%, 0); opacity: 1; }
-.escenario { position: fixed; inset: 0; }
+.cinta__foto:hover { background: rgba(255, 255, 255, .1); }
+@media (max-width: 380px) { .cinta__foto span { display: none; } }
 
-/* Lo que es igual en todos */
-.precio { font-weight: 600; font-variant-numeric: tabular-nums; }
-.boton-agregar {
-  height: 54px; padding: 0 22px; border: 0; border-radius: 99px;
-  background: var(--c); color: #1A0A04; font-weight: 700; font-size: 16px;
-  display: inline-flex; align-items: center; justify-content: center; gap: 10px;
-  transition: transform .15s var(--ease), background .5s;
-}
-.boton-agregar:active { transform: scale(.95); }
-.rotulo { margin: 0; font-size: 11px; font-weight: 600; letter-spacing: .16em; text-transform: uppercase; color: var(--suave); }
-.nombre { margin: 0; font-family: var(--display); font-style: italic; font-weight: 400; line-height: .9; letter-spacing: -0.015em; text-wrap: balance; }
-.desc { margin: 0; }
+/* ---------- El plato de la foto (en lugar del 3D) ---------- */
+/* El plato puede salirse un poco por los costados (como el 3D), pero sin que la carta se corra de lado */
+.plato { overflow: hidden; overflow: clip; }
+.fp { position: absolute; z-index: 0; pointer-events: none; perspective: 1100px; }
+.fp__mueve { position: absolute; inset: 0; will-change: transform; transform-origin: 50% 72%; perspective: 1100px; }
+.fp__plato { position: absolute; inset: 0; }
+.fp img { position: absolute; inset: 0; display: block; width: 100%; height: 100%; -webkit-user-drag: none; user-select: none; }
+.fp__entero, .fp__capa, .fp__canto, .fp__capas { position: absolute; inset: 0; }
 
-/* ---------- Vivo: la foto entera, respira y se inclina con el dedo o el celu ---------- */
-.vivo { position: absolute; inset: 0; overflow-y: auto; scroll-snap-type: y mandatory; overscroll-behavior: contain; scrollbar-width: none; }
-.vivo::-webkit-scrollbar { display: none; }
-.vivo__plato { position: relative; height: 100%; scroll-snap-align: start; scroll-snap-stop: always; overflow: hidden; perspective: 1000px; }
-.vivo__foto { position: absolute; inset: -7%; will-change: transform; }
-.vivo__foto img { width: 100%; height: 100%; object-fit: cover; animation: respirar 16s ease-in-out infinite alternate; }
-.vivo__plato::after {
-  content: ""; position: absolute; inset: 0; pointer-events: none;
-  background:
-    linear-gradient(180deg, rgba(0, 0, 0, .5) 0%, transparent 20%, transparent 40%, color-mix(in srgb, var(--c) 45%, #000) 92%),
-    linear-gradient(0deg, color-mix(in srgb, var(--c) 35%, #000) 0%, transparent 38%);
+/* Mientras se recorta: la foto con el borde esfumado; después se funde con el recorte */
+.fp__boceto {
+  position: absolute; inset: 0; overflow: hidden; transition: opacity .6s;
+  -webkit-mask-image: radial-gradient(closest-side, #000 58%, transparent); mask-image: radial-gradient(closest-side, #000 58%, transparent);
 }
-.vivo__info { position: absolute; z-index: 2; left: 18px; right: 18px; bottom: calc(var(--abajo) + 22px); display: grid; gap: 10px; max-width: 580px; }
-.vivo__info .nombre { font-size: clamp(58px, 17vw, 130px); text-shadow: 0 6px 40px rgba(0, 0, 0, .5); }
-.vivo__info .desc { max-width: 40ch; color: rgba(255, 244, 234, .9); font-size: 15.5px; text-shadow: 0 1px 12px rgba(0, 0, 0, .5); }
-.vivo__fila { display: flex; align-items: center; gap: 16px; margin-top: 6px; }
-.vivo__fila .precio { font-size: 22px; }
-.vivo__plato.entra .vivo__info > * { animation: subir .8s var(--ease) both; }
-.vivo__plato.entra .vivo__info > :nth-child(2) { animation-delay: .06s; }
-.vivo__plato.entra .vivo__info > :nth-child(3) { animation-delay: .12s; }
-.vivo__plato.entra .vivo__info > :nth-child(4) { animation-delay: .18s; }
-@keyframes respirar { from { transform: scale(1.02); } to { transform: scale(1.16) translate(-1.5%, -2%); } }
+.fp__boceto img { width: auto; height: auto; inset: auto; max-width: none; }
+.fp.listo .fp__boceto { opacity: 0; }
+.fp.listo .fp__entero { animation: platoLlega .7s var(--ease) both; }
+@keyframes platoLlega { from { opacity: 0; scale: .9; } }
 
-.vivo__arriba { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
-.chip-lab {
-  height: 36px; padding: 0 13px; border-radius: 99px; flex: none;
-  border: 1px solid rgba(255, 244, 234, .38); background: rgba(0, 0, 0, .22);
-  -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px);
-  font-weight: 600; font-size: 13.5px; display: inline-flex; align-items: center; gap: 6px;
+/* Las capas (burgers): van juntas y al abrir se separan, como en el 3D */
+.fp__capas { display: none; }
+.fp.con-capas .fp__capas { display: block; }
+.fp.con-capas .fp__entero { visibility: hidden; }
+.fp__capa { transition: transform .62s cubic-bezier(.3, 1.3, .5, 1); will-change: transform; }
+.fp.abierto .fp__capa { filter: drop-shadow(0 12px 14px rgba(0, 0, 0, .38)); }
+
+/* Los que se ven desde arriba se acuestan (con un poco de canto) y giran */
+.fp[data-vista="arriba"] .fp__plato { transform: rotateX(54deg); }
+.fp__canto { filter: brightness(.42) saturate(.8); }
+
+/* Un brillo que cruza el plato cuando se inclina */
+.fp__brillo {
+  position: absolute; inset: 0; pointer-events: none; opacity: 0;
+  -webkit-mask: var(--mascara) center / 100% 100% no-repeat; mask: var(--mascara) center / 100% 100% no-repeat;
+  background: linear-gradient(100deg, transparent 32%, rgba(255, 250, 240, .42) 50%, transparent 68%) var(--bx, 50%) 0 / 260% 100% no-repeat;
+  mix-blend-mode: screen;
 }
-.ver-todo {
-  position: fixed; z-index: 30; right: 12px; top: calc(var(--arriba) + var(--barra) + 12px);
-  height: 42px; padding: 0 14px; border-radius: 99px; border: 1px solid rgba(255, 244, 234, .3);
-  background: rgba(0, 0, 0, .35); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px);
-  font-weight: 600; font-size: 14px; display: inline-flex; align-items: center; gap: 7px;
+.fp__marca { position: absolute; width: 2px; height: 2px; margin: -1px 0 0 -1px; }
+
+/* La sombra (en Brasa, la luz del plato sobre la mesa) */
+.fp__sombra {
+  position: absolute; left: 10%; right: 10%; top: 93%; height: 10%; border-radius: 50%;
+  background: radial-gradient(closest-side, rgba(0, 0, 0, .5), transparent);
+  filter: blur(3px);
+}
+:root:not([data-estilo="jugo"]):not([data-estilo="estudio"]) .fp__sombra {
+  background: radial-gradient(closest-side, color-mix(in srgb, var(--luz-actual) 60%, transparent), transparent);
+  filter: blur(6px);
+}
+.fp[data-vista="arriba"] .fp__sombra { top: 70%; left: 2%; right: 2%; height: 22%; }
+
+/* Lo que se eligió en "Armala", debajo del plato */
+.armado {
+  position: absolute; z-index: 1; left: 50%; bottom: 6px; translate: -50% 0; margin: 0;
+  max-width: calc(100% - 16px); padding: 7px 13px; border-radius: var(--radio-chico);
+  background: var(--vidrio); border: 1px solid var(--vidrio-borde); color: var(--t);
+  -webkit-backdrop-filter: var(--desenfoque); backdrop-filter: var(--desenfoque);
+  font-weight: 600; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  animation: aparecer .3s both;
+}
+:root[data-estilo="jugo"] .armado { background: #fff; border-color: #fff; color: var(--tc); }
+
+/* ---------- ¿Qué tiene?: los nombres (capas) y las lupas (partes) ---------- */
+.etiqueta { opacity: 0; transition: opacity .35s var(--ease); }
+.etiqueta.visible { opacity: 1; }
+.etiqueta.fuera, .lupa.fuera, .punto.fuera { opacity: 0 !important; transition: opacity .18s; }
+
+.lupas-lineas { position: fixed; inset: 0; width: 100%; height: 100%; overflow: visible; pointer-events: none; }
+.lupas-lineas path {
+  fill: none; stroke: var(--luz-actual); stroke-width: 1.6; stroke-linecap: round;
+  stroke-dasharray: 700; stroke-dashoffset: 700; animation: trazo .55s var(--ease) forwards;
+  filter: drop-shadow(0 0 4px color-mix(in srgb, var(--luz-actual) 70%, transparent));
+}
+:root[data-estilo="jugo"] .lupas-lineas path { stroke: #fff; filter: none; stroke-width: 2; }
+:root[data-estilo="estudio"] .lupas-lineas path { stroke: var(--tinta-actual); filter: none; }
+
+.lupa {
+  position: fixed; left: 0; top: 0; display: flex; align-items: center; gap: 9px;
+  translate: 0 -50%; will-change: transform;
+}
+.lupa--izq { flex-direction: row-reverse; translate: -100% -50%; text-align: right; }
+.lupa--abajo { flex-direction: column; gap: 7px; translate: -50% 0; text-align: center; }
+.lupa--abajo .etiqueta__texto { padding: 4px 8px 5px; }
+.lupa--abajo .etiqueta__texto small { font-size: 11px; }
+.lupa__foto {
+  flex: none; border-radius: 50%; background-repeat: no-repeat; background-color: #222;
+  box-shadow: 0 0 0 3px #FFF4EA, 0 0 0 5px color-mix(in srgb, var(--luz-actual) 55%, transparent), 0 14px 30px -8px rgba(0, 0, 0, .7);
+}
+:root[data-estilo="jugo"] .lupa__foto { box-shadow: 0 0 0 4px #fff, 0 12px 26px -8px rgba(0, 0, 0, .45); }
+:root[data-estilo="estudio"] .lupa__foto { box-shadow: 0 0 0 2px var(--tinta-actual), 0 10px 22px -10px rgba(0, 0, 0, .5); }
+.lupa .etiqueta__texto { animation: aparecer .35s var(--ease) both; animation-delay: calc(.3s + var(--k, 0) * .08s); }
+.lupa .etiqueta__texto b { font-size: 14.5px; }
+@media (max-width: 639px) {
+  .lupa .etiqueta__texto { padding: 5px 9px 6px; }
+  .lupa .etiqueta__texto b { font-size: 13.5px; }
+  .lupa .etiqueta__texto small { display: block; font-size: 11.5px; }
 }
 
-/* ---------- La galería: toda la carta, encima del plato ---------- */
-.galeria {
-  position: fixed; inset: 0; z-index: 35; overflow-y: auto;
-  padding: calc(var(--arriba) + var(--barra) + 8px) 12px calc(var(--abajo) + 24px);
-  background: color-mix(in srgb, var(--c) 22%, #0E0B0A);
-  opacity: 0; transition: opacity .35s var(--ease);
+.punto {
+  position: fixed; left: 0; top: 0; width: 13px; height: 13px; margin: -6.5px 0 0 -6.5px; border-radius: 50%;
+  background: #FFF4EA;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--luz-actual) 75%, transparent), 0 0 16px var(--luz-actual);
+  animation: punto .4s var(--ease) both, pulso 1.8s ease-in-out infinite;
 }
-.galeria.abierta { opacity: 1; }
-.galeria__cabeza { display: flex; align-items: center; justify-content: space-between; margin: 4px 4px 4px; }
-.galeria__cabeza .nombre { font-size: 40px; }
-.galeria__cerrar { width: 44px; height: 44px; border-radius: 50%; border: 0; background: rgba(255, 255, 255, .12); font-size: 18px; }
-.galeria__cat { margin: 18px 4px 10px; }
-.galeria__grilla { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
-@media (min-width: 760px) { .galeria__grilla { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
-.galeria__item { position: relative; padding: 0; border: 0; border-radius: 20px; overflow: hidden; aspect-ratio: 4 / 5; background: #222; text-align: left; }
-.galeria__item:nth-child(3n + 1) { grid-row: span 2; aspect-ratio: auto; }
-.galeria__item img { width: 100%; height: 100%; object-fit: cover; transition: transform .6s var(--ease); }
-.galeria__item:hover img { transform: scale(1.05); }
-.galeria__item::after { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, transparent 55%, rgba(0, 0, 0, .7)); }
-.galeria__item span { position: absolute; left: 12px; right: 12px; bottom: 10px; z-index: 1; display: grid; font-weight: 700; font-size: 15px; line-height: 1.2; }
-.galeria__item span small { font-weight: 600; opacity: .85; }
-.galeria__item.esperando { visibility: hidden; }
-.galeria.abierta .galeria__item { animation: aparecer .4s var(--ease) both; }
-.volando { position: fixed; z-index: 60; overflow: hidden; pointer-events: none; margin: 0; transform-origin: 0 0; }
-.volando img { width: 100%; height: 100%; }
-
-/* ---------- ¿Qué tiene?: el plato se abre parte por parte (como en la app) ---------- */
-.qt {
-  position: fixed; inset: 0; z-index: 45; display: grid; grid-template-rows: minmax(0, 1fr) auto;
-  padding: calc(var(--arriba) + var(--barra) + 10px) 0 calc(var(--abajo) + 16px);
-  background: radial-gradient(70vmax 60vmax at 40% 45%, color-mix(in srgb, var(--c) 50%, #0E0B0A), #0B0807 80%);
-  opacity: 0; transition: opacity .35s var(--ease);
-}
-.qt.abierta { opacity: 1; }
-.qt__escena { position: relative; min-height: 0; }
-.qt__foto { position: absolute; }
-/* Los bordes de la foto se funden con el fondo: se ve el plato, no el rectángulo */
-.qt__foto:has(> .qt__franja + .qt__franja) { -webkit-mask-image: linear-gradient(90deg, transparent, #000 14%, #000 86%, transparent); mask-image: linear-gradient(90deg, transparent, #000 14%, #000 86%, transparent); }
-.qt__franja {
-  position: absolute; left: 0; right: 0; overflow: hidden;
-  transition: transform .6s cubic-bezier(.3, 1.4, .5, 1);
-  filter: drop-shadow(0 10px 14px rgba(0, 0, 0, .35));
-}
-.qt__franja img { position: absolute; max-width: none; object-fit: fill; }
-.qt:not(.abierto-del-todo) .qt__franja { transition-duration: .3s; transition-timing-function: var(--ease); }
-.qt__foto > .qt__franja:only-child { border-radius: 18px; filter: drop-shadow(0 20px 30px rgba(0, 0, 0, .45)); }
-.qt__lineas { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; overflow: visible; }
-.qt__lineas path { fill: none; stroke: color-mix(in srgb, var(--c) 40%, #fff); stroke-width: 1.5; stroke-dasharray: 400; stroke-dashoffset: 400; animation: trazo .5s var(--ease) forwards; filter: drop-shadow(0 0 4px color-mix(in srgb, var(--c) 70%, #fff)); }
-.qt__carteles { position: absolute; inset: 0; pointer-events: none; }
-.qt__cartel {
-  position: absolute; max-width: 30vw; padding: 6px 11px 7px; border-radius: 12px;
-  background: rgba(12, 6, 4, .6); border: 1px solid rgba(255, 244, 234, .18); color: #FFF4EA;
-  -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px);
-  font-weight: 600; font-size: 14px; line-height: 1.2;
-  animation: cartel .45s var(--ease) both;
-}
-@media (min-width: 640px) { .qt__cartel { max-width: 260px; font-size: 15px; } }
-.qt__punto {
-  position: absolute; width: 14px; height: 14px; margin: -7px 0 0 -7px; border-radius: 50%;
-  background: #FFF4EA; box-shadow: 0 0 0 4px color-mix(in srgb, var(--c) 60%, transparent), 0 0 18px color-mix(in srgb, var(--c) 80%, #fff);
-  animation: punto .5s var(--ease) both, pulso 1.8s .5s ease-in-out infinite;
-}
-.qt__pie { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 18px 0; max-width: 720px; width: 100%; margin: 0 auto; }
-.qt__pie p { margin: 0; display: grid; gap: 4px; }
-.qt__pie .nombre { font-size: 34px; }
-.qt__listo { height: 50px; padding: 0 26px; }
+:root[data-estilo="estudio"] .punto { background: var(--tinta-actual); box-shadow: 0 0 0 3px color-mix(in srgb, var(--tinta-actual) 25%, transparent); }
 @keyframes trazo { to { stroke-dashoffset: 0; } }
-@keyframes cartel { from { opacity: 0; transform: translateX(-8px); } }
-@keyframes punto { from { transform: scale(0); } }
-@keyframes pulso { 50% { box-shadow: 0 0 0 9px color-mix(in srgb, var(--c) 25%, transparent), 0 0 18px color-mix(in srgb, var(--c) 80%, #fff); } }
-@keyframes aparecer { from { opacity: 0; transform: scale(.96); } }
+@keyframes punto { from { scale: 0; } }
+@keyframes pulso { 50% { box-shadow: 0 0 0 8px color-mix(in srgb, var(--luz-actual) 22%, transparent), 0 0 16px var(--luz-actual); } }
 
-@keyframes subir { from { opacity: 0; transform: translateY(26px); } }
-@media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
-}
+/* ---------- La foto que vuela de "Toda la carta" a su lugar ---------- */
+.volando-foto { position: fixed; z-index: 7; margin: 0; pointer-events: none; }
+.volando-foto img { width: 100%; height: 100%; object-fit: contain; display: block; }

@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="es-AR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Recortes · laboratorio</title>
+<!-- Herramienta para revisar lo marcado en cada foto (contorno, capas y partes) y cómo
+     queda el recorte. No es parte de la carta: se abre aparte, en la compu. -->
+<style>
+  body { margin: 0; background: #1b1b1f; color: #eee; font: 14px/1.4 system-ui, sans-serif; }
+  nav { display: flex; flex-wrap: wrap; gap: 4px; padding: 8px; position: sticky; top: 0; background: #111; z-index: 2; }
+  nav button { background: #333; color: #eee; border: 0; border-radius: 6px; padding: 6px 10px; cursor: pointer; }
+  nav button[aria-pressed="true"] { background: #f5b83d; color: #111; }
+  nav label { margin-left: 8px; display: inline-flex; gap: 4px; align-items: center; }
+  main { display: flex; flex-wrap: wrap; gap: 10px; padding: 10px; align-items: flex-start; }
+  .caja { position: relative; }
+  .caja img, .caja canvas { display: block; }
+  svg { position: absolute; inset: 0; overflow: visible; }
+  .fondo { background: #7a2a10 radial-gradient(circle at 50% 40%, #ff9b45, #3a1206 70%); }
+  .claro { background: #f3e4d6; }
+  .ajedrez { background: repeating-conic-gradient(#999 0 25%, #666 0 50%) 0 0 / 20px 20px; }
+  p { margin: 4px 0; color: #aaa; }
+</style>
+</head>
+<body>
+<nav id="nav"></nav>
+<main id="main"></main>
+<script src="../app/assets/local.js"></script>
+<script src="assets/fotos.js"></script>
+<script src="assets/recorte.js"></script>
+<script>
+(async function () {
+  const nav = document.getElementById("nav"), main = document.getElementById("main");
+  const ids = Object.keys(FOTOS);
+  const params = new URLSearchParams(location.search.slice(1) || location.hash.slice(1));
+  addEventListener("hashchange", () => location.reload());
+  let actual = params.get("p") || ids[0];
+  const ancho = +(params.get("w") || 520);
+  nav.innerHTML = ids.map(id => `<button data-id="${id}" aria-pressed="${id === actual}">${id}</button>`).join("")
+    + `<label><input type="checkbox" id="marcas" checked> marcas</label>`;
+  nav.addEventListener("click", e => { const b = e.target.closest("[data-id]"); if (b) { actual = b.dataset.id; params.set("p", actual); location.hash = params.toString(); mostrar(); } });
+  document.getElementById("marcas").addEventListener("change", mostrar);
+
+  // Curva de un corte de capas: pasa por izquierda, centro y derecha
+  function curva(h, x0, x1) {
+    const [a, c, b] = h, m = 2 * c - (a + b) / 2, ps = [];
+    for (let i = 0; i <= 12; i++) { const t = i / 12; ps.push([x0 + (x1 - x0) * t, (1 - t) * (1 - t) * a + 2 * t * (1 - t) * m + t * t * b]); }
+    return ps;
+  }
+
+  async function mostrar() {
+    nav.querySelectorAll("[data-id]").forEach(b => b.setAttribute("aria-pressed", b.dataset.id === actual));
+    const d = FOTOS[actual], [W, H] = d.tam, k = ancho / W, alto = H * k;
+    const marcas = document.getElementById("marcas").checked;
+    const cont = Recorte.contornoDe(d);
+    const xs = cont.map(p => p[0]), x0 = Math.min(...xs), x1 = Math.max(...xs);
+    const pts = ps => ps.map(([x, y]) => `${(x * k).toFixed(1)},${(y * k).toFixed(1)}`).join(" ");
+    const svg = !marcas ? "" : `<svg viewBox="0 0 ${ancho} ${alto}">
+      <polygon points="${pts(cont)}" fill="none" stroke="#ffe000" stroke-width="1.5"/>
+      ${(d.extra || []).map(e => `<polygon points="${pts(e)}" fill="none" stroke="#ffe000" stroke-width="1.5" stroke-dasharray="4 3"/>`).join("")}
+      ${(d.huecos || []).map(e => `<polygon points="${pts(e)}" fill="none" stroke="#ff4040" stroke-width="1.5"/>`).join("")}
+      ${(d.capas || []).filter(c => c.hasta).map(c => `<polyline points="${pts(curva(c.hasta, x0, x1))}" fill="none" stroke="#00e5ff" stroke-width="1.5"/>`).join("")}
+      ${(d.partes || []).map(p => `<circle cx="${p.x * k}" cy="${p.y * k}" r="${p.r * k}" fill="none" stroke="#ff3df2" stroke-width="1.5"/><text x="${p.x * k + p.r * k + 3}" y="${p.y * k}" fill="#ff3df2" font-size="12">${p.nombre}</text>`).join("")}
+      ${cont.map(([x, y], i) => `<text x="${x * k + 3}" y="${y * k - 3}" fill="#ffe000" font-size="9">${i}</text>`).join("")}
+    </svg>`;
+    main.innerHTML = `
+      <div><div class="caja" style="width:${ancho}px"><img src="${d.foto}" style="width:${ancho}px">${svg}</div><p>Foto con lo marcado</p></div>
+      <div><div class="caja ajedrez" id="c1" style="width:${ancho}px;height:${alto}px"></div><p>Recorte sobre la foto oscurecida</p></div>
+      <div><div class="caja fondo" id="c2" style="width:${ancho}px;height:${alto}px"></div><p>Sobre el fondo de la carta</p></div>
+      <div><div class="caja claro" id="c3" style="width:${ancho}px;height:${alto}px"></div><p>Sobre fondo claro</p></div>`;
+    const t0 = performance.now();
+    const r = await Recorte.cortar(d.foto, d);
+    const ms = Math.round(performance.now() - t0);
+    const [cx0, cy0, cx1, cy1] = r.caja;
+    const pos = `position:absolute;left:${cx0 * k}px;top:${cy0 * k}px;width:${(cx1 - cx0) * k}px;height:${(cy1 - cy0) * k}px`;
+    document.getElementById("c1").innerHTML = `<img src="${d.foto}" style="width:${ancho}px;filter:brightness(.25) saturate(.3)"><img src="${r.url}" style="${pos}">`;
+    document.getElementById("c2").innerHTML = `<img src="${r.url}" style="${pos}">`;
+    document.getElementById("c3").innerHTML = `<img src="${r.url}" style="${pos}">`;
+    main.insertAdjacentHTML("beforeend", `<p style="width:100%">${actual}: recorte ${r.ancho}×${r.alto}, color ${r.color} <span style="display:inline-block;width:40px;height:14px;background:${r.color};vertical-align:middle"></span> · ${ms} ms</p>`);
+  }
+  mostrar();
+})();
+</script>
+</body>
+</html>

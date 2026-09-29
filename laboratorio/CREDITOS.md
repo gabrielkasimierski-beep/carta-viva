@@ -7,6 +7,14 @@ el laboratorio solo lee los platos de `app/assets/local.js`). Es para prueba y e
 - Armar el archivo único para el link: `npm run laboratorio:link` → `laboratorio/vista-previa.html`
 - Sumar un experimento: una función más en `EXPERIMENTOS` (`assets/lab.js`).
 - "Tu foto" cambia la foto del plato que se está viendo, solo en ese navegador.
+- Las marcas del "¿Qué tiene?" de cada foto (capas y puntos) están en `PARTES` (`assets/lab.js`).
+  Para revisar una: `laboratorio/#que-tiene=clasica`.
+
+## Qué se probó
+
+- 29-sep: Vivo, Plato, Tarjetas y Galería. A Gaby le gustaron Vivo y Galería; Plato y
+  Tarjetas quedaron descartados. Ahora: Vivo + Galería combinados, con el "¿Qué tiene?" de la
+  app hecho con la foto (las burgers se abren en capas; lo demás, con puntos por ingrediente).
 
 ## Fotos (Unsplash, licencia libre de Unsplash: uso gratis, sin atribución obligatoria)
 

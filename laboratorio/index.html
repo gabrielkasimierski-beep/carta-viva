@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="es-AR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Carta Viva · laboratorio</title>
+<meta name="description" content="Laboratorio de diseño de Carta Viva: animaciones con fotos reales, aparte de la app.">
+<meta name="theme-color" content="#0E0B0A">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Onest:wght@400;500;600;700;800&family=Unbounded:wght@800&display=swap">
+<link rel="stylesheet" href="assets/lab.css">
+</head>
+<body>
+
+<header class="lab-barra">
+  <p class="lab-marca">Laboratorio<small>Carta Viva · prueba</small></p>
+  <nav class="lab-experimentos" id="lab-experimentos" aria-label="Diseños para probar"></nav>
+  <button class="lab-foto" id="lab-foto" type="button" aria-label="Probar con tu foto el plato que estás viendo">📷<span>Tu foto</span></button>
+  <input id="lab-archivo" type="file" accept="image/*" hidden>
+</header>
+
+<main class="escenario" id="escenario"></main>
+<div class="lab-nota" id="lab-nota" role="status" aria-live="polite"></div>
+
+<!-- Los platos salen de la app (solo se leen: el laboratorio no la toca) -->
+<script src="../app/assets/local.js"></script>
+<script src="assets/lab.js"></script>
+</body>
+</html>

@@ -13,6 +13,8 @@
      Todo en px de la foto de referencia (tam); si la foto vino de otro tamaño, se escala.
      caja: [x0, y0, x1, y1] del recorte, en px de la foto original.
    Sin forma (una foto cualquiera), recorta un óvalo con el borde suave.
+   forma.alfa: la foto ya viene recortada (generada con fondo transparente): el color en un .jpg
+   y lo transparente en otro (alfa, en gris). No hay nada que calcular: se juntan.
    ============================================================================= */
 (function () {
   "use strict";
@@ -144,6 +146,7 @@
   }
   // elipse: [cx, cy, rx, ry] · superelipse: [cx, cy, rx, ry, n] (n > 2: más cuadrada, como una fuente ovalada)
   function contornoDe(forma) {
+    if (forma.alfa && !forma.contorno && forma.tam) { const [W, H] = forma.tam; return [[0, 0], [W, 0], [W, H], [0, H]]; }
     const e = forma.elipse ? [...forma.elipse, 2] : forma.superelipse;
     if (!e) return forma.contorno;
     const [cx, cy, rx, ry, k] = e, ps = [];
@@ -180,7 +183,7 @@
     const img = await cargar(src);
     const W = img.naturalWidth, H = img.naturalHeight;
     let f = forma || ovalo(W, H);
-    if (f.auto) f = { ...f, tam: [W, H], contorno: [[0, 0], [W, 0], [W, H], [0, H]] };   // fondo liso: se saca solo
+    if (f.auto || f.alfa) f = { ...f, tam: [W, H], contorno: [[0, 0], [W, 0], [W, H], [0, H]] };   // fondo liso: se saca solo
     const { contorno, huecos, extra } = puntos(f, W, H);
     const [x0, y0, x1, y1] = cajaDe(contorno, extra, W, H);
     const cw = x1 - x0, ch = y1 - y0;
@@ -203,8 +206,16 @@
     const M = new Float32Array(tw * th);
     for (let i = 0; i < M.length; i++) M[i] = md[i * 4 + 3] / 255;
 
-    let alfa;
-    if (f.auto) {
+    let alfa, mascara = null;
+    if (f.alfa) {
+      // Ya viene recortada: lo transparente sale de su foto en gris
+      mascara = await cargar(f.alfa);
+      const a = lienzo(tw, th), ga = a.getContext("2d", { willReadFrequently: true });
+      ga.drawImage(mascara, x0, y0, cw, ch, 0, 0, tw, th);
+      const ad = ga.getImageData(0, 0, tw, th).data;
+      alfa = new Float32Array(tw * th);
+      for (let i = 0; i < alfa.length; i++) alfa[i] = ad[i * 4] / 255;
+    } else if (f.auto) {
       // Foto sobre fondo liso: lo que se parece al color de los bordes y toca el borde es fondo
       const n = tw * th, fondo = new Uint8Array(n), cola = new Int32Array(n);
       let r = 0, g = 0, b = 0, c = 0;
@@ -242,9 +253,15 @@
     const s = lienzo(sw, sh), gs = s.getContext("2d", { willReadFrequently: true });
     gs.drawImage(img, x0, y0, cw, ch, 0, 0, sw, sh);
     const out = gs.getImageData(0, 0, sw, sh), od = out.data;
+    if (mascara) {
+      const a = lienzo(sw, sh), ga = a.getContext("2d", { willReadFrequently: true });
+      ga.drawImage(mascara, x0, y0, cw, ch, 0, 0, sw, sh);
+      const ad = ga.getImageData(0, 0, sw, sh).data;
+      for (let i = 3; i < od.length; i += 4) od[i] = ad[i - 3];
+    }
     const fx = (tw - 1) / Math.max(1, sw - 1), fy = (th - 1) / Math.max(1, sh - 1);
     const nitido = f.afinar === false ? 0 : 0.18;
-    for (let y = 0; y < sh; y++) {
+    for (let y = 0; y < (mascara ? 0 : sh); y++) {
       const ty = y * fy, ya = Math.floor(ty), yb = Math.min(th - 1, ya + 1), wy = ty - ya;
       for (let x = 0; x < sw; x++) {
         const tx = x * fx, xa = Math.floor(tx), xb = Math.min(tw - 1, xa + 1), wx = tx - xa;
@@ -266,7 +283,7 @@
   // De a uno por vez (el primero que se pide, primero)
   let cola = Promise.resolve();
   function cortar(src, forma) {
-    const clave = src + "|" + JSON.stringify(forma ? [forma.contorno, forma.elipse, forma.superelipse, forma.extra, forma.huecos, forma.banda, forma.afinar, forma.auto] : "ovalo");
+    const clave = src + "|" + JSON.stringify(forma ? [forma.contorno, forma.elipse, forma.superelipse, forma.extra, forma.huecos, forma.banda, forma.afinar, forma.auto, forma.alfa] : "ovalo");
     if (!hechos.has(clave)) {
       const p = cola.then(() => hacer(src, forma)).catch(() => null);
       cola = p.then(() => new Promise(r => setTimeout(r, 16)));

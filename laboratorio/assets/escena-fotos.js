@@ -4,7 +4,7 @@
    en su lugar de la carta, se mueve con el dedo y salta con un toque.
    · De costado (burgers, tragos, flan, aros) dan la vuelta entera con el dedo: la foto se
      envuelve en un cilindro y gira (un toque: una vuelta completa).
-   · Desde arriba (pizzas, la fuente del helado) se acuestan como un plato de verdad y giran.
+   · Desde arriba (las pizzas) se acuestan como un plato de verdad y giran.
    · "¿Qué tiene?": el plato queda entero y alrededor aparece cada ingrediente, con su foto.
    · "Armala": la burger se rearma con las franjas de su foto (simple, doble, triple; lo que
      se saca se va; panceta y huevo se suman con su propia foto).
@@ -151,7 +151,7 @@
   function extra(id) {
     const s = window.SUMAR && window.SUMAR[id];
     if (!s) return null;
-    if (!extras[id]) extras[id] = Recorte.cortar(s.foto, { auto: true, tolerancia: 40 });
+    if (!extras[id]) extras[id] = Recorte.cortar(s.foto, s.alfa ? { alfa: s.alfa } : { auto: true, tolerancia: 40 });
     return extras[id];
   }
   function componer(el, eleccion) {

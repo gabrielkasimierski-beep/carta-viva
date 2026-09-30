@@ -17,7 +17,7 @@ el laboratorio solo lee de ahí los platos, `local.js`, y el diseño, `estilos.c
 - `assets/escena-fotos.js`: en lugar del 3D, el plato es la foto recortada. Flota, se mueve con el dedo,
   salta con un toque. Las pizzas y la fuente del helado (fotos desde arriba) se acuestan y giran.
   "¿Qué tiene?": las burgers se abren en capas; lo demás muestra cada parte con una lupa.
-- `assets/recorte.js`: saca el plato de la foto. Con el contorno marcado "más o menos", el borde se
+- `assets/recorte.js`: saca el plato de la foto (las de Higgsfield ya vienen recortadas: color + alfa). Con el contorno marcado "más o menos", el borde se
   ajusta solo a la foto (mira el color del plato y del fondo, y lo afina siguiendo los bordes).
 
 ## Qué se probó
@@ -31,27 +31,16 @@ el laboratorio solo lee de ahí los platos, `local.js`, y el diseño, `estilos.c
   ingrediente con su propia foto (las capas y lupas cortadas de la foto no gustaron). "Armala":
   la burger se rearma (simple, doble o triple; lo que se saca se va; panceta y huevo se suman).
   Las burgers, tragos, flan y aros dan la vuelta entera con el dedo (un toque: una vuelta).
+- 30-sep: todas las fotos generadas con Higgsfield (platos, ingredientes y lo que se suma en "Armala"),
+  hechas según la receta de la carta. Los platos vienen con fondo transparente: no hace falta marcar
+  el contorno. Las burgers, de costado y en capas parejas, para que "Armala" las rearme mejor. El
+  cucurucho ahora es un cucurucho de verdad (de costado, da la vuelta entera).
 
-## Fotos (Unsplash, licencia libre de Unsplash: uso gratis, sin atribución obligatoria)
+## Fotos
 
-| Plato | Foto |
-|---|---|
-| La Clásica | https://unsplash.com/photos/sc5sTPMrVfk |
-| Doble Bacon | https://unsplash.com/photos/jh5XyK4Rr3Y |
-| La Remolacha | images.unsplash.com/photo-1520072959219-c595dc870360 (recortada más cerca) |
-| Pepperoni | https://unsplash.com/photos/xIqVfW8XUt4 |
-| Fugazzeta | images.unsplash.com/photo-1594007654729-407eedc4be65 |
-| Papas con cheddar | images.unsplash.com/photo-1639744210631-209fce3e256c |
-| Aros de cebolla | https://unsplash.com/photos/uo46nevU9i4 (recortada) |
-| Flan | https://unsplash.com/photos/TqPdzQ00I0U (recortada) |
-| Cucurucho | images.unsplash.com/photo-1633933358116-a27b902fad35 |
-| Cheesecake | https://unsplash.com/photos/xx1USWIvIFc |
-| Limonada | images.unsplash.com/photo-1653542772393-71ffa417b1c4 |
-| Pinta de IPA | images.unsplash.com/photo-1608270586620-248524c67de9 (recortada más cerca) |
-| Fernet con coca | images.unsplash.com/photo-1629654613528-5d0a2e4166de |
+Generadas con Higgsfield (modelo GPT Image 2.5), el 30-sep, desde la cuenta de Gaby. Platos en
+calidad alta con fondo transparente; ingredientes en calidad baja (se ven chicos) sobre fondo blanco.
+Se guardan ya recortadas y achicadas: `fotos/<plato>.jpg` (color) + `fotos/<plato>-alfa.jpg` (lo
+transparente, en gris). Los PNG originales quedan en la cuenta de Higgsfield.
 
-Ingredientes (`assets/ingredientes/`) y lo que se suma en "Armala" (`assets/fotos/sumar-*.jpg`):
-también de Unsplash, una foto por ingrediente (ids en el historial del repo, commit de este cambio).
-
-Son fotos de ejemplo, no de Mordisco: sirven para probar cómo se ven las animaciones. Por eso lo
-marcado en el "¿Qué tiene?" describe lo que se ve en cada foto, que no siempre es la receta de la carta.
+Las anteriores (Unsplash) quedaron en el historial del repo.

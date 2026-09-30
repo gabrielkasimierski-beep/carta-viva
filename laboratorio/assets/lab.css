@@ -40,7 +40,6 @@ body { background: #0D0605; }
 .fp.con-capas .fp__capas { display: block; }
 .fp.con-capas .fp__entero { visibility: hidden; }
 .fp__capa { transition: transform .62s cubic-bezier(.3, 1.3, .5, 1); will-change: transform; }
-.fp.abierto .fp__capa { filter: drop-shadow(0 12px 14px rgba(0, 0, 0, .38)); }
 
 /* Los que se ven desde arriba se acuestan (con un poco de canto) y giran */
 .fp[data-vista="arriba"] .fp__plato { transform: rotateX(54deg); }
@@ -78,52 +77,37 @@ body { background: #0D0605; }
 }
 :root[data-estilo="jugo"] .armado { background: #fff; border-color: #fff; color: var(--tc); }
 
-/* ---------- ¿Qué tiene?: los nombres (capas) y las lupas (partes) ---------- */
-.etiqueta { opacity: 0; transition: opacity .35s var(--ease); }
-.etiqueta.visible { opacity: 1; }
-.etiqueta.fuera, .lupa.fuera, .punto.fuera { opacity: 0 !important; transition: opacity .18s; }
+/* ---------- ¿Qué tiene?: cada ingrediente con su foto, alrededor del plato ---------- */
+.ingrediente { position: fixed; left: 0; top: 0; will-change: transform; transition: opacity .2s; }
+.ingrediente.fuera { opacity: 0; }
+.ingrediente__cuerpo {
+  position: absolute; left: 0; top: 0; translate: -50% -50%;
+  display: grid; justify-items: center; gap: 6px; width: max-content; max-width: 124px; text-align: center;
+  animation: flotar 3.2s ease-in-out infinite; animation-delay: calc(var(--k, 0) * -.45s);
+}
+.ingrediente__foto {
+  display: block; border-radius: 50%; background: #fff center / cover no-repeat;
+  box-shadow: 0 0 0 3px #FFF4EA, 0 0 0 6px color-mix(in srgb, var(--luz-actual) 45%, transparent), 0 16px 30px -10px rgba(0, 0, 0, .7);
+}
+.ingrediente b {
+  padding: 4px 9px 5px; border-radius: 10px; font-size: 13px; font-weight: 600; line-height: 1.15;
+  background: rgba(12, 6, 4, .6); color: #FFF4EA; border: 1px solid rgba(255, 244, 234, .16);
+  -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px);
+}
+:root[data-estilo="jugo"] .ingrediente__foto { box-shadow: 0 0 0 4px #fff, 0 12px 26px -8px rgba(0, 0, 0, .45); }
+:root[data-estilo="jugo"] .ingrediente b { background: #fff; color: var(--tarjeta-actual); border-color: #fff; }
+:root[data-estilo="estudio"] .ingrediente__foto { box-shadow: 0 0 0 2px var(--tinta-actual), 0 10px 22px -10px rgba(0, 0, 0, .5); }
+:root[data-estilo="estudio"] .ingrediente b { background: none; border: 0; color: var(--tinta-actual); font-family: var(--rotulo); font-weight: 500; text-transform: uppercase; font-size: 11.5px; letter-spacing: .04em; -webkit-backdrop-filter: none; backdrop-filter: none; }
+@media (min-width: 640px) { .ingrediente b { font-size: 14.5px; } .ingrediente__cuerpo { max-width: 170px; } }
+@keyframes flotar { 50% { translate: -50% calc(-50% - 7px); } }
 
-.lupas-lineas { position: fixed; inset: 0; width: 100%; height: 100%; overflow: visible; pointer-events: none; }
-.lupas-lineas path {
-  fill: none; stroke: var(--luz-actual); stroke-width: 1.6; stroke-linecap: round;
-  stroke-dasharray: 700; stroke-dashoffset: 700; animation: trazo .55s var(--ease) forwards;
-  filter: drop-shadow(0 0 4px color-mix(in srgb, var(--luz-actual) 70%, transparent));
-}
-:root[data-estilo="jugo"] .lupas-lineas path { stroke: #fff; filter: none; stroke-width: 2; }
-:root[data-estilo="estudio"] .lupas-lineas path { stroke: var(--tinta-actual); filter: none; }
-
-.lupa {
-  position: fixed; left: 0; top: 0; display: flex; align-items: center; gap: 9px;
-  translate: 0 -50%; will-change: transform;
-}
-.lupa--izq { flex-direction: row-reverse; translate: -100% -50%; text-align: right; }
-.lupa--abajo { flex-direction: column; gap: 7px; translate: -50% 0; text-align: center; }
-.lupa--abajo .etiqueta__texto { padding: 4px 8px 5px; }
-.lupa--abajo .etiqueta__texto small { font-size: 11px; }
-.lupa__foto {
-  flex: none; border-radius: 50%; background-repeat: no-repeat; background-color: #222;
-  box-shadow: 0 0 0 3px #FFF4EA, 0 0 0 5px color-mix(in srgb, var(--luz-actual) 55%, transparent), 0 14px 30px -8px rgba(0, 0, 0, .7);
-}
-:root[data-estilo="jugo"] .lupa__foto { box-shadow: 0 0 0 4px #fff, 0 12px 26px -8px rgba(0, 0, 0, .45); }
-:root[data-estilo="estudio"] .lupa__foto { box-shadow: 0 0 0 2px var(--tinta-actual), 0 10px 22px -10px rgba(0, 0, 0, .5); }
-.lupa .etiqueta__texto { animation: aparecer .35s var(--ease) both; animation-delay: calc(.3s + var(--k, 0) * .08s); }
-.lupa .etiqueta__texto b { font-size: 14.5px; }
-@media (max-width: 639px) {
-  .lupa .etiqueta__texto { padding: 5px 9px 6px; }
-  .lupa .etiqueta__texto b { font-size: 13.5px; }
-  .lupa .etiqueta__texto small { display: block; font-size: 11.5px; }
-}
-
-.punto {
-  position: fixed; left: 0; top: 0; width: 13px; height: 13px; margin: -6.5px 0 0 -6.5px; border-radius: 50%;
-  background: #FFF4EA;
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--luz-actual) 75%, transparent), 0 0 16px var(--luz-actual);
-  animation: punto .4s var(--ease) both, pulso 1.8s ease-in-out infinite;
-}
-:root[data-estilo="estudio"] .punto { background: var(--tinta-actual); box-shadow: 0 0 0 3px color-mix(in srgb, var(--tinta-actual) 25%, transparent); }
-@keyframes trazo { to { stroke-dashoffset: 0; } }
-@keyframes punto { from { scale: 0; } }
-@keyframes pulso { 50% { box-shadow: 0 0 0 8px color-mix(in srgb, var(--luz-actual) 22%, transparent), 0 0 16px var(--luz-actual); } }
+/* La vuelta entera (se dibuja encima de la foto mientras gira) y lo que se suma en "Armala" */
+.fp__rueda { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.fp.girando .fp__entero { visibility: hidden; }
+.fp__extra { position: absolute; left: 7%; right: 7%; overflow: hidden; transition: top .45s cubic-bezier(.3, 1.3, .5, 1), opacity .25s; filter: drop-shadow(0 6px 6px rgba(0, 0, 0, .3)); }
+.fp__extra img { position: absolute; max-width: none; }
+.fp__capa { transition: transform .45s cubic-bezier(.3, 1.3, .5, 1), opacity .25s; }
+.fp__capas { transition: transform .45s cubic-bezier(.3, 1.3, .5, 1); }
 
 /* ---------- La foto que vuela de "Toda la carta" a su lugar ---------- */
 .volando-foto { position: fixed; z-index: 7; margin: 0; pointer-events: none; }

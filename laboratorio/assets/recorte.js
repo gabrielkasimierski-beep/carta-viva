@@ -179,7 +179,8 @@
   async function hacer(src, forma) {
     const img = await cargar(src);
     const W = img.naturalWidth, H = img.naturalHeight;
-    const f = forma || ovalo(W, H);
+    let f = forma || ovalo(W, H);
+    if (f.auto) f = { ...f, tam: [W, H], contorno: [[0, 0], [W, 0], [W, H], [0, H]] };   // fondo liso: se saca solo
     const { contorno, huecos, extra } = puntos(f, W, H);
     const [x0, y0, x1, y1] = cajaDe(contorno, extra, W, H);
     const cw = x1 - x0, ch = y1 - y0;
@@ -203,7 +204,30 @@
     for (let i = 0; i < M.length; i++) M[i] = md[i * 4 + 3] / 255;
 
     let alfa;
-    if (f.afinar === false) {
+    if (f.auto) {
+      // Foto sobre fondo liso: lo que se parece al color de los bordes y toca el borde es fondo
+      const n = tw * th, fondo = new Uint8Array(n), cola = new Int32Array(n);
+      let r = 0, g = 0, b = 0, c = 0;
+      const borde = i => { r += rgba[i * 4]; g += rgba[i * 4 + 1]; b += rgba[i * 4 + 2]; c++; };
+      for (let x = 0; x < tw; x++) { borde(x); borde((th - 1) * tw + x); }
+      for (let y = 0; y < th; y++) { borde(y * tw); borde(y * tw + tw - 1); }
+      r /= c; g /= c; b /= c;
+      const tol = (f.tolerancia || 38) ** 2;
+      const parecido = i => (rgba[i * 4] - r) ** 2 + (rgba[i * 4 + 1] - g) ** 2 + (rgba[i * 4 + 2] - b) ** 2 < tol;
+      let fin = 0;
+      const sembrar = i => { if (!fondo[i] && parecido(i)) { fondo[i] = 1; cola[fin++] = i; } };
+      for (let x = 0; x < tw; x++) { sembrar(x); sembrar((th - 1) * tw + x); }
+      for (let y = 0; y < th; y++) { sembrar(y * tw); sembrar(y * tw + tw - 1); }
+      for (let k = 0; k < fin; k++) {
+        const i = cola[k], x = i % tw;
+        if (x > 0) sembrar(i - 1);
+        if (x < tw - 1) sembrar(i + 1);
+        if (i >= tw) sembrar(i - tw);
+        if (i < n - tw) sembrar(i + tw);
+      }
+      for (let i = 0; i < n; i++) M[i] = fondo[i] ? 0 : 1;
+      alfa = calcularAlfa(null, M, tw, th, Math.max(1, Math.round(Math.max(tw, th) * 0.004)), true);
+    } else if (f.afinar === false) {
       // Sin afinar: el contorno con el borde suavizado
       const suave = Math.max(1, Math.round(Math.max(tw, th) * (f.suave || 0.006) / 1.6));
       alfa = calcularAlfa(null, M, tw, th, suave, true);
@@ -232,14 +256,17 @@
     gs.putImageData(out, 0, 0);
     const blob = await new Promise(ok => s.toBlob(ok, "image/webp", 0.9));
     const url = blob ? URL.createObjectURL(blob) : s.toDataURL("image/png");
-    return { url, ancho: sw, alto: sh, caja: [x0, y0, x1, y1], foto: [W, H], color };
+    // Dónde está de verdad el plato adentro del recorte (0 a 1), por si sobró fondo alrededor
+    let ux0 = 1, uy0 = 1, ux1 = 0, uy1 = 0;
+    for (let y = 0; y < th; y++) for (let x = 0; x < tw; x++) if (alfa[y * tw + x] > 0.5) { ux0 = Math.min(ux0, x / tw); ux1 = Math.max(ux1, (x + 1) / tw); uy0 = Math.min(uy0, y / th); uy1 = Math.max(uy1, (y + 1) / th); }
+    return { url, ancho: sw, alto: sh, caja: [x0, y0, x1, y1], foto: [W, H], color, util: ux1 > ux0 ? [ux0, uy0, ux1, uy1] : [0, 0, 1, 1] };
   }
 
   const hechos = new Map();
   // De a uno por vez (el primero que se pide, primero)
   let cola = Promise.resolve();
   function cortar(src, forma) {
-    const clave = src + "|" + JSON.stringify(forma ? [forma.contorno, forma.elipse, forma.superelipse, forma.extra, forma.huecos, forma.banda, forma.afinar] : "ovalo");
+    const clave = src + "|" + JSON.stringify(forma ? [forma.contorno, forma.elipse, forma.superelipse, forma.extra, forma.huecos, forma.banda, forma.afinar, forma.auto] : "ovalo");
     if (!hechos.has(clave)) {
       const p = cola.then(() => hacer(src, forma)).catch(() => null);
       cola = p.then(() => new Promise(r => setTimeout(r, 16)));

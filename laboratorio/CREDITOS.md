@@ -27,6 +27,10 @@ el laboratorio solo lee de ahí los platos, `local.js`, y el diseño, `estilos.c
 - 29-sep (2): pidió la interacción de la app con las fotos reales. Ahora el laboratorio es la carta
   de la app tal cual (los tres estilos incluidos), con el plato recortado de la foto en lugar del 3D.
   Vivo + Galería quedó en el historial del repo.
+- 29-sep (3): pedidos de Gaby. "¿Qué tiene?": el plato queda entero y alrededor aparece cada
+  ingrediente con su propia foto (las capas y lupas cortadas de la foto no gustaron). "Armala":
+  la burger se rearma (simple, doble o triple; lo que se saca se va; panceta y huevo se suman).
+  Las burgers, tragos, flan y aros dan la vuelta entera con el dedo (un toque: una vuelta).
 
 ## Fotos (Unsplash, licencia libre de Unsplash: uso gratis, sin atribución obligatoria)
 
@@ -45,6 +49,9 @@ el laboratorio solo lee de ahí los platos, `local.js`, y el diseño, `estilos.c
 | Limonada | images.unsplash.com/photo-1653542772393-71ffa417b1c4 |
 | Pinta de IPA | images.unsplash.com/photo-1608270586620-248524c67de9 (recortada más cerca) |
 | Fernet con coca | images.unsplash.com/photo-1629654613528-5d0a2e4166de |
+
+Ingredientes (`assets/ingredientes/`) y lo que se suma en "Armala" (`assets/fotos/sumar-*.jpg`):
+también de Unsplash, una foto por ingrediente (ids en el historial del repo, commit de este cambio).
 
 Son fotos de ejemplo, no de Mordisco: sirven para probar cómo se ven las animaciones. Por eso lo
 marcado en el "¿Qué tiene?" describe lo que se ve en cada foto, que no siempre es la receta de la carta.

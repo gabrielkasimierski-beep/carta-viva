@@ -344,7 +344,7 @@
     });
     $("#explosion-pie").hidden = !si;
     $("#explosion-nombre").textContent = p.nombre;
-    $("#explosion-bajada").textContent = E.tieneCapas(p) ? "Así viene, capa por capa" : "Así viene, parte por parte";
+    $("#explosion-bajada").textContent = "Lo que lleva";
     if (si) setTimeout(() => $("#explosion-cerrar").focus({ preventScroll: true }), 50);
   }
   $("#explosion-cerrar").addEventListener("click", () => explotar(false));
@@ -361,11 +361,13 @@
     abrirHoja(hojaArmar, { claro: true });
     raiz.style.setProperty("--hoja", hojaArmar.offsetHeight + "px");
     E.acomodar(escenario(actual), () => document.body.classList.add("armando"));
+    E.componer(escenario(actual), { ...eleccion });            // la burger como viene en la carta
   }
   function salirArmar() {
     if (modo !== "armando") return;
     modo = null;
     E.acomodar(escenario(actual), () => document.body.classList.remove("armando"));
+    E.componer(escenario(actual), null);
     if (eleccionCambio) mostrarArmado(null);
   }
   function mostrarArmado(texto) {
@@ -407,7 +409,8 @@
     }
     $$(".chip", gEl).forEach(c => c.setAttribute("aria-pressed", elegido(g, g.items.find(x => String(x.id) === c.dataset.item))));
     eleccionCambio = true;
-    E.saltar(escenario(actual), 0.55);
+    E.componer(escenario(actual), { ...eleccion });
+    E.saltar(escenario(actual), 0.4);
     mostrarArmado(describir(p, eleccion));
     $("#armar-agregar").textContent = `Agregar · ${plata(precioDe(p, eleccion))}`;
   });
@@ -492,7 +495,7 @@
     pistaPuesta = true;
     pista = document.createElement("div");
     pista.className = "pista";
-    pista.innerHTML = `<svg width="18" height="18" aria-hidden="true"><use href="#i-giro"/></svg>Movelo con el dedo · deslizá para ver más`;
+    pista.innerHTML = `<svg width="18" height="18" aria-hidden="true"><use href="#i-giro"/></svg>Girala con el dedo · deslizá para ver más`;
     escenario(0).appendChild(pista);
     setTimeout(ocultarPista, 7000);
   }

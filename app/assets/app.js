@@ -50,7 +50,9 @@ function miMesa() {
   return m && !m.sesion.cerrada ? m : null;
 }
 const inicial = n => (String(n || "?").trim()[0] || "?").toUpperCase();
-const avatar = (c, clase = "") => `<span class="avatar ${clase}" style="--av:${c.color}" aria-hidden="true">${esc(inicial(c.nombre))}</span>`;
+// Los del club llevan un aro dorado
+const avatar = (c, clase = "") => `<span class="avatar ${clase}${c.cliente ? " avatar--club" : ""}" style="--av:${c.color}" aria-hidden="true">${esc(inicial(c.nombre))}</span>`;
+const icono = (id, tam = 16) => `<svg width="${tam}" height="${tam}" aria-hidden="true"><use href="#${id}"/></svg>`;
 const nombreEn = (m, id) => (m.comensales.find(c => c.id === id) || {}).nombre || "Alguien";
 
 /* ---------- Color: el color de cada plato, llevado a cada estilo ---------- */
@@ -356,6 +358,7 @@ function abrirHoja(h, { claro = false } = {}) {
   hojaAbierta = h;
   velo.hidden = false;
   velo.classList.toggle("velo--claro", claro);
+  velo.classList.toggle("velo--alto", h.classList.contains("hoja--club"));     // el club se abre también sobre el "gracias"
   h.hidden = false;
   document.body.classList.add("bloqueada");
   requestAnimationFrame(() => requestAnimationFrame(() => { velo.classList.add("abierto"); h.classList.add("abierta"); }));
@@ -392,10 +395,13 @@ function pedirNombre(despues, plato) {
   ocultarPista();
   bvAbierta = true;
   bvPlato = plato ? platos.indexOf(plato) : Math.max(0, actual);
-  miColor = null;
-  bvNombre.value = "";
+  // Si este celu es del club, ya sabemos quién es: su nombre y su color
+  const k = miCliente();
+  miColor = k ? k.color : null;
+  bvNombre.value = k ? k.nombre : "";
   $("#bv-bajada").textContent = plato
     ? `Para sumar ${plato.nombre}, decinos quién sos: así en la mesa se sabe qué pidió cada uno.`
+    : k && k.visitas ? `Es tu ${k.visitas + 1}ª visita a ${L.nombre}. Tu color y tus premios te estaban esperando.`
     : "Mirá cada plato en 3D, armalo a tu gusto y pidan juntos, cada uno desde su celu.";
   $("#bv-pista").hidden = !!plato;
   pintarBienvenida();
@@ -431,6 +437,7 @@ function pintarBienvenida() {
   bvGente();
   bvColores();
   bvYo();
+  bvClub();
 }
 // Quiénes ya están (con lo que ya pidieron): si entra alguien mientras mirás, aparece
 function bvGente() {
@@ -459,7 +466,10 @@ function bvYo() {
   yoEl.textContent = n ? inicial(n) : "?";
   yoEl.style.setProperty("--av", miColor || "#9A9A9A");
   yoEl.classList.toggle("con-nombre", !!n);
-  $("#bv-titulo").textContent = n ? `¡${saludo()}, ${n.split(" ")[0]}!` : `¡${saludo()}!`;
+  yoEl.classList.toggle("avatar--club", !!miCliente());
+  const k = miCliente();
+  const vuelve = k && k.visitas && n.toLowerCase() === k.nombre.toLowerCase();
+  $("#bv-titulo").textContent = vuelve ? `¡Hola de nuevo, ${n.split(" ")[0]}!` : n ? `¡${saludo()}, ${n.split(" ")[0]}!` : `¡${saludo()}!`;
   $("#bv-entrar").textContent = n ? `Entrar a la mesa ${mesa}` : "Entrar a la mesa";
 }
 bvNombre.addEventListener("input", () => {
@@ -507,11 +517,22 @@ async function entrar() {
     if (!r) return avisar("No pudimos entrar a la mesa. Probá de nuevo.");
     yo = r.comensal.id;
     D.recordarYo(r.comensal);
+    // Del club: esta persona de la mesa es la de la cuenta de este celu (o se suma recién)
+    let socio = null;
+    if (miCliente() || clubAlta) {
+      const v = await D.vincular(yo, clubAlta || {});
+      socio = v && v.ok ? v : null;
+      if (v && !v.ok) avisar(MOTIVOS_CLUB[v.motivo] || "No pudimos sumarte al club. Probá de nuevo.");
+    }
+    clubAlta = null;
     antes = null;
     cerrarBienvenida(true);
     refrescar();
-    requestAnimationFrame(() => volarYo(r.comensal));
-    avisar(`¡Listo, ${r.comensal.nombre}! Ya estás en la mesa ${mesa}.`, r.comensal);
+    const c = miComensal() || r.comensal;
+    requestAnimationFrame(() => volarYo(c));
+    avisar(!socio ? `¡Listo, ${c.nombre}! Ya estás en la mesa ${mesa}.`
+      : socio.nuevo ? `¡Listo, ${c.nombre}! Ya sos del club y estás en la mesa ${mesa}.`
+      : `¡Hola de nuevo, ${c.nombre}! Es tu ${socio.cliente.visitas + 1}ª visita.`, c);
     const f = alEntrar;
     alEntrar = null;
     if (f) setTimeout(f, 700);
@@ -520,6 +541,282 @@ async function entrar() {
   }
 }
 $("#bv-entrar").addEventListener("click", entrar);
+
+/* ---------- El club: la cuenta con el mail (sin contraseña), los sellos y los premios ----------
+   Cada comensal que quiere se suma con su mail: le llega un código de 6 números y listo.
+   Lo que pide suma sellos cuando se cobra la mesa; cada tantos, un premio de regalo que
+   pide desde acá y sale gratis. Cuando vuelve, la carta lo saluda con su nombre, su color,
+   lo que siempre pide y sus premios. */
+const hojaClub = $("#hoja-club");
+const cfgClub = () => (D.club ? D.club() : { activo: false });
+const miCliente = () => (D.miCliente ? D.miCliente() : null);
+const premioClub = () => porId(cfgClub().premio);
+const MOTIVOS_CLUB = {
+  mail: "Revisá el mail: parece que le falta algo.", espera: "Esperá unos segundos para pedir otro código.",
+  codigo: "Ese código no es. Revisalo y probá de nuevo.", vencido: "El código venció. Pedí uno nuevo.",
+  intentos: "Probaste muchas veces. Pedí un código nuevo.", nombre: "Decinos tu nombre.",
+  ya_en_la_mesa: "Tu cuenta ya está en esta mesa desde otro celu.", otra_cuenta: "En esta mesa ya entraste con otra cuenta del club.",
+  mesa_cerrada: "Esa mesa se cobró hace rato: lo de ese día ya no suma. Desde la próxima, sí.",
+  club_apagado: "El club no está funcionando ahora.", sin_cuenta: "Primero entrá con tu mail.",
+};
+let clubPaso = "mail", clubMail = "", clubDemo = "", clubError = "", clubNombre = "", clubNovedades = false;
+let clubRecien = false, clubBorrar = false, clubAlta = null, clubOcupado = false;
+const cuando = t => {
+  if (!t) return "";
+  const dias = Math.round((new Date().setHours(0, 0, 0, 0) - new Date(t).setHours(0, 0, 0, 0)) / 864e5);
+  return dias <= 0 ? "hoy" : dias === 1 ? "ayer" : "el " + new Date(t).toLocaleDateString("es-AR", { day: "numeric", month: "short" });
+};
+const veces = n => `${n} ${n === 1 ? "vez" : "veces"}`;
+
+// Los sellos: uno por cosa pedida; al completar la tarjeta, el premio (la foto del plato)
+function sellosHtml(sellos, meta, nuevos = 0) {
+  const p = premioClub();
+  const foto = p ? fotoRedonda(p, null, "sellos__premio") : "";
+  if (meta > 15) return `<span class="sellos sellos--barra"><span class="club-barra" style="--p:${Math.round(sellos / meta * 100)}%"><i></i></span>${foto}</span>`;
+  return `<span class="sellos" role="img" aria-label="${sellos} de ${meta} sellos">${Array.from({ length: meta }, (_, i) => {
+    const nuevo = i >= sellos - nuevos && i < sellos;
+    return `<i class="${i < sellos ? "lleno" : ""}${nuevo ? " nuevo" : ""}"${nuevo ? ` style="animation-delay:${0.25 + (i - (sellos - nuevos)) * 0.12}s"` : ""}></i>`;
+  }).join("")}${foto}</span>`;
+}
+function faltaTexto(k) {
+  const p = premioClub(), falta = k.meta - k.sellos;
+  if (!p) return "";
+  return k.sellos ? `Te ${falta === 1 ? "falta <b>1</b>" : `faltan <b>${falta}</b>`} para ${esc(p.nombre)} de regalo.`
+    : `Cada <b>${k.meta}</b> cosas que pidas, ${esc(p.nombre)} de regalo.`;
+}
+// Los premios que tiene para pedir
+function premiosHtml(k) {
+  return k.premios.map(pr => {
+    const p = porId(pr.plato);
+    return `<div class="club-premio">
+      ${p ? fotoRedonda(p, null, "club-premio__foto") : ""}
+      <span><b>${esc(pr.nombre)} de regalo</b><small>Lo ganaste ${cuando(pr.ganado)}${pr.enPedido ? " · ya está en el pedido" : ""}</small></span>
+      ${pr.enPedido ? `<span class="club-premio__listo">${icono("i-listo", 18)}</span>` : `<button type="button" class="club-premio__pedir" data-canjear="${pr.id}">Pedirlo</button>`}
+    </div>`;
+  }).join("");
+}
+function tarjetaClub(k) {
+  return `<div class="club-tarjeta">
+    <div class="club-tarjeta__cabeza">${avatar({ ...k, cliente: true }, "club-tarjeta__avatar")}<span><b>${esc(k.nombre)}</b><small>${icono("i-estrella", 12)} Club ${esc(L.nombre)} · ${k.visitas ? `${veces(k.visitas)} por acá` : "recién llegás"}</small></span></div>
+    ${sellosHtml(k.sellos, k.meta)}
+    <p class="club-tarjeta__falta">${faltaTexto(k)}</p>
+    ${premiosHtml(k)}
+  </div>`;
+}
+
+// En la bienvenida: la invitación, o la tarjeta de quien vuelve (con "lo de siempre")
+function bvClub() {
+  const el = $("#bv-club");
+  const cfg = cfgClub(), p = premioClub();
+  if (!cfg.activo || !p) { el.hidden = true; return; }
+  const k = miCliente();
+  let html;
+  if (k) {
+    const fav = k.favoritos.map(f => porId(f.plato)).find(x => x && !D.agotado(x.id));
+    html = `<div class="bv-club__fila">${sellosHtml(k.sellos, k.meta)}<p>${faltaTexto(k)}</p></div>
+      ${premiosHtml(k)}
+      <div class="bv-club__pie">
+        ${fav ? `<button type="button" class="club-siempre" data-fav="${fav.id}">${fotoRedonda(fav, null, "club-siempre__foto")}<span><small>¿Lo de siempre?</small><b>${esc(fav.nombre)}</b></span>${icono("i-mas", 16)}</button>` : ""}
+        <button type="button" class="club-link" data-club-salir>No soy ${esc(k.nombre)}</button>
+      </div>`;
+  } else {
+    html = `<button type="button" class="club-invita" data-club-abrir>
+      <span class="club-invita__icono">${icono("i-regalo", 20)}</span>
+      <span><b>Club ${esc(L.nombre)}</b><small>Cada ${cfg.meta} cosas, ${esc(p.nombre)} de regalo. Con tu mail, sin contraseña.</small></span>
+      <span class="club-invita__ir">Sumarme</span>
+    </button>`;
+  }
+  if (el._html !== html) { el.innerHTML = html; el._html = html; llenarFotos(el); }
+  el.hidden = false;
+}
+
+// La hoja del club: el mail → el código → tu cuenta
+function abrirClub() {
+  if (!cfgClub().activo) return;
+  clubError = "";
+  clubBorrar = false;
+  clubRecien = false;
+  clubPaso = miCliente() ? "yo" : "mail";
+  if (clubPaso === "mail" && !clubNombre) clubNombre = (miComensal() || {}).nombre || bvNombre.value.trim();
+  pintarClub();
+  abrirHoja(hojaClub);
+  setTimeout(() => hojaClub.querySelector(clubPaso === "mail" ? (hojaClub.querySelector("#club-nombre") ? "#club-nombre" : "#club-mail") : "[data-cerrar]")?.focus({ preventScroll: true }), 80);
+}
+function pintarClub() {
+  const cfg = cfgClub(), p = premioClub(), k = miCliente();
+  if (clubPaso === "yo" && !k) clubPaso = "mail";
+  const cuerpo = $("#club-cuerpo"), pie = $("#club-pie");
+  $("#club-sobre").textContent = `Club ${L.nombre}`;
+  const error = clubError ? `<p class="club-error" role="alert">${esc(clubError)}</p>` : "";
+  if (clubPaso === "mail") {
+    $("#club-titulo").textContent = "Sumate al club";
+    const pideNombre = !miComensal() && !bvNombre.value.trim();
+    cuerpo.innerHTML = `
+      <ul class="club-beneficios">
+        <li>${fotoRedonda(p, null, "club-beneficios__foto")}<span>Cada <b>${cfg.meta} cosas</b> que pidas, <b>${esc(p.nombre)}</b> de regalo. Lo pedís desde acá y sale gratis.</span></li>
+        <li><span class="club-beneficios__icono">${icono("i-estrella", 18)}</span><span>Cuando vuelvas, la carta te reconoce: tu color, lo que siempre pedís y tus premios.</span></li>
+        <li><span class="club-beneficios__icono">${icono("i-mail", 18)}</span><span>Sin contraseña: te mandamos un código a tu mail. Si ya sos del club, entrá con el mismo.</span></li>
+      </ul>
+      ${pideNombre ? `<div class="campo"><label for="club-nombre">Tu nombre</label><input id="club-nombre" type="text" autocomplete="given-name" autocapitalize="words" maxlength="20" value="${esc(clubNombre)}" placeholder="Como te dicen"></div>` : ""}
+      <div class="campo"><label for="club-mail">Tu mail</label><input id="club-mail" type="email" inputmode="email" autocomplete="email" autocapitalize="off" spellcheck="false" maxlength="120" value="${esc(clubMail)}" placeholder="nombre@mail.com" enterkeyhint="send"></div>
+      <label class="club-check"><input type="checkbox" id="club-novedades"${clubNovedades ? " checked" : ""}><span>Quiero que ${esc(L.nombre)} me mande novedades y promos</span></label>
+      ${error}
+      <p class="club-letra">${esc(L.nombre)} guarda tu nombre, tu mail y lo que pedís solo para el club. Lo borrás cuando quieras desde acá.</p>`;
+    pie.innerHTML = `<button class="boton-principal" type="button" data-club-codigo>${icono("i-mail", 18)} Mandame el código</button>`;
+  } else if (clubPaso === "codigo") {
+    $("#club-titulo").textContent = "Revisá tu mail";
+    cuerpo.innerHTML = `
+      <p class="club-texto">Te mandamos un código de 6 números a <b>${esc(clubMail)}</b>. Si no está, fijate en correo no deseado.</p>
+      <div class="campo"><label for="club-codigo">El código</label><input id="club-codigo" class="club-codigo" type="text" inputmode="numeric" pattern="[0-9]*" autocomplete="one-time-code" maxlength="6" placeholder="000000" enterkeyhint="done"></div>
+      ${clubDemo ? `<p class="club-demo"><span class="club-demo__tag">Demo</span><span>No se manda ningún mail: el código es <b>${clubDemo}</b>.</span><button type="button" data-club-demo>Usarlo</button></p>` : ""}
+      ${error}
+      <p class="club-otros"><button type="button" data-club-reenviar>Mandarlo de nuevo</button><button type="button" data-club-cambiar>Cambiar el mail</button></p>`;
+    pie.innerHTML = `<button class="boton-principal" type="button" data-club-verificar>Entrar al club</button>`;
+  } else {
+    $("#club-titulo").textContent = clubRecien ? `¡Listo, ${k.nombre}!` : `Hola, ${k.nombre}`;
+    const favs = k.favoritos.map(f => ({ ...f, p: porId(f.plato) })).filter(f => f.p);
+    const c = miComensal();
+    cuerpo.innerHTML = `
+      ${clubRecien ? `<p class="club-texto">${c && c.acreditado ? `Lo que pediste hoy ya sumó: <b>${c.acreditado.cosas}</b>.` : "Ya sos del club. Lo que pidas suma cuando paguen la mesa."}</p>` : ""}
+      ${tarjetaClub(k)}
+      ${favs.length ? `<div class="club-favs"><p class="grupo__titulo">Lo que más pedís</p><ul>${favs.map(f => `
+        <li>${fotoRedonda(f.p, null, "club-favs__foto")}<span><b>${esc(f.p.nombre)}</b><small>Lo pediste ${veces(f.cant)}</small></span>${miMesa() && !D.agotado(f.p.id) ? `<button type="button" data-fav="${f.p.id}">Sumar</button>` : ""}</li>`).join("")}</ul></div>` : ""}
+      <label class="club-check"><input type="checkbox" id="club-novedades-yo"${k.novedades ? " checked" : ""}><span>Quiero que ${esc(L.nombre)} me mande novedades y promos</span></label>
+      ${error}
+      <p class="club-letra">Entrás con ${esc(k.email)}. En este celu quedás adentro; en otro, te mandamos un código.</p>
+      <p class="club-otros"><button type="button" data-club-salir>Salir en este celu</button><button type="button" class="${clubBorrar ? "confirmando" : ""}" data-club-borrar>${clubBorrar ? "Tocá de nuevo: se borra todo" : "Borrar mi cuenta del club"}</button></p>`;
+    pie.innerHTML = `<button class="boton-principal" type="button" data-cerrar>Listo</button>`;
+  }
+  llenarFotos(cuerpo);
+}
+async function clubPedirCodigo() {
+  const nombre = $("#club-nombre");
+  if (nombre) clubNombre = nombre.value.trim();
+  clubMail = ($("#club-mail") || {}).value?.trim() || clubMail;
+  clubNovedades = !!($("#club-novedades") || {}).checked;
+  clubError = "";
+  if (nombre && !clubNombre) { clubError = MOTIVOS_CLUB.nombre; return pintarClub(); }
+  const r = await D.pedirCodigo(clubMail);
+  if (!r || !r.ok) { clubError = MOTIVOS_CLUB[r && r.motivo] || "No se pudo mandar el código. Probá de nuevo."; return pintarClub(); }
+  clubMail = r.email || clubMail;
+  clubDemo = r.demo || "";
+  clubPaso = "codigo";
+  pintarClub();
+  setTimeout(() => $("#club-codigo")?.focus({ preventScroll: true }), 60);
+}
+async function clubVerificar(codigo) {
+  if (clubOcupado) return;
+  clubOcupado = true;
+  try {
+    const r = await D.verificarCodigo(clubMail, codigo ?? $("#club-codigo")?.value);
+    if (!r || !r.ok) {
+      clubError = MOTIVOS_CLUB[r && r.motivo] || "No pudimos entrar. Probá de nuevo.";
+      pintarClub();
+      return $("#club-codigo")?.focus({ preventScroll: true });
+    }
+    clubError = "";
+    clubDemo = "";
+    const alta = { nombre: clubNombre, color: miColor, novedades: clubNovedades };
+    // Desde la bienvenida: entra a la mesa con su cuenta (si ya era del club, con su nombre y su color)
+    if (bvAbierta && !miMesa()) {
+      const k = r.cliente;
+      if (k) {
+        bvNombre.value = k.nombre;
+        if ((D.coloresLibres ? D.coloresLibres(mesa) : []).includes(k.color)) miColor = k.color;
+      } else if (clubNombre && !bvNombre.value.trim()) bvNombre.value = clubNombre;
+      clubAlta = k ? null : { ...alta, nombre: bvNombre.value.trim(), color: miColor };
+      cerrarHoja(true);
+      bvColores();
+      bvYo();
+      return entrar();
+    }
+    const c = miComensal();
+    if (!c) { cerrarHoja(); return avisar("Listo: cuando entres a una mesa, lo que pidas suma."); }
+    const v = await D.vincular(c.id, alta);
+    if (!v || !v.ok) { clubError = MOTIVOS_CLUB[v && v.motivo] || "No pudimos sumarte. Probá de nuevo."; clubPaso = "mail"; return pintarClub(); }
+    clubRecien = true;
+    clubPaso = "yo";
+    pintarClub();
+    refrescar();
+    avisar(v.nuevo ? `¡Ya sos del club, ${v.cliente.nombre}!` : `¡Hola de nuevo, ${v.cliente.nombre}!`, miComensal());
+  } finally {
+    clubOcupado = false;
+  }
+}
+hojaClub.addEventListener("click", async e => {
+  const b = s => e.target.closest(s);
+  if (b("[data-club-codigo]") || b("[data-club-reenviar]")) return clubPedirCodigo();
+  if (b("[data-club-verificar]")) return clubVerificar();
+  if (b("[data-club-demo]")) { const i = $("#club-codigo"); if (i) i.value = clubDemo; return clubVerificar(clubDemo); }
+  if (b("[data-club-cambiar]")) { clubPaso = "mail"; clubError = ""; pintarClub(); return $("#club-mail")?.focus(); }
+  if (b("[data-club-borrar]")) {
+    if (!clubBorrar) { clubBorrar = true; pintarClub(); setTimeout(() => { if (clubBorrar) { clubBorrar = false; if (hojaAbierta === hojaClub) pintarClub(); } }, 4000); return; }
+    clubBorrar = false;
+    await D.borrarme();
+    cerrarHoja();
+    refrescar();
+    return avisar("Listo: borramos tu cuenta del club.");
+  }
+});
+hojaClub.addEventListener("change", e => {
+  if (e.target.id === "club-novedades-yo") D.novedades(e.target.checked);
+});
+hojaClub.addEventListener("input", e => {
+  if (e.target.id === "club-codigo") {
+    const limpio = e.target.value.replace(/\D/g, "").slice(0, 6);
+    if (limpio !== e.target.value) e.target.value = limpio;
+    if (limpio.length === 6) clubVerificar(limpio);
+  }
+});
+hojaClub.addEventListener("keydown", e => {
+  if (e.key !== "Enter") return;
+  if (e.target.matches("#club-mail, #club-nombre")) { e.preventDefault(); clubPedirCodigo(); }
+  if (e.target.matches("#club-codigo")) { e.preventDefault(); clubVerificar(); }
+});
+
+// Pedir un premio: va al pedido de la mesa, gratis
+async function canjearPremio(id) {
+  if (!miMesa()) return;
+  const l = await D.canjear(yo, id);
+  if (!l) return;
+  pintarPastilla();
+  latir();
+  refrescar();
+  avisar("¡Tu premio va en el pedido! Sale gratis con la próxima ronda.", miComensal());
+}
+// "Lo de siempre": va al plato y lo suma
+function sumarDeSiempre(id) {
+  const p = porId(id);
+  if (!p) return;
+  const i = platos.indexOf(p);
+  if (i !== actual) irA(i, false);
+  setTimeout(() => { alDeslizar(); agregar(p, null); }, 380);
+}
+// Los botones del club que aparecen en la bienvenida, el pedido, el seguimiento y el "gracias"
+document.addEventListener("click", async e => {
+  if (!$("#panel").hidden) return;
+  const b = e.target.closest("[data-club-abrir], [data-canjear], [data-fav], [data-club-unir], [data-club-salir]");
+  if (!b) return;
+  if (b.matches("[data-club-abrir]")) return abrirClub();
+  if (b.matches("[data-club-salir]")) {
+    D.salirClub();
+    if (hojaAbierta === hojaClub) cerrarHoja();
+    if (bvAbierta) { bvNombre.value = ""; miColor = null; pintarBienvenida(); }
+    return avisar("Listo: en este celu ya no entrás con tu cuenta del club.");
+  }
+  if (b.matches("[data-club-unir]")) {
+    const v = await D.vincular(yo);
+    if (v && !v.ok) return avisar(MOTIVOS_CLUB[v.motivo] || "No se pudo. Probá de nuevo.");
+    refrescar();
+    return avisar("Listo: lo que pidas hoy suma para tus premios.", miComensal());
+  }
+  const id = b.dataset.canjear || b.dataset.fav;
+  const hacer = b.matches("[data-canjear]") ? () => canjearPremio(id) : () => sumarDeSiempre(id);
+  if (bvAbierta && !miMesa()) { alEntrar = hacer; return entrar(); }       // primero entra a la mesa
+  if (hojaAbierta) cerrarHoja();
+  if (!seg.hidden) return cerrarSeguimiento(hacer);
+  hacer();
+});
 
 /* ---------- ¿Qué tiene? ---------- */
 function explotar(si) {
@@ -607,6 +904,13 @@ $("#armar-agregar").addEventListener("click", () => {
 const sub = lineas => lineas.reduce((s, l) => s + l.precio * l.cant, 0);
 function lineaHtml(l, mia) {
   const p = porId(l.plato);
+  if (l.premio) {                                     // el premio del club: uno, gratis
+    return `<li class="linea linea--premio">
+      ${fotoRedonda(p, null)}
+      <div class="linea__info"><b>${esc(p.nombre)}</b><small class="linea__regalo">${icono("i-regalo", 13)} Premio del club</small><span class="linea__precio">Gratis</span></div>
+      ${mia ? `<button type="button" class="linea__sacar" data-menos="${l.id}" aria-label="Sacar el premio del pedido (lo pedís otro día)">Sacar</button>` : `<span class="linea__cant">×1</span>`}
+    </li>`;
+  }
   return `<li class="linea">
     ${fotoRedonda(p, l.eleccion)}
     <div class="linea__info"><b>${esc(p.nombre)}</b>${l.detalle ? `<small>${esc(l.detalle)}</small>` : ""}<span class="linea__precio">${plata(l.precio * l.cant)}</span></div>
@@ -617,9 +921,30 @@ function lineaHtml(l, mia) {
       </div>` : `<span class="linea__cant" aria-label="${l.cant} ${l.cant === 1 ? "unidad" : "unidades"}">×${l.cant}</span>`}
   </li>`;
 }
+// Arriba del pedido: el premio para sumar, cómo vas en el club o la invitación
+function pintarPedidoClub() {
+  const el = $("#pedido-club");
+  const cfg = cfgClub(), p = premioClub(), c = miComensal();
+  if (!cfg.activo || !p || !c) { el.hidden = true; return; }
+  const k = miCliente();
+  let html;
+  if (k && c.cliente) {
+    const pr = k.premios.find(x => !x.enPedido);
+    html = pr
+      ? `${fotoRedonda(porId(pr.plato), null, "club-fila__foto")}<span><b>Tenés ${esc(pr.nombre)} de regalo</b><small>Sumalo y sale gratis con esta ronda</small></span><button type="button" data-canjear="${pr.id}">Sumarlo</button>`
+      : `<span class="club-fila__icono">${icono("i-estrella", 16)}</span><span><b>Club: ${k.sellos} de ${k.meta}</b><small>Lo que pidas hoy suma cuando paguen</small></span><button type="button" data-club-abrir>Ver</button>`;
+  } else if (k) {
+    html = `<span class="club-fila__icono">${icono("i-estrella", 16)}</span><span><b>Sos del club, ${esc(k.nombre)}</b><small>Sumá lo de esta mesa a tu cuenta</small></span><button type="button" data-club-unir>Sumar</button>`;
+  } else {
+    html = `<span class="club-fila__icono">${icono("i-regalo", 16)}</span><span><b>Sumá premios con lo que pidas</b><small>Cada ${cfg.meta} cosas, ${esc(p.nombre)} de regalo</small></span><button type="button" data-club-abrir>Sumarme</button>`;
+  }
+  if (el._html !== html) { el.innerHTML = html; el._html = html; llenarFotos(el); }
+  el.hidden = false;
+}
 function pintarPedido() {
   const m = miMesa();
   if (!m) return cerrarHoja(true);
+  pintarPedidoClub();
   const n = m.comensales.length;
   $("#pedido-mesa").textContent = `Mesa ${mesa} · ${n} ${n === 1 ? "persona" : "personas"}`;
   const ul = $("#pedido-lineas");
@@ -724,7 +1049,7 @@ function pintarSeguimiento() {
   ul.innerHTML = u.items.map(it => {
     const p = porId(it.plato);
     const c = m.comensales.find(x => x.id === it.comensal);
-    return `<li>${fotoRedonda(p, it.eleccion)}<span><b>${it.cant}× ${esc(it.nombre)}</b>${it.detalle ? `<small>${esc(it.detalle)}</small>` : ""}${c ? `<em class="de">${avatar(c, "avatar--chico")}${c.id === yo ? "Vos" : esc(c.nombre)}</em>` : ""}</span><span class="precio">${plata(it.precio * it.cant)}</span></li>`;
+    return `<li>${fotoRedonda(p, it.eleccion)}<span><b>${it.cant}× ${esc(it.nombre)}</b>${it.detalle ? `<small>${esc(it.detalle)}</small>` : ""}${it.premio ? `<small>Premio del club</small>` : ""}${c ? `<em class="de">${avatar(c, "avatar--chico")}${c.id === yo ? "Vos" : esc(c.nombre)}</em>` : ""}</span><span class="precio">${it.premio ? "Regalo" : plata(it.precio * it.cant)}</span></li>`;
   }).join("");
   llenarFotos(ul);
   const otras = rondas.filter(p => p !== u);
@@ -738,6 +1063,27 @@ function pintarSeguimiento() {
   $("#seg-mesa").textContent = validas.length > 1
     ? `La mesa lleva ${plata(total)} en ${validas.length} rondas. Pagan al final.`
     : `Total: ${plata(total)}. Pagan al final, cuando pidan la cuenta.`;
+  pintarSegClub(m);
+}
+// Lo que te va a sumar en el club lo que pediste (o la invitación a sumarte)
+const misCosas = m => m.pedidos.filter(p => !p.rechazado).flatMap(p => p.items)
+  .filter(i => i.comensal === yo && !i.premio).reduce((t, i) => t + i.cant, 0);
+function pintarSegClub(m) {
+  const el = $("#seg-club");
+  const cfg = cfgClub(), p = premioClub(), c = miComensal(), k = miCliente();
+  const mias = misCosas(m);
+  if (!cfg.activo || !p || !c || !mias) { el.hidden = true; return; }
+  let html;
+  if (k && c.cliente) {
+    const total = k.sellos + mias;
+    html = `<span class="seg-club__icono">${icono("i-estrella", 16)}</span><p>${total >= k.meta
+      ? `Cuando paguen, <b>ganás ${esc(p.nombre)} de regalo</b>.`
+      : `Cuando paguen, sumás <b>${mias}</b> al club: vas a quedar en ${total} de ${k.meta}.`}</p>`;
+  } else {
+    html = `<span class="seg-club__icono">${icono("i-regalo", 16)}</span><p>Lo que pediste hoy te puede sumar <b>${mias}</b> para ${esc(p.nombre)} de regalo.</p><button type="button" data-club-abrir>Sumarme</button>`;
+  }
+  if (el._html !== html) { el.innerHTML = html; el._html = html; }
+  el.hidden = false;
 }
 function abrirSeguimiento(id) {
   const m = mesaParaSeguir();
@@ -901,10 +1247,36 @@ function mostrarGracias() {
   $("#gracias-local").textContent = `${L.nombre} · Mesa ${mesa}`;
   $("#gracias-titulo").textContent = c ? `¡Gracias, ${c.nombre}!` : "¡Gracias por venir!";
   $("#gracias-texto").textContent = `Esperamos verlos pronto en ${L.nombre}. La mesa ${mesa} ya quedó libre para los que siguen.`;
+  pintarGraciasClub();
   gracias.hidden = false;
   document.body.classList.add("bloqueada");
   requestAnimationFrame(() => requestAnimationFrame(() => gracias.classList.add("abierta")));
   E.pausar(true);
+}
+// Lo que sumó en el club (y si ganó el premio), o la invitación a que lo de hoy le sume
+function pintarGraciasClub() {
+  const el = $("#gracias-club");
+  const cfg = cfgClub(), p = premioClub(), c = miComensal();
+  const m = c && D.mesa(c.sesion);
+  if (!cfg.activo || !p || !m) { el.hidden = true; return; }
+  let html;
+  const a = c.acreditado;
+  if (c.cliente && a) {
+    html = a.ganados
+      ? `${fotoRedonda(porId(p.id), null, "gracias-club__foto")}
+         <p class="gracias-club__titulo">¡Ganaste ${esc(a.premio || p.nombre)} de regalo!</p>
+         <p>Lo pedís desde tu celu la próxima vez que vengas. Sumaste ${a.cosas} y ya vas ${a.sellos} de ${a.meta} para el próximo.</p>`
+      : `<p class="gracias-club__titulo">Sumaste ${a.cosas} al club</p>
+         ${sellosHtml(a.sellos, a.meta, Math.min(a.cosas, a.sellos))}
+         <p>${a.meta - a.sellos === 1 ? "Te falta 1" : `Te faltan ${a.meta - a.sellos}`} para ${esc(p.nombre)} de regalo. ¡Te esperamos!</p>`;
+  } else if (!c.cliente) {
+    const mias = misCosas(m);
+    html = `<p class="gracias-club__titulo">${mias ? "¿Querés que lo de hoy te sume?" : "¿Venís seguido?"}</p>
+      <p>${mias ? `Sumate al club con tu mail y lo de hoy suma <b>${mias}</b>` : "Sumate al club con tu mail"}: cada ${cfg.meta} cosas, ${esc(p.nombre)} de regalo.</p>
+      <button type="button" class="gracias-club__boton" data-club-abrir>${icono("i-mail", 16)} Sumarme con mi mail</button>`;
+  } else { el.hidden = true; return; }
+  if (el._html !== html) { el.innerHTML = html; el._html = html; llenarFotos(el); }
+  el.hidden = false;
 }
 $("#gracias-otra").addEventListener("click", () => {
   olvidarYo();
@@ -1073,7 +1445,9 @@ function refrescar() {
   if (!seg.hidden) pintarSeguimiento();
   if (hojaAbierta === hojaPedido) pintarPedido();
   if (hojaAbierta === hojaMozo) { pintarMozoEstado(); if (!$("#cuenta").hidden) pintarCuenta(); }
-  if (bvAbierta) { bvGente(); bvColores(); bvYo(); }
+  if (hojaAbierta === hojaClub && clubPaso === "yo") pintarClub();         // en los otros pasos se está escribiendo
+  if (bvAbierta) { bvGente(); bvColores(); bvYo(); bvClub(); }
+  if (!gracias.hidden && gracias.classList.contains("abierta")) pintarGraciasClub();
 }
 
 /* ---------- Pista para la primera vez ---------- */
@@ -1146,7 +1520,7 @@ function iniciar() {
   alDeslizar();
   secciones[0].classList.add("entrada");
   // Si todavía no entró a la mesa, lo primero es la bienvenida (con el plato en el medio).
-  const enPanel = !$("#panel").hidden || /^#(panel|mesas|qr|equipo|cocina|barra)$/.test(location.hash);
+  const enPanel = !$("#panel").hidden || /^#(panel|mesas|qr|clientes|equipo|cocina|barra)$/.test(location.hash);
   if (mesa && !miMesa() && !enPanel) pedirNombre();
   else ponerPista();
 

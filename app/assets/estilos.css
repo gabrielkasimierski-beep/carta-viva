@@ -839,6 +839,131 @@ svg { flex: none; }
 @keyframes sentarse { from { transform: scale(.3); opacity: 0; } }
 @keyframes saltito { 40% { transform: scale(1.18) translateY(-4px); } }
 
+/* ---------- El club: la cuenta con el mail, los sellos y los premios ----------
+   Dorado en los tres estilos: el aro de los del club, los sellos y el premio. */
+:root { --oro: #EDB93E; --oro-tinta: #2A1C02; }
+.avatar--club { outline: 2px solid var(--oro); outline-offset: 1.5px; }
+.avatar--mini.avatar--club { outline-width: 1.5px; outline-offset: .5px; }
+.velo.velo--alto { z-index: 12; }
+.hoja--club { z-index: 12; max-height: calc(100% - var(--arriba) - 32px); }
+
+.sellos { display: flex; flex-wrap: wrap; align-items: center; gap: 5px; }
+.sellos i {
+  width: 16px; height: 16px; border-radius: 50%; flex: none;
+  border: 1.5px dashed color-mix(in srgb, currentColor 34%, transparent);
+}
+.sellos i.lleno { border: 0; background: var(--oro); box-shadow: inset 0 -2px 0 rgba(0, 0, 0, .14); }
+.sellos i.nuevo { animation: sello .55s var(--ease) both; }
+.sellos__premio { width: 30px; height: 30px; margin-left: 3px; border-radius: 50%; background: var(--c); display: grid; place-items: center; overflow: hidden; box-shadow: 0 0 0 2px var(--oro); flex: none; }
+.sellos__premio img { width: 120%; height: 120%; object-fit: contain; }
+.sellos--barra { flex-wrap: nowrap; gap: 10px; }
+.club-barra { flex: 1; height: 10px; border-radius: 99px; background: color-mix(in srgb, currentColor 14%, transparent); overflow: hidden; }
+.club-barra i { display: block; width: var(--p); height: 100%; border-radius: inherit; background: var(--oro); }
+@keyframes sello { 0% { transform: scale(0); } 60% { transform: scale(1.35); } 100% { transform: scale(1); } }
+
+/* En la bienvenida */
+.bv__club { display: grid; gap: 10px; }
+.club-invita {
+  display: flex; align-items: center; gap: 12px; width: 100%; padding: 10px 12px; text-align: left;
+  border-radius: 16px; border: 1px dashed color-mix(in srgb, var(--oro) 70%, transparent);
+  background: color-mix(in srgb, var(--oro) 9%, transparent); color: var(--hoja-tinta);
+}
+.club-invita > span:nth-child(2) { flex: 1; min-width: 0; display: grid; line-height: 1.3; }
+.club-invita b { font-weight: 700; font-size: 15px; }
+.club-invita small { color: var(--hoja-suave); font-size: 13px; }
+.club-invita__icono { width: 38px; height: 38px; border-radius: 50%; flex: none; display: grid; place-items: center; background: var(--oro); color: var(--oro-tinta); }
+.club-invita__ir { flex: none; font-weight: 700; font-size: 14px; text-decoration: underline; text-underline-offset: 3px; }
+.bv-club__fila { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; color: var(--hoja-tinta); }
+.bv-club__fila p { margin: 0; flex: 1 1 180px; font-size: 13.5px; line-height: 1.35; color: var(--hoja-suave); }
+.bv-club__fila b { color: var(--hoja-tinta); }
+.bv-club__pie { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; }
+.club-siempre {
+  display: inline-flex; align-items: center; gap: 10px; min-height: 48px; padding: 4px 14px 4px 4px; border-radius: 99px;
+  border: 1px solid var(--hoja-chip-borde); background: var(--hoja-chip); color: var(--hoja-tinta); text-align: left;
+}
+.club-siempre span { display: grid; line-height: 1.15; }
+.club-siempre small { font-size: 11.5px; color: var(--hoja-suave); }
+.club-siempre b { font-size: 14px; }
+.club-siempre__foto { width: 40px; height: 40px; border-radius: 50%; background: var(--c); display: grid; place-items: center; overflow: hidden; flex: none; }
+.club-siempre__foto img { width: 120%; height: 120%; object-fit: contain; }
+.club-link { height: 36px; padding: 0 4px; border: 0; background: none; color: var(--hoja-suave); font-size: 13px; font-weight: 600; text-decoration: underline; text-underline-offset: 3px; }
+
+/* La tarjeta del club y los premios */
+.club-tarjeta { display: grid; gap: 10px; padding: 14px; border-radius: 18px; background: color-mix(in srgb, var(--oro) 10%, var(--hoja-campo)); border: 1px solid color-mix(in srgb, var(--oro) 38%, transparent); }
+.club-tarjeta__cabeza { display: flex; align-items: center; gap: 12px; }
+.club-tarjeta__cabeza > span:last-child { display: grid; line-height: 1.25; }
+.club-tarjeta__cabeza b { font-size: 17px; }
+.club-tarjeta__cabeza small { display: inline-flex; align-items: center; gap: 5px; color: var(--hoja-suave); font-size: 13px; }
+.club-tarjeta__cabeza small svg { color: var(--oro); }
+.club-tarjeta__avatar { width: 44px; height: 44px; font-size: 19px; }
+.club-tarjeta__falta { margin: 0; font-size: 14px; color: var(--hoja-suave); }
+.club-tarjeta__falta b { color: var(--hoja-tinta); }
+.club-premio { display: flex; align-items: center; gap: 12px; padding: 8px 8px 8px 6px; border-radius: 16px; background: var(--oro); color: var(--oro-tinta); }
+.club-premio > span:nth-child(2) { flex: 1; min-width: 0; display: grid; line-height: 1.25; }
+.club-premio b { font-weight: 800; font-size: 15px; }
+.club-premio small { font-size: 12.5px; opacity: .8; }
+.club-premio__foto { width: 52px; height: 52px; border-radius: 50%; flex: none; background: rgba(255, 255, 255, .55); display: grid; place-items: center; overflow: hidden; }
+.club-premio__foto img { width: 118%; height: 118%; object-fit: contain; }
+.club-premio__pedir { flex: none; height: 42px; padding: 0 16px; border: 0; border-radius: var(--radio-boton); background: var(--oro-tinta); color: #FFF3D6; font-weight: 800; font-size: 14px; }
+.club-premio__listo { flex: none; width: 42px; display: grid; place-items: center; }
+
+/* La hoja del club */
+.club-beneficios { list-style: none; margin: 4px 0 6px; padding: 0; display: grid; gap: 12px; }
+.club-beneficios li { display: flex; align-items: center; gap: 12px; font-size: 14.5px; line-height: 1.38; color: var(--hoja-suave); }
+.club-beneficios b { color: var(--hoja-tinta); }
+.club-beneficios__foto { width: 52px; height: 52px; border-radius: 50%; flex: none; background: var(--c); display: grid; place-items: center; overflow: hidden; box-shadow: 0 0 0 2px var(--oro); }
+.club-beneficios__foto img { width: 118%; height: 118%; object-fit: contain; }
+.club-beneficios__icono { width: 52px; height: 36px; flex: none; display: grid; place-items: center; color: var(--oro); }
+.club-check { display: flex; align-items: flex-start; gap: 10px; margin-top: 14px; font-size: 14px; line-height: 1.35; color: var(--hoja-tinta); cursor: pointer; }
+.club-check input { width: 20px; height: 20px; margin: 0; flex: none; accent-color: var(--oro); }
+.club-letra { margin: 12px 0 0; font-size: 12.5px; line-height: 1.4; color: var(--hoja-suave); }
+.club-texto { margin: 4px 0 0; font-size: 15px; line-height: 1.45; color: var(--hoja-suave); }
+.club-texto b { color: var(--hoja-tinta); overflow-wrap: anywhere; }
+.club-error { margin: 12px 0 0; padding: 10px 12px; border-radius: 12px; background: rgba(230, 70, 70, .14); color: var(--hoja-tinta); font-size: 14px; font-weight: 600; }
+.campo input.club-codigo { font-size: 28px; letter-spacing: .4em; text-align: center; font-variant-numeric: tabular-nums; padding-left: calc(16px + .4em); }
+.club-demo { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; margin: 12px 0 0; padding: 10px 12px; border-radius: 12px; border: 1px dashed var(--hoja-chip-borde); font-size: 13.5px; color: var(--hoja-suave); }
+.club-demo b { color: var(--hoja-tinta); letter-spacing: .12em; font-variant-numeric: tabular-nums; }
+.club-demo__tag { padding: 2px 7px; border-radius: 99px; background: var(--hoja-tinta); color: var(--hoja-fondo); font-size: 10px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
+.club-demo button { margin-left: auto; height: 32px; padding: 0 12px; border-radius: 99px; border: 1px solid var(--hoja-chip-borde); background: var(--hoja-chip); color: var(--hoja-tinta); font-weight: 700; font-size: 13px; }
+.club-otros { display: flex; flex-wrap: wrap; gap: 4px 18px; margin: 14px 0 0; }
+.club-otros button { height: 36px; padding: 0; border: 0; background: none; color: var(--hoja-suave); font-size: 13.5px; font-weight: 600; text-decoration: underline; text-underline-offset: 3px; }
+.club-otros button.confirmando { color: #E24C4C; }
+.club-favs { margin-top: 16px; }
+.club-favs ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.club-favs li { display: flex; align-items: center; gap: 12px; }
+.club-favs li > span:not(.club-favs__foto) { flex: 1; display: grid; line-height: 1.25; }
+.club-favs small { color: var(--hoja-suave); font-size: 13px; }
+.club-favs button { height: 38px; padding: 0 14px; border-radius: var(--radio-chico); border: 1px solid var(--hoja-chip-borde); background: var(--hoja-chip); color: var(--hoja-tinta); font-weight: 700; font-size: 14px; }
+.club-favs__foto { width: 48px; height: 48px; border-radius: 50%; flex: none; background: var(--c); display: grid; place-items: center; overflow: hidden; }
+.club-favs__foto img { width: 118%; height: 118%; object-fit: contain; }
+
+/* En el pedido: el premio para sumar o cómo vas */
+.club-fila { display: flex; align-items: center; gap: 12px; margin: 0 0 14px; padding: 8px 8px 8px 10px; border-radius: 16px; border: 1px solid color-mix(in srgb, var(--oro) 45%, transparent); background: color-mix(in srgb, var(--oro) 10%, transparent); }
+.club-fila > span:nth-child(2) { flex: 1; min-width: 0; display: grid; line-height: 1.25; }
+.club-fila b { font-size: 14.5px; }
+.club-fila small { color: var(--hoja-suave); font-size: 12.5px; }
+.club-fila button { flex: none; height: 38px; padding: 0 14px; border: 0; border-radius: var(--radio-boton); background: var(--oro); color: var(--oro-tinta); font-weight: 800; font-size: 14px; }
+.club-fila__icono { width: 36px; height: 36px; border-radius: 50%; flex: none; display: grid; place-items: center; background: var(--oro); color: var(--oro-tinta); }
+.club-fila__foto { width: 44px; height: 44px; border-radius: 50%; flex: none; background: var(--c); display: grid; place-items: center; overflow: hidden; box-shadow: 0 0 0 2px var(--oro); }
+.club-fila__foto img { width: 118%; height: 118%; object-fit: contain; }
+.linea--premio .foto-redonda { box-shadow: 0 0 0 3px var(--oro); }
+.linea__regalo { display: inline-flex; align-items: center; gap: 4px; color: var(--hoja-tinta) !important; font-weight: 600; }
+.linea__regalo svg { color: var(--oro); }
+.linea__sacar { height: 36px; padding: 0 12px; border-radius: var(--radio-chico); border: 1px solid var(--hoja-chip-borde); background: var(--hoja-chip); color: var(--hoja-suave); font-weight: 600; font-size: 13.5px; }
+
+/* En el seguimiento y en el "gracias" */
+.seg-club { display: flex; align-items: center; gap: 12px; margin-top: 14px; padding: 12px 14px; border-radius: 16px; border: 1px solid color-mix(in srgb, var(--oro) 50%, transparent); background: color-mix(in srgb, var(--oro) 12%, transparent); }
+.seg-club p { margin: 0; flex: 1; font-size: 14.5px; line-height: 1.4; }
+.seg-club button { flex: none; height: 40px; padding: 0 14px; border: 0; border-radius: var(--radio-boton); background: var(--oro); color: var(--oro-tinta); font-weight: 800; }
+.seg-club__icono { width: 34px; height: 34px; border-radius: 50%; flex: none; display: grid; place-items: center; background: var(--oro); color: var(--oro-tinta); }
+.gracias-club { display: grid; justify-items: center; gap: 10px; width: 100%; max-width: 380px; padding: 18px; border-radius: 22px; border: 1px solid color-mix(in srgb, var(--oro) 55%, transparent); background: color-mix(in srgb, var(--oro) 12%, transparent); }
+.gracias-club p { margin: 0; font-size: 15px; line-height: 1.42; opacity: .92; }
+.gracias-club .gracias-club__titulo { font-size: 19px; font-weight: 800; opacity: 1; }
+.gracias-club .sellos { justify-content: center; }
+.gracias-club__foto { width: 110px; height: 110px; border-radius: 50%; background: var(--c); display: grid; place-items: center; overflow: hidden; box-shadow: 0 0 0 4px var(--oro), 0 14px 40px rgba(0, 0, 0, .3); animation: sello .7s var(--ease) both; }
+.gracias-club__foto img { width: 118%; height: 118%; object-fit: contain; }
+.gracias-club__boton { height: 48px; padding: 0 20px; border: 0; border-radius: var(--radio-boton); background: var(--oro); color: var(--oro-tinta); font-weight: 800; font-size: 15px; display: inline-flex; align-items: center; gap: 8px; }
+
 .campo input {
   font: inherit; font-size: 18px; color: var(--hoja-tinta);
   height: 56px; padding: 0 16px; border-radius: 16px;
@@ -1544,6 +1669,60 @@ svg { flex: none; }
 .ed-hecho__pin { display: flex; gap: 10px; margin: 0 0 6px; }
 .ed-hecho__pin span { width: 58px; height: 72px; border-radius: 14px; display: grid; place-items: center; background: var(--p-sup2); border: 1px solid var(--p-linea2); font: 800 38px/1 "Onest", system-ui, sans-serif; font-variant-numeric: tabular-nums; }
 .ed-hecho .panel__ayuda { max-width: 34ch; }
+
+/* Clientes: los del club, su premio y la mesa donde están */
+.detalle__club { display: grid; gap: 8px; padding: 10px 12px; border-radius: 14px; border: 1px solid color-mix(in srgb, var(--oro) 40%, transparent); background: color-mix(in srgb, var(--oro) 8%, transparent); }
+.detalle__club p { margin: 0; display: flex; align-items: flex-start; gap: 10px; font-size: 14px; line-height: 1.35; }
+.detalle__club p > span:last-child { display: grid; gap: 2px; }
+.detalle__club-premio { display: inline-flex; align-items: center; gap: 5px; color: #F6D27A; font-weight: 700; font-size: 13px; }
+.club-regla { display: flex; flex-wrap: wrap; align-items: center; gap: 14px 18px; margin: 0 0 18px; padding: 16px; border-radius: 18px; background: var(--p-sup); border: 1px solid color-mix(in srgb, var(--oro) 40%, transparent); }
+.club-regla--apagado { border-color: var(--p-linea); }
+.club-regla--apagado .club-regla__foto, .club-regla--apagado .club-regla__texto { opacity: .5; }
+.club-regla__foto { width: 72px; height: 72px; border-radius: 50%; flex: none; display: grid; place-items: center; overflow: hidden; background: color-mix(in srgb, var(--c) 30%, var(--p-sup2)); box-shadow: 0 0 0 2px var(--oro); }
+.club-regla__foto img { width: 118%; height: 118%; object-fit: contain; }
+.club-regla__texto { flex: 1 1 300px; display: grid; gap: 8px; min-width: 0; }
+.club-regla__frase { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: 17px; font-weight: 600; }
+.club-regla__meta { display: inline-flex; align-items: center; border-radius: 12px; border: 1px solid var(--p-linea2); }
+.club-regla__meta button { width: 40px; height: 40px; border: 0; background: none; color: var(--p-tinta); font-size: 20px; font-weight: 700; }
+.club-regla__meta b { min-width: 30px; text-align: center; font-size: 20px; font-variant-numeric: tabular-nums; }
+.club-regla select { height: 42px; max-width: 100%; padding: 0 12px; border-radius: 12px; border: 1px solid var(--p-linea2); background: var(--p-sup2); color: var(--p-tinta); font: inherit; font-weight: 700; }
+.clientes-barra { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 12px; }
+.clientes-barra input { flex: 1 1 240px; height: 44px; padding: 0 14px; border-radius: 12px; border: 1px solid var(--p-linea2); background: var(--p-sup); color: var(--p-tinta); font: inherit; font-size: 15px; }
+.clientes-barra input:focus { outline: none; border-color: var(--p-tinta); }
+.clientes { display: grid; gap: 8px; }
+.cliente {
+  display: grid; grid-template-columns: auto minmax(0, 1fr) auto auto 34px; align-items: center; gap: 14px;
+  width: 100%; padding: 12px 14px; border-radius: 16px; border: 1px solid var(--p-linea); background: var(--p-sup); color: var(--p-tinta); text-align: left;
+}
+.avatar--cliente { width: 40px; height: 40px; font-size: 17px; }
+.cliente__info { display: grid; min-width: 0; line-height: 1.3; }
+.cliente__info b { font-size: 15.5px; }
+.cliente__info small { color: var(--p-suave); font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cliente__aca { margin-left: 6px; padding: 2px 7px; border-radius: 99px; background: var(--oro); color: var(--oro-tinta); font-size: 10.5px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; vertical-align: 2px; }
+.cliente__visitas { display: grid; text-align: right; font-size: 13.5px; color: var(--p-suave); line-height: 1.25; }
+.cliente__visitas b { color: var(--p-tinta); font-size: 15px; }
+.cliente__visitas small { font-size: 12px; color: var(--p-tenue); }
+.cliente__sellos { display: grid; gap: 3px; width: 92px; text-align: right; }
+.cliente__sellos small { font-size: 12px; color: var(--p-suave); font-variant-numeric: tabular-nums; }
+.cliente__barra { height: 8px; border-radius: 99px; background: var(--p-sup2); overflow: hidden; }
+.cliente__barra i { display: block; width: var(--p); height: 100%; background: var(--oro); border-radius: inherit; }
+.cliente__premios { display: inline-flex; align-items: center; justify-content: flex-end; gap: 3px; color: var(--oro); font-weight: 800; font-size: 14px; }
+.cliente__ahora { margin: 0; display: flex; align-items: center; gap: 8px; padding: 8px 12px; border-radius: 12px; background: color-mix(in srgb, var(--oro) 14%, transparent); color: #F6D27A; font-weight: 700; font-size: 14px; }
+.cliente__favs, .cliente__premios-lista { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 8px; }
+.cliente__favs li { display: flex; align-items: center; gap: 10px; }
+.cliente__favs li span:not(.item-foto) { flex: 1; }
+.cliente__premios-lista li { display: flex; align-items: flex-start; gap: 10px; color: var(--p-suave); }
+.cliente__premios-lista li > span { display: grid; line-height: 1.3; }
+.cliente__premios-lista li b { color: var(--p-tinta); }
+.cliente__premios-lista li small { font-size: 12.5px; }
+.cliente__premios-lista li.libre svg { color: var(--oro); }
+@media (max-width: 560px) {
+  .cliente { grid-template-columns: auto minmax(0, 1fr) auto; row-gap: 8px; }
+  .cliente__visitas { grid-column: 2; grid-row: 2; text-align: left; display: block; }
+  .cliente__visitas small { margin-left: 6px; }
+  .cliente__sellos { grid-column: 3; grid-row: 1 / 3; width: 70px; }
+  .cliente__premios { grid-column: 1; grid-row: 2; justify-content: center; }
+}
 
 @keyframes sacudir { 20%, 60% { transform: translateX(-9px); } 40%, 80% { transform: translateX(9px); } }
 

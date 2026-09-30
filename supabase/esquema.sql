@@ -13,7 +13,11 @@
 --      clave de Supabase) y cada persona se identifica con su PIN. Todo lo que hace
 --      queda firmado con su nombre, y solo puede hacer lo que le permiten sus permisos
 --      (los elige el dueño o el encargado desde el panel: ver las mesas, atender,
---      llevar, cobrar, cada estación, agotados, QR, manejar el equipo).
+--      llevar, cobrar, cada estación, agotados, QR, clientes, manejar el equipo).
+--    · Los del CLUB: el comensal que quiere se suma con su mail, sin contraseña (Supabase
+--      Auth le manda un código de 6 números). Cuando se cobra la mesa, lo que pidió suma
+--      sellos; cada tantos, un premio de regalo que pide desde su celu (sale gratis). El
+--      mozo ve quién es del club; el mail solo lo ve quien tiene el permiso "clientes".
 --
 --  Nadie toca las tablas directo: todo pasa por las funciones de abajo, que validan
 --  (precios los calcula la base, no el celular; si dos tocan lo mismo, gana uno).
@@ -177,6 +181,57 @@ create table if not exists public.agotados (
   primary key (local_id, plato)
 );
 
+-- El club: la regla del premio de cada local (se cambia desde el panel, permiso "clientes")
+alter table public.locales add column if not exists club jsonb not null default '{"activo": true, "meta": 10, "premio": null}'::jsonb;
+
+-- Bases de la versión anterior: quien maneja el equipo pasa a ver también los clientes (una sola vez)
+do $$ begin
+  if to_regclass('public.clientes') is null then
+    update public.equipo set permisos = permisos || array['clientes'] where 'equipo' = any(permisos) and not ('clientes' = any(permisos));
+  end if;
+end $$;
+
+-- Cada cliente del club, por local: su cuenta (Supabase Auth, mail sin contraseña), su nombre,
+-- su color, cuántas veces vino, lo que pidió de cada cosa y los sellos que lleva
+create table if not exists public.clientes (
+  id         uuid primary key default gen_random_uuid(),
+  local_id   uuid not null references public.locales on delete cascade,
+  user_id    uuid not null references auth.users on delete cascade,
+  email      text not null,
+  nombre     text not null,
+  color      text not null,
+  alta       timestamptz not null default now(),
+  ultima     timestamptz,
+  visitas    integer not null default 0,
+  cosas      integer not null default 0,
+  sellos     integer not null default 0,
+  platos     jsonb not null default '{}'::jsonb,         -- {plato: cuántos pidió}
+  novedades  boolean not null default false,             -- aceptó que le manden promos
+  unique (local_id, user_id)
+);
+
+-- Los premios: cuándo lo ganó y cuándo lo pidió (con qué ronda)
+create table if not exists public.premios (
+  id               uuid primary key default gen_random_uuid(),
+  local_id         uuid not null references public.locales on delete cascade,
+  cliente_id       uuid not null references public.clientes on delete cascade,
+  plato            text not null,
+  nombre           text not null,
+  ganado           timestamptz not null default now(),
+  sesion_id        uuid references public.sesiones on delete set null,
+  canjeado         timestamptz,
+  canjeado_sesion  uuid references public.sesiones on delete set null,
+  canjeado_pedido  uuid references public.pedidos on delete set null
+);
+create index if not exists premios_cliente on public.premios (cliente_id);
+
+-- Quién de la mesa es del club, y lo que sumó cuando se cobró
+alter table public.comensales add column if not exists cliente_id uuid references public.clientes on delete set null;
+alter table public.comensales add column if not exists acreditado jsonb;
+create unique index if not exists un_cliente_por_mesa on public.comensales (sesion_id, cliente_id) where cliente_id is not null;
+-- Un premio en el pedido: una línea gratis (si se borra el cliente, se va con él)
+alter table public.carrito add column if not exists premio_id uuid references public.premios on delete cascade;
+
 -- Nadie lee ni escribe las tablas directo: solo a través de las funciones.
 alter table public.locales      enable row level security;
 alter table public.mesas        enable row level security;
@@ -190,8 +245,11 @@ alter table public.carrito      enable row level security;
 alter table public.pedidos      enable row level security;
 alter table public.llamados     enable row level security;
 alter table public.agotados     enable row level security;
+alter table public.clientes     enable row level security;
+alter table public.premios      enable row level security;
 revoke all on public.locales, public.mesas, public.equipo, public.cuentas, public.turnos, public.intentos_pin,
-              public.sesiones, public.comensales, public.carrito, public.pedidos, public.llamados, public.agotados
+              public.sesiones, public.comensales, public.carrito, public.pedidos, public.llamados, public.agotados,
+              public.clientes, public.premios
   from anon, authenticated;
 
 
@@ -338,7 +396,7 @@ $$;
 -- Permisos: los fijos más uno por estación de la carta (cocina, barra, ...)
 create or replace function interno.permisos_validos(carta jsonb) returns text[]
 language sql immutable as $$
-  select array['mesas', 'atender', 'llevar', 'cobrar', 'carta', 'qr', 'equipo']::text[]
+  select array['mesas', 'atender', 'llevar', 'cobrar', 'carta', 'qr', 'clientes', 'equipo']::text[]
          || coalesce((select array_agg(e->>'id') from jsonb_array_elements(coalesce(carta->'estaciones', '[]'::jsonb)) e), '{}'::text[])
 $$;
 -- Los permisos de entrada de un puesto (según la carta del local)
@@ -387,12 +445,13 @@ language sql stable as $$
 $$;
 create or replace function interno.j_comensal(c public.comensales) returns jsonb
 language sql immutable as $$
-  select jsonb_build_object('id', c.id, 'sesion', c.sesion_id, 'nombre', c.nombre, 'color', c.color, 'unido', interno.ms(c.unido))
+  select jsonb_build_object('id', c.id, 'sesion', c.sesion_id, 'nombre', c.nombre, 'color', c.color, 'unido', interno.ms(c.unido),
+           'cliente', c.cliente_id is not null, 'acreditado', c.acreditado)
 $$;
 create or replace function interno.j_linea(l public.carrito) returns jsonb
 language sql immutable as $$
   select jsonb_build_object('id', l.id, 'sesion', l.sesion_id, 'comensal', l.comensal_id, 'plato', l.plato, 'eleccion', l.eleccion,
-           'detalle', l.detalle, 'precio', l.precio, 'clave', l.clave, 'cant', l.cant, 'creado', interno.ms(l.creado))
+           'detalle', l.detalle, 'precio', l.precio, 'clave', l.clave, 'cant', l.cant, 'creado', interno.ms(l.creado), 'premio', l.premio_id)
 $$;
 create or replace function interno.j_pedido(p public.pedidos) returns jsonb
 language sql immutable as $$
@@ -405,6 +464,51 @@ language sql immutable as $$
            'creado', interno.ms(l.creado), 'toma', l.toma, 'tomado', interno.ms(l.tomado), 'atendido', l.atendido)
 $$;
 
+-- El club: la regla del premio (con el nombre del plato)
+create or replace function interno.club_config(p_local uuid) returns jsonb
+language sql stable as $$
+  select jsonb_build_object('activo', coalesce((l.club->>'activo')::boolean, false) and interno.plato(l.carta, l.club->>'premio') is not null,
+           'meta', coalesce((l.club->>'meta')::integer, 10), 'premio', l.club->>'premio',
+           'nombrePremio', coalesce(interno.plato(l.carta, l.club->>'premio')->>'nombre', ''))
+    from public.locales l where l.id = p_local
+$$;
+-- Los premios sin pedir de un cliente (y si ya están en el pedido de la mesa)
+create or replace function interno.j_premios_libres(p_cliente uuid) returns jsonb
+language sql stable as $$
+  select coalesce(jsonb_agg(jsonb_build_object('id', p.id, 'plato', p.plato, 'nombre', p.nombre, 'ganado', interno.ms(p.ganado),
+           'enPedido', exists (select 1 from public.carrito x where x.premio_id = p.id)) order by p.ganado), '[]'::jsonb)
+    from public.premios p where p.cliente_id = p_cliente and p.canjeado is null
+$$;
+-- Lo que ve el mozo de alguien del club sentado en una mesa: sin el mail
+create or replace function interno.j_club(c public.comensales) returns jsonb
+language sql stable as $$
+  select jsonb_build_object('nombre', k.nombre, 'visita', k.visitas + case when c.acreditado is null then 1 else 0 end,
+           'sellos', k.sellos, 'meta', coalesce((l.club->>'meta')::integer, 10),
+           'favorito', coalesce((select interno.plato(l.carta, f.key)->>'nombre' from jsonb_each_text(k.platos) f
+                                  order by f.value::integer desc, f.key limit 1), ''),
+           'premios', interno.j_premios_libres(k.id))
+    from public.clientes k join public.locales l on l.id = k.local_id
+   where k.id = c.cliente_id and coalesce((l.club->>'activo')::boolean, false)
+$$;
+-- El cliente completo: para él mismo y para el panel (permiso "clientes"), que además ve el mail
+create or replace function interno.j_cliente(k public.clientes, con_mail boolean) returns jsonb
+language sql stable as $$
+  select jsonb_build_object(
+           'id', k.id, 'nombre', k.nombre, 'color', k.color, 'alta', interno.ms(k.alta), 'ultima', interno.ms(k.ultima),
+           'visitas', k.visitas, 'cosas', k.cosas, 'sellos', k.sellos,
+           'meta', (select coalesce((l.club->>'meta')::integer, 10) from public.locales l where l.id = k.local_id),
+           'favoritos', coalesce((select jsonb_agg(jsonb_build_object('plato', f.key, 'cant', f.value::integer) order by f.value::integer desc, f.key)
+                                    from (select * from jsonb_each_text(k.platos) x order by x.value::integer desc, x.key limit 3) f), '[]'::jsonb),
+           'premios', interno.j_premios_libres(k.id),
+           'canjeados', (select count(*) from public.premios p where p.cliente_id = k.id and p.canjeado is not null))
+         || case when con_mail then jsonb_build_object('email', k.email, 'novedades', k.novedades,
+              'historial', coalesce((select jsonb_agg(jsonb_build_object('id', p.id, 'plato', p.plato, 'nombre', p.nombre, 'ganado', interno.ms(p.ganado),
+                  'canjeado', case when p.canjeado is null then null
+                                   else jsonb_build_object('t', interno.ms(p.canjeado), 'sesion', p.canjeado_sesion, 'pedido', p.canjeado_pedido) end)
+                  order by p.ganado desc) from public.premios p where p.cliente_id = k.id), '[]'::jsonb))
+           else '{}'::jsonb end
+$$;
+
 -- Todo lo de una mesa, para los celulares de esa mesa
 create or replace function interno.estado_mesa(sesion uuid) returns jsonb
 language sql stable as $$
@@ -415,7 +519,8 @@ language sql stable as $$
     'pedidos',    coalesce((select jsonb_agg(interno.j_pedido(p) order by p.creado) from public.pedidos p where p.sesion_id = s.id), '[]'::jsonb),
     'llamados',   coalesce((select jsonb_agg(interno.j_llamado(l) order by l.creado) from public.llamados l where l.sesion_id = s.id), '[]'::jsonb),
     'agotados',   coalesce((select jsonb_agg(jsonb_build_object('id', a.plato, 't', interno.ms(a.t))) from public.agotados a where a.local_id = s.local_id), '[]'::jsonb),
-    'equipo',     coalesce((select jsonb_agg(jsonb_build_object('id', e.id, 'nombre', e.nombre)) from public.equipo e where e.local_id = s.local_id), '[]'::jsonb)
+    'equipo',     coalesce((select jsonb_agg(jsonb_build_object('id', e.id, 'nombre', e.nombre)) from public.equipo e where e.local_id = s.local_id), '[]'::jsonb),
+    'club',       interno.club_config(s.local_id)
   )
   from public.sesiones s where s.id = sesion
 $$;
@@ -431,11 +536,13 @@ language sql stable as $$
     'mesas',      coalesce((select jsonb_agg(jsonb_build_object('n', m.numero, 'zona', m.zona, 'lugares', m.lugares, 'codigo', m.codigo) order by m.numero) from public.mesas m where m.local_id = p_local), '[]'::jsonb),
     'equipo',     coalesce((select jsonb_agg(jsonb_build_object('id', e.id, 'nombre', e.nombre, 'rol', e.rol, 'puesto', e.puesto, 'zona', coalesce(e.zona, ''), 'color', e.color, 'permisos', to_jsonb(e.permisos)) order by e.orden, e.nombre) from public.equipo e where e.local_id = p_local and e.activo), '[]'::jsonb),
     'sesiones',   coalesce((select jsonb_agg(interno.j_sesion(s, true) order by s.abierta) from ses s), '[]'::jsonb),
-    'comensales', coalesce((select jsonb_agg(interno.j_comensal(c) order by c.unido) from public.comensales c where c.sesion_id in (select id from ses)), '[]'::jsonb),
+    'comensales', coalesce((select jsonb_agg(interno.j_comensal(c) || jsonb_build_object('cliente', c.cliente_id, 'club', interno.j_club(c)) order by c.unido)
+                              from public.comensales c where c.sesion_id in (select id from ses)), '[]'::jsonb),
     'carrito',    coalesce((select jsonb_agg(interno.j_linea(l) order by l.creado) from public.carrito l where l.sesion_id in (select id from ses)), '[]'::jsonb),
     'pedidos',    coalesce((select jsonb_agg(interno.j_pedido(p) order by p.creado) from public.pedidos p where p.sesion_id in (select id from ses)), '[]'::jsonb),
     'llamados',   coalesce((select jsonb_agg(interno.j_llamado(l) order by l.creado) from public.llamados l where l.sesion_id in (select id from ses)), '[]'::jsonb),
-    'agotados',   coalesce((select jsonb_agg(jsonb_build_object('id', a.plato, 'quien', a.quien, 't', interno.ms(a.t))) from public.agotados a where a.local_id = p_local), '[]'::jsonb)
+    'agotados',   coalesce((select jsonb_agg(jsonb_build_object('id', a.plato, 'quien', a.quien, 't', interno.ms(a.t))) from public.agotados a where a.local_id = p_local), '[]'::jsonb),
+    'club',       interno.club_config(p_local)
   )
 $$;
 
@@ -465,6 +572,54 @@ begin
   return v_t;
 end $$;
 
+-- El club, cuando se cobra la mesa: cada uno del club suma lo que pidió (lo que pidió de
+-- regalo no cuenta). Cada "meta" sellos, un premio. p_comensal: solo esa persona (la que se
+-- suma al club después de cobrada la mesa).
+create or replace function interno.acreditar(p_sesion uuid, p_comensal uuid default null) returns void
+language plpgsql as $$
+declare
+  v_s public.sesiones; v_l public.locales; v_meta integer; v_plato jsonb;
+  c record; v_cosas integer; v_platos jsonb; v_k public.clientes; v_ganados integer;
+begin
+  select * into v_s from public.sesiones x where x.id = p_sesion;
+  if v_s.cerrada is null then return; end if;
+  select * into v_l from public.locales x where x.id = v_s.local_id;
+  if not coalesce((v_l.club->>'activo')::boolean, false) then return; end if;
+  v_meta := greatest(1, coalesce((v_l.club->>'meta')::integer, 10));
+  v_plato := interno.plato(v_l.carta, v_l.club->>'premio');
+  for c in select * from public.comensales x
+            where x.sesion_id = p_sesion and x.cliente_id is not null and x.acreditado is null
+              and (p_comensal is null or x.id = p_comensal) loop
+    select coalesce(sum(q.n), 0), coalesce(jsonb_object_agg(q.plato, q.n) filter (where q.plato is not null), '{}'::jsonb)
+      into v_cosas, v_platos
+      from (select it->>'plato' as plato, sum((it->>'cant')::integer) as n
+              from public.pedidos p, jsonb_array_elements(p.items) it
+             where p.sesion_id = p_sesion and p.rechazado is null and it->>'comensal' = c.id::text and it->>'premio' is null
+             group by 1) q;
+    update public.clientes k
+       set visitas = k.visitas + 1, cosas = k.cosas + v_cosas, sellos = k.sellos + v_cosas, ultima = v_s.cerrada,
+           platos = (select coalesce(jsonb_object_agg(u.key, u.total), '{}'::jsonb)
+                       from (select x.key, sum(x.value::integer) as total
+                               from (select * from jsonb_each_text(k.platos) union all select * from jsonb_each_text(v_platos)) x
+                              group by x.key) u)
+     where k.id = c.cliente_id
+     returning * into v_k;
+    v_ganados := 0;
+    while v_plato is not null and v_k.sellos >= v_meta loop
+      insert into public.premios (local_id, cliente_id, plato, nombre, ganado, sesion_id)
+      values (v_s.local_id, v_k.id, v_plato->>'id', v_plato->>'nombre', v_s.cerrada, v_s.id);
+      v_k.sellos := v_k.sellos - v_meta;
+      v_ganados := v_ganados + 1;
+    end loop;
+    update public.clientes k set sellos = v_k.sellos where k.id = v_k.id;
+    update public.comensales x set acreditado = jsonb_build_object('cosas', v_cosas, 'ganados', v_ganados, 'sellos', v_k.sellos,
+                                                                  'meta', v_meta, 'premio', coalesce(v_plato->>'nombre', ''))
+     where x.id = c.id;
+    perform interno.anotar(p_sesion, c.nombre || ' sumó ' || v_cosas || ' al club (lleva ' || v_k.sellos || ' de ' || v_meta || ')');
+    if v_ganados > 0 then perform interno.anotar(p_sesion, '¡' || c.nombre || ' ganó ' || (v_plato->>'nombre') || ' de regalo!'); end if;
+  end loop;
+end $$;
+
 revoke all on all functions in schema interno from public;
 
 
@@ -482,7 +637,8 @@ as $$
     'gente', coalesce((select jsonb_agg(jsonb_build_object('nombre', c.nombre, 'color', c.color) order by c.unido)
                          from public.comensales c join public.sesiones s on s.id = c.sesion_id
                         where s.mesa_id = m.id and s.cerrada is null), '[]'::jsonb),
-    'agotados', coalesce((select jsonb_agg(a.plato) from public.agotados a where a.local_id = m.local_id), '[]'::jsonb))
+    'agotados', coalesce((select jsonb_agg(a.plato) from public.agotados a where a.local_id = m.local_id), '[]'::jsonb),
+    'club', interno.club_config(m.local_id))
   from public.mesas m join public.locales l on l.id = m.local_id
   where m.codigo = p_codigo
 $$;
@@ -578,7 +734,7 @@ declare v_c public.comensales; v_linea public.carrito; v_local uuid;
 begin
   v_c := interno.comensal(p_clave);
   select * into v_linea from public.carrito x where x.id = p_linea and x.comensal_id = v_c.id for update;
-  if found then
+  if found and not (v_linea.premio_id is not null and p_delta > 0) then               -- un premio es uno
     if v_linea.cant + p_delta <= 0 then delete from public.carrito x where x.id = v_linea.id;
     else update public.carrito x set cant = least(20, v_linea.cant + p_delta) where x.id = v_linea.id;
     end if;
@@ -604,7 +760,7 @@ begin
   select coalesce(jsonb_agg(jsonb_build_object(
            'plato', l.plato, 'nombre', interno.plato(v_carta, l.plato)->>'nombre', 'cant', l.cant, 'precio', l.precio,
            'detalle', l.detalle, 'eleccion', l.eleccion, 'comensal', l.comensal_id,
-           'estacion', interno.estacion(v_carta, interno.plato(v_carta, l.plato))) order by l.creado), '[]'::jsonb),
+           'estacion', interno.estacion(v_carta, interno.plato(v_carta, l.plato)), 'premio', l.premio_id) order by l.creado), '[]'::jsonb),
          coalesce(sum(l.precio * l.cant), 0), count(distinct l.comensal_id), array_agg(l.id)
     into v_items, v_total, v_quienes, v_ids
     from public.carrito l
@@ -620,9 +776,15 @@ begin
   insert into public.pedidos (local_id, sesion_id, mesa, numero, ronda, por, nota, total, items, partes)
   values (v_s.local_id, v_s.id, v_s.mesa, v_numero, v_ronda, v_c.id, left(trim(coalesce(p_nota, '')), 200), v_total, v_items, v_partes)
   returning id into v_pedido;
+  -- Los premios del club que iban en la ronda quedan usados
+  update public.premios p set canjeado = now(), canjeado_sesion = v_s.id, canjeado_pedido = v_pedido
+    from public.carrito x where x.id = any(v_ids) and x.premio_id = p.id;
   delete from public.carrito x where x.id = any(v_ids);
   perform interno.anotar(v_s.id, v_c.nombre || ' mandó la ronda ' || v_ronda || ' (pedido ' || v_numero || ')'
                                  || case when v_quienes > 1 then ', con lo de ' || v_quienes || ' personas' else '' end);
+  perform interno.anotar(v_s.id, k.nombre || ' pidió su premio del club: ' || p.nombre)
+     from public.premios p join public.comensales k on k.cliente_id = p.cliente_id and k.sesion_id = v_s.id
+    where p.canjeado_pedido = v_pedido;
   perform interno.avisar(v_s.local_id, v_s.id);
   return interno.estado_mesa(v_s.id) || jsonb_build_object('pedido', v_pedido);
 end $$;
@@ -675,6 +837,124 @@ begin
   end if;
   perform interno.avisar(v_s.local_id, v_s.id);
   return interno.estado_mesa(v_s.id) || jsonb_build_object('ya', false);
+end $$;
+
+
+-- -----------------------------------------------------------------------------
+--  3b. El club desde el celular del comensal
+--  Entra con su mail y un código (Supabase Auth: signInWithOtp + verifyOtp, sin contraseña).
+--  Con esa sesión, auth.uid() dice quién es. La cuenta del local (la del panel) no puede ser
+--  cliente. Los premios se piden con la clave de la mesa, como el resto del pedido.
+-- -----------------------------------------------------------------------------
+
+-- La regla del club y, si este celu entró con su mail, quién es en este local
+create or replace function public.club_ver(p_codigo text) returns jsonb
+language plpgsql stable security definer
+set search_path = public
+as $$
+declare v_local uuid; v_club jsonb; v_k public.clientes;
+begin
+  select m.local_id into v_local from public.mesas m where m.codigo = p_codigo;
+  if v_local is null then raise exception 'mesa_no_existe'; end if;
+  v_club := interno.club_config(v_local);
+  select * into v_k from public.clientes k where k.local_id = v_local and k.user_id = auth.uid();
+  return jsonb_build_object('club', v_club,
+    'yo', case when v_k.id is not null and (v_club->>'activo')::boolean then interno.j_cliente(v_k, true) end);
+end $$;
+
+-- Sumarse (o volver) al club: esta persona de la mesa es la de este mail. Si es nuevo, se crea
+-- con su nombre y su color de la mesa. Si la mesa ya se cobró (hace menos de 3 horas), lo que
+-- pidió también suma.   p_datos: {nombre, color, novedades}
+create or replace function public.club_vincular(p_clave text, p_datos jsonb default '{}'::jsonb) returns jsonb
+language plpgsql volatile security definer
+set search_path = public
+as $$
+declare
+  v_c public.comensales; v_s public.sesiones; v_k public.clientes; v_email text; v_nuevo boolean := false;
+  v_nombre text; v_color text;
+  v_colores text[] := array['#FF7A59', '#3DB2FF', '#FFC43D', '#A57BFF', '#2BC48A', '#FF6FB5'];
+begin
+  if auth.uid() is null then raise exception 'sin_cuenta'; end if;
+  select u.email into v_email from auth.users u where u.id = auth.uid();
+  if coalesce(v_email, '') = '' then raise exception 'sin_cuenta'; end if;
+  if exists (select 1 from public.cuentas k where k.user_id = auth.uid()) then raise exception 'cuenta_del_local'; end if;
+  p_datos := coalesce(p_datos, '{}'::jsonb);
+  v_c := interno.comensal(p_clave, false);
+  select * into v_s from public.sesiones x where x.id = v_c.sesion_id for update;
+  if v_s.cerrada is not null and v_s.cerrada < now() - interval '3 hours' then raise exception 'mesa_cerrada'; end if;
+  if not (interno.club_config(v_s.local_id)->>'activo')::boolean then raise exception 'club_apagado'; end if;
+  select * into v_k from public.clientes k where k.local_id = v_s.local_id and k.user_id = auth.uid() for update;
+  if v_c.cliente_id is not null and v_c.cliente_id is distinct from v_k.id then raise exception 'otra_cuenta'; end if;
+  if v_k.id is not null and exists (select 1 from public.comensales x where x.sesion_id = v_s.id and x.cliente_id = v_k.id and x.id <> v_c.id) then
+    raise exception 'ya_en_la_mesa';
+  end if;
+  if v_k.id is null then
+    v_nombre := left(regexp_replace(trim(coalesce(p_datos->>'nombre', '')), '\s+', ' ', 'g'), 20);
+    v_color := case when p_datos->>'color' = any(v_colores) then p_datos->>'color' else v_c.color end;
+    insert into public.clientes (local_id, user_id, email, nombre, color, novedades)
+    values (v_s.local_id, auth.uid(), lower(v_email), coalesce(nullif(v_nombre, ''), v_c.nombre), v_color, coalesce(p_datos->>'novedades' = 'true', false))
+    returning * into v_k;
+    v_nuevo := true;
+  elsif p_datos->>'novedades' = 'true' then
+    update public.clientes k set novedades = true where k.id = v_k.id;
+  end if;
+  if v_c.cliente_id is null then
+    update public.comensales x set cliente_id = v_k.id where x.id = v_c.id;
+    perform interno.anotar(v_s.id, case when v_nuevo then v_c.nombre || ' se sumó al club'
+                                        else v_c.nombre || ' es del club: ' || (v_k.visitas + 1) || 'ª visita' end);
+  end if;
+  if v_s.cerrada is not null then perform interno.acreditar(v_s.id, v_c.id); end if;
+  perform interno.avisar(v_s.local_id, v_s.id);
+  select * into v_c from public.comensales x where x.id = v_c.id;
+  select * into v_k from public.clientes k where k.id = v_k.id;
+  return jsonb_build_object('ok', true, 'nuevo', v_nuevo, 'cliente', interno.j_cliente(v_k, true), 'acreditado', v_c.acreditado);
+end $$;
+
+-- Pedir un premio: va al pedido de la mesa, gratis, y sale con la próxima ronda
+create or replace function public.club_canjear(p_clave text, p_premio uuid) returns jsonb
+language plpgsql volatile security definer
+set search_path = public
+as $$
+declare v_c public.comensales; v_s public.sesiones; v_p public.premios; v_carta jsonb;
+begin
+  v_c := interno.comensal(p_clave);
+  if v_c.cliente_id is null then raise exception 'sin_cuenta'; end if;
+  select * into v_s from public.sesiones x where x.id = v_c.sesion_id for update;
+  select * into v_p from public.premios p where p.id = p_premio and p.cliente_id = v_c.cliente_id and p.canjeado is null for update;
+  if not found then raise exception 'premio_no_existe'; end if;
+  if exists (select 1 from public.carrito x where x.premio_id = v_p.id) then raise exception 'premio_en_pedido'; end if;
+  if exists (select 1 from public.agotados a where a.local_id = v_s.local_id and a.plato = v_p.plato) then raise exception 'agotado'; end if;
+  select l.carta into v_carta from public.locales l where l.id = v_s.local_id;
+  if interno.plato(v_carta, v_p.plato) is null then raise exception 'plato_no_existe'; end if;
+  insert into public.carrito (sesion_id, comensal_id, plato, eleccion, clave, detalle, precio, cant, premio_id)
+  values (v_s.id, v_c.id, v_p.plato, null, 'premio-' || v_p.id, '', 0, 1, v_p.id);
+  perform interno.avisar(v_s.local_id, v_s.id);
+  return interno.estado_mesa(v_s.id);
+end $$;
+
+-- Que el local le mande (o no) novedades y promos
+create or replace function public.club_novedades(p_codigo text, p_si boolean) returns jsonb
+language plpgsql volatile security definer
+set search_path = public
+as $$
+begin
+  update public.clientes k set novedades = coalesce(p_si, false)
+    from public.mesas m where m.codigo = p_codigo and k.local_id = m.local_id and k.user_id = auth.uid();
+  return public.club_ver(p_codigo);
+end $$;
+
+-- Borrar mi cuenta del club de este local: el mail, lo que pedí y los premios
+create or replace function public.club_borrarme(p_codigo text) returns jsonb
+language plpgsql volatile security definer
+set search_path = public
+as $$
+declare v_local uuid;
+begin
+  if auth.uid() is null then raise exception 'sin_cuenta'; end if;
+  select m.local_id into v_local from public.mesas m where m.codigo = p_codigo;
+  delete from public.clientes k where k.local_id = v_local and k.user_id = auth.uid();
+  perform interno.avisar(v_local, null);
+  return jsonb_build_object('ok', true);
 end $$;
 
 
@@ -797,6 +1077,7 @@ begin
   end if;
   if v_p.rechazado is null and not exists (select 1 from jsonb_each(v_p.partes) e where e.value->>'estado' <> 'nuevo') then
     update public.pedidos x set rechazado = jsonb_build_object('quien', v_t.equipo_id, 't', interno.ms(now())) where x.id = v_p.id;
+    update public.premios x set canjeado = null, canjeado_sesion = null, canjeado_pedido = null where x.canjeado_pedido = v_p.id;   -- el premio vuelve
     perform interno.anotar(v_p.sesion_id, interno.nombre_equipo(v_t.equipo_id) || ' no tomó la ronda ' || v_p.ronda);
     perform interno.avisar(v_t.local_id, v_p.sesion_id);
   end if;
@@ -871,6 +1152,7 @@ begin
     delete from public.carrito x where x.sesion_id = v_s.id;
     update public.llamados x set atendido = jsonb_build_object('quien', v_t.equipo_id, 't', v_ahora) where x.sesion_id = v_s.id and x.atendido is null;
     perform interno.anotar(v_s.id, interno.nombre_equipo(v_t.equipo_id) || ' cobró y liberó la mesa');
+    perform interno.acreditar(v_s.id);                         -- los del club suman lo que pidieron
     perform interno.avisar(v_t.local_id, v_s.id);
   end if;
   return interno.estado_panel(v_t.local_id);
@@ -1006,6 +1288,55 @@ begin
 end $$;
 
 
+-- Los del club, con su mail y sus premios (permiso "clientes")
+create or replace function public.clientes_estado(p_turno text) returns jsonb
+language plpgsql stable security definer
+set search_path = public
+as $$
+declare v_t public.turnos;
+begin
+  v_t := interno.turno(p_turno);
+  perform interno.exigir(v_t.equipo_id, 'clientes');
+  return jsonb_build_object('club', interno.club_config(v_t.local_id),
+    'clientes', coalesce((select jsonb_agg(interno.j_cliente(k, true) order by coalesce(k.ultima, k.alta) desc)
+                            from public.clientes k where k.local_id = v_t.local_id), '[]'::jsonb));
+end $$;
+
+-- La regla del club: cada cuántas cosas (3 a 50), qué plato de la carta se regala y si está prendido
+create or replace function public.guardar_club(p_turno text, p_club jsonb) returns jsonb
+language plpgsql volatile security definer
+set search_path = public
+as $$
+declare v_t public.turnos; v_carta jsonb; v_meta integer;
+begin
+  v_t := interno.turno(p_turno);
+  perform interno.exigir(v_t.equipo_id, 'clientes');
+  select l.carta into v_carta from public.locales l where l.id = v_t.local_id;
+  v_meta := case when p_club->>'meta' ~ '^\d{1,3}$' then (p_club->>'meta')::integer end;
+  if v_meta is null or v_meta < 3 or v_meta > 50 then raise exception 'meta'; end if;
+  if interno.plato(v_carta, p_club->>'premio') is null then raise exception 'premio'; end if;
+  update public.locales l set club = jsonb_build_object('activo', coalesce(p_club->>'activo', 'true') <> 'false', 'meta', v_meta, 'premio', p_club->>'premio')
+   where l.id = v_t.local_id;
+  perform interno.avisar(v_t.local_id, null);
+  return public.clientes_estado(p_turno);
+end $$;
+
+-- Borrar los datos de alguien del club (si lo pide): el mail, lo que pidió y sus premios
+create or replace function public.borrar_cliente(p_turno text, p_cliente uuid) returns jsonb
+language plpgsql volatile security definer
+set search_path = public
+as $$
+declare v_t public.turnos;
+begin
+  v_t := interno.turno(p_turno);
+  perform interno.exigir(v_t.equipo_id, 'clientes');
+  delete from public.clientes k where k.id = p_cliente and k.local_id = v_t.local_id;
+  if not found then raise exception 'no_existe'; end if;
+  perform interno.avisar(v_t.local_id, null);
+  return public.clientes_estado(p_turno);
+end $$;
+
+
 -- -----------------------------------------------------------------------------
 --  5. Para la encargada, desde el SQL Editor
 -- -----------------------------------------------------------------------------
@@ -1060,6 +1391,14 @@ revoke all on function public.agotar(text, text, boolean)                  from 
 revoke all on function public.guardar_persona(text, jsonb, text)           from public, anon;
 revoke all on function public.nuevo_pin(text, uuid, text)                  from public, anon;
 revoke all on function public.baja_persona(text, uuid)                     from public, anon;
+revoke all on function public.club_ver(text)                               from public;
+revoke all on function public.club_vincular(text, jsonb)                   from public, anon;
+revoke all on function public.club_canjear(text, uuid)                     from public;
+revoke all on function public.club_novedades(text, boolean)                from public, anon;
+revoke all on function public.club_borrarme(text)                          from public, anon;
+revoke all on function public.clientes_estado(text)                        from public, anon;
+revoke all on function public.guardar_club(text, jsonb)                    from public, anon;
+revoke all on function public.borrar_cliente(text, uuid)                   from public, anon;
 revoke all on all functions in schema interno                              from public, anon, authenticated;
 
 -- Los comensales (sin cuenta)
@@ -1070,6 +1409,12 @@ grant execute on function public.sumar(text, text, jsonb, integer) to anon, auth
 grant execute on function public.cantidad(text, uuid, integer)     to anon, authenticated;
 grant execute on function public.mandar(text, text)                to anon, authenticated;
 grant execute on function public.llamar(text, text, jsonb)         to anon, authenticated;
+grant execute on function public.club_ver(text)                    to anon, authenticated;
+grant execute on function public.club_canjear(text, uuid)          to anon, authenticated;
+-- Los del club (entraron con su mail: Supabase Auth)
+grant execute on function public.club_vincular(text, jsonb)        to authenticated;
+grant execute on function public.club_novedades(text, boolean)     to authenticated;
+grant execute on function public.club_borrarme(text)               to authenticated;
 -- El equipo (con la cuenta del local)
 grant execute on function public.panel_estado()                    to authenticated;
 grant execute on function public.abrir_turno(uuid, text)           to authenticated;
@@ -1083,3 +1428,6 @@ grant execute on function public.agotar(text, text, boolean)       to authentica
 grant execute on function public.guardar_persona(text, jsonb, text) to authenticated;
 grant execute on function public.nuevo_pin(text, uuid, text)       to authenticated;
 grant execute on function public.baja_persona(text, uuid)          to authenticated;
+grant execute on function public.clientes_estado(text)             to authenticated;
+grant execute on function public.guardar_club(text, jsonb)         to authenticated;
+grant execute on function public.borrar_cliente(text, uuid)        to authenticated;

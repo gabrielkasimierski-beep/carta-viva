@@ -111,6 +111,45 @@ más; arreglar las horas que no coincidían; y pensar todo para el ritmo de las 
 
 La base real (`supabase/esquema.sql`) hace cumplir lo mismo: permisos, equipo y deshacer.
 
+### El club: la cuenta con el mail, los premios y volver (30-sep-2026)
+
+Pedido de Gaby: que cada comensal, al escanear el QR, pueda crear su usuario con su mail y sin
+contraseña (su propia identidad); que al consumir cierta cantidad de cosas gane un premio y que
+quede registrado; y que al volver sienta familiaridad con el local.
+- **Sumarse es opcional y sin contraseña.** En la bienvenida (y en el pedido, el seguimiento y
+  el "gracias") está "Club Mordisco: cada 10 cosas, un Flan casero de regalo". Deja su mail y le
+  llega un código de 6 números; con eso entra. El celu queda adentro: la próxima vez lo
+  reconoce solo. Desde otro celu, otro código. Si ya era del club, entra con el mismo mail.
+  En la demo no se manda ningún mail: el código aparece en pantalla.
+- **Su identidad:** su nombre y su color (los de la mesa), lo que más pide, sus visitas y sus
+  premios. Los del club tienen un aro dorado en su inicial, en la mesa y en el panel.
+- **Los sellos.** Cuando se cobra la mesa, cada cosa que pidió suma un sello. Al completar la
+  tarjeta gana el premio (un plato de la carta) y el "gracias" lo festeja. Lo que se pide de
+  regalo no suma, y lo que el local no tomó tampoco. Si se suma recién en el "gracias" (hasta 3
+  horas después de pagar), lo de ese día también cuenta.
+- **El premio lo pide desde su celu** cuando quiera: va al pedido de la mesa, gratis, y sale con
+  la ronda. Queda registrado cuándo lo ganó y cuándo lo pidió. Si el local no toma esa ronda,
+  el premio vuelve.
+- **Cuando vuelve:** "¡Hola de nuevo, Vale! Es tu 5ª visita", ya con su nombre y su color, sus
+  sellos, su premio para pedir y "¿Lo de siempre?" con lo que más pide (un toque y lo suma).
+- **El mozo sabe quién es:** en la mesa ve "Vale es del club · 5ª visita · suele pedir Doble
+  Bacon · tiene un Flan de regalo para pedir". Sin el mail.
+- **Clientes, en el panel** (permiso nuevo "clientes": dueño y encargado). La regla del premio
+  (cada cuántas cosas, qué plato, prendido o apagado), la lista con visitas, sellos y premios,
+  quién está sentado ahora, el detalle de cada uno y "Copiar mails" de los que aceptaron promos.
+- **Datos personales (Ley 25.326).** Se dice qué se guarda y para qué; las promos son aparte y
+  solo si tilda la casilla; cada uno borra su cuenta desde su celu y el local puede borrar los
+  datos de quien lo pida.
+
+En la versión real el código lo manda **Supabase Auth** (sin contraseña: `signInWithOtp` y
+`verifyOtp`). Antes de abrir un local hay que: poner en la plantilla del mail el código de 6
+números (`{{ .Token }}`) en lugar del link, y conectar un servicio de mails propio (por ejemplo
+Resend: el de Supabase manda muy pocos por hora y es solo para probar). Las cuentas las crea
+Gaby. La base ya lo hace cumplir: `club_ver`, `club_vincular`, `club_canjear`, `club_novedades`,
+`club_borrarme` para el comensal; `clientes_estado`, `guardar_club`, `borrar_cliente` para el
+panel; los sellos se suman solos al cobrar. Probado (149 pruebas, y una base de la versión
+anterior se actualiza sin perder nada).
+
 ## 2. Qué se reutiliza de Fena y qué cambia
 
 | | Fena (turnos) | Carta Viva |
@@ -131,8 +170,9 @@ correcta.
 **Base (Supabase): ya escrita en `supabase/esquema.sql` y probada (`npm test`).**
 - Varios locales desde el día 1. La carta de cada local se guarda entera (sale de `local.js` con
   `npm run semilla`) y **los precios los calcula la base**: el celular nunca manda un precio.
-- Los comensales no tienen usuario: el código del QR y una clave por persona los dejan pedir
-  solo en su mesa y ver solo lo de su mesa.
+- Los comensales no necesitan usuario: el código del QR y una clave por persona los dejan pedir
+  solo en su mesa y ver solo lo de su mesa. Los que quieren se suman al club con su mail (sin
+  contraseña, con Supabase Auth) y quedan como clientes del local.
 - El local entra con una cuenta del panel, y cada persona del equipo con su PIN (se traba a los
   5 intentos).
 - Las tablas no se leen directo: todo pasa por funciones de la base que controlan quién puede qué.
@@ -165,6 +205,7 @@ nueva" y se puede no tomar. Si hiciera falta más, el código de la mesa puede c
 3. Un color por plato (o la paleta del local).
 4. Imprimir los QR de las mesas.
 5. El equipo: se suma desde el panel (sección Equipo), cada uno con su PIN y sus permisos.
+6. El premio del club: qué plato se regala y cada cuántas cosas (sección Clientes).
 
 ## 5. Decidido y por decidir
 
@@ -182,7 +223,8 @@ nueva" y se puede no tomar. Si hiciera falta más, el código de la mesa puede c
 
 ## 6. Costos (aproximados, a confirmar al contratar)
 
-Con un local: Supabase gratis + Netlify gratis → $0 fijo. Con varios locales: Supabase Pro
+Con un local: Supabase gratis + Netlify gratis → $0 fijo. Los mails del club (el código para
+entrar): Resend, gratis hasta unos 3.000 por mes. Con varios locales: Supabase Pro
 (~USD 25/mes) y, si hace falta, Netlify Pro (~USD 19/mes). Los modelos 3D van en el Storage de
 Supabase.
 
@@ -190,7 +232,8 @@ Supabase.
 
 1. Cargar un plato **escaneado de verdad** (.glb) en la demo, al lado de los modelados.
 2. Base multi-local en Supabase: **escrita y probada**. Falta conectarla a la app y probar
-   pedidos en tiempo real entre celulares de verdad.
+   pedidos en tiempo real entre celulares de verdad. Para el club: la plantilla del mail con el
+   código y un servicio de mails (Resend).
 3. Avisos al celular del mozo aunque tenga la app cerrada (como los turnos de Fena): "¡Sale!
    Mesa 9" en la pantalla bloqueada.
 4. Panel del dueño: editar carta, precios, colores y mesas (el equipo, los agotados y los QR ya

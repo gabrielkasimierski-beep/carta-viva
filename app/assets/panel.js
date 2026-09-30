@@ -10,6 +10,9 @@
                     sumado arriba. La pantalla no se apaga.
      · CARTA  — lo que se terminó (deja de poder pedirse en todas las mesas al instante).
      · QR     — los códigos para imprimir y pegar en cada mesa.
+     · CLIENTES — los del club: quiénes vuelven, sus mails, lo que piden, sus premios, y
+                  qué premio da el club. En el plano, los del club tienen un aro dorado y
+                  el mozo ve cuántas veces vinieron y qué suelen pedir.
      · EQUIPO — sumar personas, su PIN y qué puede ver y hacer cada una.
    Todo queda firmado ("Diego la empezó", "Carla fue a la mesa") y lo que se toca sin
    querer se puede deshacer durante unos segundos.
@@ -55,19 +58,19 @@ const puedeMover = (est, a, p = persona(yo)) => (a === "entregado" ? puede("llev
 const puedeRechazar = (ped, p = persona(yo)) => puede("mesas", p) || Object.keys(ped.partes).some(e => puede(e, p));
 const puedeEditarA = (e, p = persona(yo)) => puede("equipo", p) && (e.rol !== "dueno" || p.rol === "dueno");
 
-const VISTAS = { mesas: "Mesas", ...Object.fromEntries(ESTACIONES.map(e => [e.id, e.nombre])), carta: "Carta", qr: "QR", equipo: "Equipo" };
+const VISTAS = { mesas: "Mesas", ...Object.fromEntries(ESTACIONES.map(e => [e.id, e.nombre])), carta: "Carta", qr: "QR", clientes: "Clientes", equipo: "Equipo" };
 function vistasDe(p) {
   if (!p) return [];
   const v = [];
   if (deSalon(p)) v.push("mesas");
   EST.forEach(e => { if (puede(e, p)) v.push(e); });
-  ["carta", "qr", "equipo"].forEach(x => { if (puede(x, p)) v.push(x); });
+  ["carta", "qr", "clientes", "equipo"].forEach(x => { if (puede(x, p)) v.push(x); });
   return v;
 }
 // Quien lleva o atiende pero no ve el plano, tiene su lista de tareas
 const nombreVista = (v, p) => (v === "mesas" && !puede("mesas", p) ? "Para hacer" : VISTAS[v]);
 const avatarEquipo = (p, clase = "") => `<span class="avatar avatar--equipo ${clase}" style="--av:${p.color}" aria-hidden="true">${esc((p.nombre || "?")[0].toUpperCase())}</span>`;
-const avatarComensal = (c, clase = "") => `<span class="avatar ${clase}" style="--av:${c.color}" aria-hidden="true">${esc((c.nombre || "?")[0].toUpperCase())}</span>`;
+const avatarComensal = (c, clase = "") => `<span class="avatar ${clase}${c.cliente ? " avatar--club" : ""}" style="--av:${c.color}" aria-hidden="true">${esc((c.nombre || "?")[0].toUpperCase())}</span>`;
 
 /* ---------- Estados ---------- */
 const ESTADO_MESA = { libre: "Libre", eligiendo: "Eligiendo", nuevo: "Pidió", preparando: "Preparando", listo: "Para llevar", entregado: "Comiendo" };
@@ -94,6 +97,7 @@ let editor = null;                            // la persona que se está editand
 let liberando = null, rechazando = null, dobleT;
 let historiaAbierta = false, verTodo = false;
 let eligiendo = null, pin = "", pinMal = false;
+let clienteAbierto = null, buscarCliente = "", borrandoCliente = false;     // Clientes
 
 const datosMesa = n => mesasDelLocal().find(m => m.n === n) || { n, zona: "", lugares: 4 };
 const platoDe = id => L.platos.find(p => p.id === id);
@@ -290,7 +294,7 @@ function pintarMesas(d) {
 function itemsHtml(items, d, conQuien = true) {
   return items.map(it => {
     const c = conQuien && comensalDe(d, it.comensal);
-    const bajo = [it.detalle, c ? `para ${c.nombre}` : ""].filter(Boolean).join(" · ");
+    const bajo = [it.detalle, it.premio ? "regalo del club" : "", c ? `para ${c.nombre}` : ""].filter(Boolean).join(" · ");
     return `<li><b>${it.cant}</b>${fotoHtml(it.plato, it.eleccion, "item-foto")}<span>${esc(it.nombre)}${bajo ? `<small>${esc(bajo)}</small>` : ""}</span></li>`;
   }).join("");
 }
@@ -348,8 +352,19 @@ function cerrarAside() {
   veloDetalle.hidden = true;
   detalle._html = null;
 }
+// Los del club que están en la mesa: para saludarlos por su nombre
+function clubMesaHtml(m) {
+  const socios = m.comensales.map(c => ({ c, k: D.clubDe ? D.clubDe(c.id) : null })).filter(x => x.k);
+  if (!socios.length) return "";
+  return `<section class="detalle__club" aria-label="Del club">${socios.map(({ c, k }) => {
+    const libres = k.premios.filter(p => !p.enPedido);
+    return `<p>${avatarComensal(c, "avatar--chico")}<span><b>${esc(c.nombre)}</b> es del club · ${k.visita === 1 ? "primera visita" : `${k.visita}ª visita`}${k.favorito ? ` · suele pedir ${esc(k.favorito)}` : ""}${
+      libres.length ? `<small class="detalle__club-premio">${icono("i-regalo", 13)} Tiene ${esc(lista(libres.map(p => p.nombre)))} de regalo para pedir</small>` : ""}</span></p>`;
+  }).join("")}</section>`;
+}
 function pintarDetalle(d) {
   if (editor) return;                          // el editor de Equipo no se repinta solo
+  if (clienteAbierto) return pintarCliente(d);
   if (mesaAbierta == null || vista !== "mesas" || panel.hidden || !yo || !puede("mesas")) return cerrarAside();
   const m = mesaInfo(datosMesa(mesaAbierta), d);
   const nombres = m.comensales.map(c => c.nombre);
@@ -368,6 +383,7 @@ function pintarDetalle(d) {
         <span class="avatares">${m.comensales.slice(0, 6).map(c => avatarComensal(c)).join("")}</span>
         <span><b>${esc(lista(nombres))}</b><small>${nombres.length} ${nombres.length === 1 ? "persona" : "personas"} con la carta · abrieron la mesa ${haceCuanto(Date.now() - m.desde)}</small></span>
       </div>` : ""}
+      ${clubMesaHtml(m)}
       ${m.llama ? tareaHtml({ tipo: "mozo", m, l: m.llama, t: m.llama.creado }, d) : ""}
       ${m.cuenta ? cuentaHtml(m.cuenta, m, d) : ""}
       ${m.listos.map(x => tareaHtml({ ...x, t: x.cambio, m, tipo: "listo" }, d)).join("")}
@@ -401,6 +417,14 @@ function abrirMesa(n) {
 }
 function cerrarDetalle() {
   if (editor) return cerrarEditor();
+  if (clienteAbierto) {
+    const volver = clienteAbierto;
+    clienteAbierto = null;
+    borrandoCliente = false;
+    cerrarAside();
+    pintar();
+    return panel.querySelector(`[data-cliente="${volver}"]`)?.focus({ preventScroll: true });
+  }
   const volver = mesaAbierta;
   mesaAbierta = null;
   liberando = null;
@@ -535,6 +559,114 @@ function pintarQR() {
         ${L.demo ? `<a class="tarjeta-qr__probar" href="${esc(enlaceProbar(m))}" target="_blank" rel="noopener" title="Se abre como si fuera otro celular">Abrir la mesa ${m.n} ${icono("i-flecha", 13)}</a>` : ""}
       </article>`;
     }).join("")}</div>`;
+}
+
+/* ---------- Clientes: los del club y su premio ---------- */
+const fecha = t => new Date(t).toLocaleDateString("es-AR", { day: "numeric", month: "short", year: new Date(t).getFullYear() === new Date().getFullYear() ? undefined : "numeric" });
+const cuando = t => {
+  if (!t) return "";
+  const dias = Math.round((new Date().setHours(0, 0, 0, 0) - new Date(t).setHours(0, 0, 0, 0)) / 864e5);
+  return dias <= 0 ? "hoy" : dias === 1 ? "ayer" : dias < 7 ? `hace ${dias} días` : fecha(t);
+};
+function clubRegla() {
+  const cfg = D.club();
+  const opciones = L.categorias.map(c => `<optgroup label="${esc(c.nombre)}">${L.platos.filter(p => p.categoria === c.id)
+    .map(p => `<option value="${p.id}"${p.id === cfg.premio ? " selected" : ""}>${esc(p.nombre)}</option>`).join("")}</optgroup>`).join("");
+  return `<section class="club-regla${cfg.activo ? "" : " club-regla--apagado"}" aria-labelledby="club-regla-titulo">
+    ${fotoHtml(cfg.premio, null, "club-regla__foto")}
+    <div class="club-regla__texto">
+      <p class="ed-rotulo" id="club-regla-titulo">El premio del club</p>
+      <div class="club-regla__frase">
+        <span>Cada</span>
+        <span class="club-regla__meta"><button type="button" data-club-meta="-1" aria-label="Una cosa menos">−</button><b aria-live="polite">${cfg.meta}</b><button type="button" data-club-meta="1" aria-label="Una cosa más">+</button></span>
+        <span>cosas,</span>
+        <select id="club-premio" aria-label="El premio">${opciones}</select>
+        <span>de regalo.</span>
+      </div>
+      <p class="ed-ayuda">Cuentan las cosas que pide cada uno con su cuenta, cuando se cobra la mesa (lo que pide de regalo no cuenta). El premio lo pide desde su celu cuando quiera y sale gratis con su ronda.</p>
+    </div>
+    <button type="button" class="interruptor" role="switch" aria-checked="${cfg.activo}" aria-label="El club: ${cfg.activo ? "prendido" : "apagado"}" data-club-activo>${cfg.activo ? "Prendido" : "Apagado"}</button>
+  </section>`;
+}
+function clienteFicha(k) {
+  const aqui = mesaDelCliente(k.id);
+  return `<button type="button" class="cliente" data-cliente="${k.id}">
+    ${avatarComensal({ ...k, cliente: true }, "avatar--cliente")}
+    <span class="cliente__info"><b>${esc(k.nombre)}${aqui ? ` <span class="cliente__aca">Mesa ${aqui}</span>` : ""}</b><small>${esc(k.email)}</small></span>
+    <span class="cliente__visitas"><span><b>${k.visitas}</b> ${k.visitas === 1 ? "visita" : "visitas"}</span><small>${k.ultima ? "última " + cuando(k.ultima) : "recién se sumó"}</small></span>
+    <span class="cliente__sellos" title="${k.sellos} de ${k.meta} para el próximo premio"><span class="cliente__barra" style="--p:${Math.round(k.sellos / k.meta * 100)}%"><i></i></span><small>${k.sellos}/${k.meta}</small></span>
+    <span class="cliente__premios">${k.premios.length ? `${icono("i-regalo", 14)}${k.premios.length}` : ""}</span>
+  </button>`;
+}
+// Si está sentado ahora en alguna mesa
+function mesaDelCliente(id) {
+  const d = D.todo();
+  const c = d.comensales.find(x => x.cliente === id && d.sesiones.some(s => s.id === x.sesion && !s.cerrada));
+  return c ? (d.sesiones.find(s => s.id === c.sesion) || {}).mesa : null;
+}
+function pintarClientes() {
+  const todos = D.clientes(yo) || [];
+  const q = buscarCliente.trim().toLowerCase();
+  const vis = q ? todos.filter(k => k.nombre.toLowerCase().includes(q) || k.email.includes(q)) : todos;
+  const volvieron = todos.filter(k => k.visitas > 1).length;
+  const ganados = todos.reduce((t, k) => t + k.historial.length, 0);
+  const usados = todos.reduce((t, k) => t + k.canjeados, 0);
+  const promos = todos.filter(k => k.novedades).length;
+  return `
+    ${clubRegla()}
+    <div class="resumen">
+      <p><b>${todos.length}</b> en el club</p>
+      <p><b>${volvieron}</b> volvieron más de una vez</p>
+      <p><b>${ganados}</b> ${ganados === 1 ? "premio ganado" : "premios ganados"} · ${usados} ya ${usados === 1 ? "pedido" : "pedidos"}</p>
+    </div>
+    <div class="clientes-barra">
+      <input type="search" id="buscar-cliente" placeholder="Buscar por nombre o mail" value="${esc(buscarCliente)}" autocomplete="off" aria-label="Buscar clientes">
+      ${promos ? `<button type="button" class="ed-boton" data-copiar-mails title="Los mails de los que aceptaron recibir novedades">Copiar mails · ${promos} ${promos === 1 ? "acepta" : "aceptan"} promos</button>` : ""}
+    </div>
+    <div class="clientes">${vis.length ? vis.map(clienteFicha).join("")
+      : `<p class="panel__ayuda">${q ? "Nadie con ese nombre o mail." : "Todavía no se sumó nadie. Cada comensal se suma desde su celu, con su mail."}</p>`}</div>`;
+}
+function pintarCliente() {
+  const k = (D.clientes(yo) || []).find(x => x.id === clienteAbierto);
+  if (!k || vista !== "clientes" || panel.hidden) { clienteAbierto = null; return cerrarAside(); }
+  const aqui = mesaDelCliente(k.id);
+  const favs = k.favoritos.map(f => ({ ...f, p: platoDe(f.plato) })).filter(f => f.p);
+  const html = `
+    <header class="detalle__cabeza">
+      <div><p class="detalle__zona">Club · desde ${fecha(k.alta)}</p><h3 class="detalle__titulo" id="detalle-titulo">${esc(k.nombre)}</h3></div>
+      <button type="button" class="detalle__cerrar" data-cerrar-detalle aria-label="Cerrar">${icono("i-cerrar", 18)}</button>
+    </header>
+    <div class="detalle__cuerpo" data-scroll="cuerpo">
+      <div class="detalle__gente">${avatarComensal({ ...k, cliente: true }, "avatar--cliente")}<span><b>${esc(k.email)}</b><small>${k.novedades ? "Acepta que le manden novedades y promos" : "No quiere recibir promos"}</small></span></div>
+      ${aqui ? `<p class="cliente__ahora">${icono("i-estrella", 14)} Está en la mesa ${aqui} ahora</p>` : ""}
+      <dl class="detalle__cuenta">
+        <dt>Visitas</dt><dd>${k.visitas}</dd>
+        <dt>La última</dt><dd>${k.ultima ? cuando(k.ultima) : "—"}</dd>
+        <dt>Cosas que pidió</dt><dd>${k.cosas}</dd>
+        <dt>Para el próximo premio</dt><dd>${k.sellos} de ${k.meta}</dd>
+      </dl>
+      ${favs.length ? `<section><p class="ed-rotulo">Lo que más pide</p><ul class="cliente__favs">${favs.map(f => `<li>${fotoHtml(f.plato, null, "item-foto")}<span>${esc(f.p.nombre)}</span><b>${f.cant}</b></li>`).join("")}</ul></section>` : ""}
+      <section><p class="ed-rotulo">Premios</p>${k.historial.length ? `<ul class="cliente__premios-lista">${k.historial.map(p => `
+        <li class="${p.canjeado ? "" : "libre"}">${icono("i-regalo", 16)}<span><b>${esc(p.nombre)}</b><small>Lo ganó ${cuando(p.ganado)} · ${p.canjeado ? `lo pidió ${cuando(p.canjeado.t)}` : "todavía no lo pidió"}</small></span></li>`).join("")}</ul>`
+        : `<p class="ed-ayuda">Todavía ninguno: le faltan ${k.meta - k.sellos} cosas para el primero.</p>`}</section>
+    </div>
+    <footer class="detalle__pie">
+      <button type="button" class="ed-baja${borrandoCliente ? " confirmando" : ""}" data-borrar-cliente>${borrandoCliente ? `Tocá de nuevo: se borran el mail y todo lo de ${esc(k.nombre)}` : "Borrar sus datos del club"}</button>
+    </footer>`;
+  poner(detalle, html);
+  detalle.hidden = false;
+  veloDetalle.hidden = false;
+}
+function abrirCliente(id) {
+  clienteAbierto = id;
+  borrandoCliente = false;
+  mesaAbierta = null;
+  pintar();
+  setTimeout(() => detalle.querySelector("[data-cerrar-detalle]")?.focus({ preventScroll: true }), 30);
+}
+async function guardarClub(cambio) {
+  const r = await D.guardarClub(yo, { ...D.club(), ...cambio });
+  if (!r || !r.ok) avisoPanel(r && r.motivo === "meta" ? "Entre 3 y 50 cosas." : "No se pudo guardar. Probá de nuevo.");
 }
 
 /* ---------- Equipo: quién es quién y qué puede hacer cada uno ---------- */
@@ -806,6 +938,7 @@ function salir(aOtro) {
   D.salirEquipo();
   mesaAbierta = null;
   editor = null;
+  clienteAbierto = null;
   eligiendo = aOtro || null;
   pin = "";
   ocultarAlerta();
@@ -1022,6 +1155,7 @@ function pintar() {
     : vista === "mesas" ? pintarMesas(d)
     : vista === "carta" ? pintarStock(d)
     : vista === "qr" ? pintarQR()
+    : vista === "clientes" ? pintarClientes()
     : vista === "equipo" ? pintarEquipo()
     : pintarEstacion(d, vista);
   cont.setAttribute("aria-labelledby", "tab-" + vista);
@@ -1037,11 +1171,12 @@ function elegirVista(v) {
   if (editor) cerrarEditor();
   vista = v;
   if (v !== "mesas") mesaAbierta = null;
+  if (v !== "clientes") clienteAbierto = null;
   pintar();
   panel.scrollTop = 0;
 }
 
-const RUTAS = ["panel", "mesas", "qr", "equipo", ...EST];
+const RUTAS = ["panel", "mesas", "qr", "clientes", "equipo", ...EST];
 function segunDireccion() {
   const h = location.hash.slice(1);
   const ver = RUTAS.includes(h);
@@ -1051,6 +1186,7 @@ function segunDireccion() {
   if (!ver) {
     mesaAbierta = null;
     editor = null;
+    clienteAbierto = null;
     cerrarAside();
     ocultarAlerta();
     pantallaPrendida(false);
@@ -1122,14 +1258,48 @@ panel.addEventListener("click", async e => {
   if (b("[data-agotar]")) { const id = b("[data-agotar]").dataset.agotar; return D.agotar(id, !D.agotado(id), yo); }
   if (b("[data-imprimir]")) { try { window.print(); } catch { /* sin impresora */ } return; }
   if (b("[data-persona]")) return abrirEditor(b("[data-persona]").dataset.persona);
+  if (b("[data-cliente]")) return abrirCliente(b("[data-cliente]").dataset.cliente);
+  if (b("[data-club-meta]")) return guardarClub({ meta: D.club().meta + +b("[data-club-meta]").dataset.clubMeta });
+  if (b("[data-club-activo]")) {
+    const si = !D.club().activo;
+    await guardarClub({ activo: si });
+    return avisoPanel(si ? "El club está prendido: los comensales se pueden sumar con su mail." : "El club está apagado: nadie ve el club ni suma sellos (los datos quedan guardados).");
+  }
+  if (b("[data-copiar-mails]")) {
+    const mails = (D.clientes(yo) || []).filter(k => k.novedades).map(k => k.email);
+    try { await navigator.clipboard.writeText(mails.join(", ")); avisoPanel(`Copiaste ${mails.length} ${mails.length === 1 ? "mail" : "mails"}: solo los que aceptaron recibir promos.`); }
+    catch { avisoPanel("No se pudo copiar. Probá de nuevo."); }
+    return;
+  }
+  if (b("[data-borrar-cliente]")) {
+    clearTimeout(dobleT);
+    if (!borrandoCliente) { borrandoCliente = true; pintar(); dobleT = setTimeout(() => { borrandoCliente = false; pintar(); }, 4000); return; }
+    const k = (D.clientes(yo) || []).find(x => x.id === clienteAbierto);
+    const r = await D.borrarCliente(yo, clienteAbierto);
+    clienteAbierto = null;
+    borrandoCliente = false;
+    cerrarAside();
+    pintar();
+    return avisoPanel(r && r.ok ? `Listo: se borraron los datos de ${k ? k.nombre : "esa persona"}.` : "No se pudo borrar.");
+  }
   if (editor && b("#detalle")) return editorClic(b);
   if (b("#panel-reiniciar")) { mesaAbierta = null; editor = null; cerrarAside(); D.reiniciar(); }
 });
+// Clientes: buscar (sin perder el foco al repintar) y elegir el premio
+panel.addEventListener("input", e => {
+  if (e.target.id !== "buscar-cliente") return;
+  buscarCliente = e.target.value;
+  const donde = e.target.selectionStart;
+  pintar();
+  const i = $("#buscar-cliente");
+  if (i && document.activeElement !== i) { i.focus({ preventScroll: true }); try { i.setSelectionRange(donde, donde); } catch { /* nada */ } }
+});
+panel.addEventListener("change", e => { if (e.target.id === "club-premio") guardarClub({ premio: e.target.value }); });
 panel.addEventListener("toggle", e => { if (e.target.matches && e.target.matches(".historia")) historiaAbierta = e.target.open; }, true);
 document.addEventListener("keydown", e => {
   if (panel.hidden) return;
   if (!yo && eligiendo && (/^\d$/.test(e.key) || e.key === "Backspace")) { e.preventDefault(); return tecla(e.key === "Backspace" ? "borrar" : e.key); }
-  if (e.key === "Escape" && (mesaAbierta != null || editor)) cerrarDetalle();
+  if (e.key === "Escape" && (mesaAbierta != null || editor || clienteAbierto)) cerrarDetalle();
 });
 document.addEventListener("visibilitychange", () => { if (!panel.hidden && yo) pantallaPrendida(EST.includes(vista) && document.visibilityState === "visible"); });
 

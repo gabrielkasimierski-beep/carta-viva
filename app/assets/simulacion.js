@@ -5,7 +5,8 @@
    · La cocina (Diego) y la barra (Martín) empiezan y terminan lo que se pide.
    · Los mozos (Carla en el salón, Nico en la vereda) llevan lo que está listo, van
      cuando los llaman y, en tu mesa, te traen la cuenta y te cobran.
-   · Las otras mesas siguen su curso: piden otra ronda, llaman al mozo, se sienta gente.
+   · Las otras mesas siguen su curso: piden otra ronda, llaman al mozo, se sienta gente
+     (entre ellos, alguien del club que vuelve).
    Cada cosa la hace alguien del equipo que tiene ese permiso (si lo cambiás en Equipo,
    la simulación también). Lo que alguien mueve a mano desde el panel, la simulación no
    lo toca. Corre en una sola pestaña, la que se está mirando: si nadie mira, el local
@@ -113,7 +114,7 @@
     { en: 55e3,  hace: "mandar", mesa: 4 },
     { en: 125e3, hace: "llamar", mesa: 11, quien: "Luz" },
     { en: 195e3, hace: "ronda",  mesa: 5, quien: "Santi", items: [["ipa", 3], ["papas-cheddar", 1]] },
-    { en: 265e3, hace: "abrir",  mesa: 10, gente: ["Lara", "Juan"], items: [["fugazzeta", 1, 0], ["limonada", 2, 1]] },
+    { en: 265e3, hace: "abrir",  mesa: 10, gente: ["Lara", "Tomás"], club: { "Tomás": "k-tomas" }, items: [["fugazzeta", 1, 0], ["limonada", 2, 1]] },
     { en: 335e3, hace: "mandar", mesa: 10 },
     { en: 405e3, hace: "ronda",  mesa: 3, quien: "Mica", items: [["flan", 2], ["cheesecake", 1]] },
     { en: 480e3, hace: "llamar", mesa: 12, quien: "Nahue" },
@@ -137,7 +138,8 @@
       D.mandar(c.id, "");
     }
     if (libre && !s && paso.hace === "abrir") {
-      const cs = paso.gente.map(n => D.entrar(paso.mesa, n, { sim: true }));
+      // Tomás vuelve: es del club (el mozo lo ve en la mesa)
+      const cs = paso.gente.map(n => D.entrar(paso.mesa, n, { sim: true, ...(paso.club && paso.club[n] ? { cliente: paso.club[n] } : {}) }));
       paso.items.forEach(([id, n, q]) => cs[q] && sumarSim(cs[q].comensal.id, id, n));
     }
     marcar(x => { x.sim = { inicio: sim.inicio, paso: sim.paso + 1 }; });

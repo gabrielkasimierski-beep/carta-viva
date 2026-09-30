@@ -17,14 +17,18 @@
      nombre, para que no vayan dos a la misma mesa.
    · EQUIPO: cada persona con su PIN, su puesto y sus permisos (qué ve y qué puede hacer).
      Los maneja quien tiene el permiso "equipo" (el dueño o el encargado).
+   · CLUB: el comensal que quiere guarda su cuenta con su mail (sin contraseña: le llega un
+     código). Cuando se cobra la mesa, lo que pidió suma sellos; cada tantos, un premio de
+     regalo que pide desde su celu. Cuando vuelve, la carta lo saluda y el mozo sabe quién es.
    ============================================================================= */
 
 (function () {
   "use strict";
 
   const L = window.LOCAL;
-  const CLAVE = "cartaviva.demo.v4";
-  const VERSION = 4;
+  const CLAVE = "cartaviva.demo.v5";
+  const VIEJA = "cartaviva.demo.v4";      // de la versión anterior de la demo se hereda el equipo
+  const VERSION = 5;
   const ESTADOS = ["nuevo", "preparando", "listo", "entregado"];
   const COLORES = ["#FF7A59", "#3DB2FF", "#FFC43D", "#A57BFF", "#2BC48A", "#FF6FB5"];
   const COLORES_EQUIPO = ["#C4A4FF", "#7FD6FF", "#8BE3B4", "#FFB27A", "#FFD86B", "#F28FB0", "#9FB4FF", "#E6C79C"];
@@ -76,6 +80,7 @@
     })),
     { id: "carta",   grupo: "El local", corto: "Agotados", nombre: "Marcar agotados",      ayuda: "Lo que se termina deja de poder pedirse en todas las mesas." },
     { id: "qr",      grupo: "El local", corto: "QR",       nombre: "Los QR de las mesas",  ayuda: "Verlos e imprimirlos para pegar en cada mesa." },
+    { id: "clientes", grupo: "El local", corto: "Clientes", nombre: "Ver los clientes",    ayuda: "Los del club: quiénes vuelven, sus mails, lo que piden y sus premios. Y qué premio da el club." },
     { id: "equipo",  grupo: "El local", corto: "Equipo",   nombre: "Manejar el equipo",    ayuda: "Sumar personas, darles un PIN y elegir qué puede hacer cada una." },
   ];
   const TODOS = PERMISOS.map(p => p.id);
@@ -115,15 +120,105 @@
   }
 
   /* ---------------------------------------------------------------------------
-     Lo que ya está pasando en el local cuando se abre la demo
+     El club: las cuentas de los comensales y sus premios
+     Cada cliente: su mail, su nombre y su color, las veces que vino, lo que pidió de cada
+     cosa y los sellos que lleva. Los premios quedan registrados: cuándo lo ganó y cuándo
+     lo pidió. Lo que se pide como premio no suma sellos.
      --------------------------------------------------------------------------- */
-  function ejemplo(equipo) {
+  function clienteDe(d, id) { return (d.clientes || []).find(k => k.id === id) || null; }
+  function enPedido(d, premio) { return d.carrito.some(l => l.premio === premio); }
+  // Suma lo que pidió en esa mesa (cuando se cobra). Devuelve lo que sumó y si ganó premio.
+  function acreditarA(d, c, s) {
+    const k = clienteDe(d, c.cliente), cfg = d.club;
+    if (!k || !s || !s.cerrada || !cfg) return null;
+    const items = d.pedidos.filter(p => p.sesion === s.id && !p.rechazado).flatMap(p => p.items)
+      .filter(i => i.comensal === c.id && !i.premio);
+    const cosas = items.reduce((t, i) => t + i.cant, 0);
+    k.visitas += 1;
+    k.cosas += cosas;
+    k.sellos += cosas;
+    k.ultima = s.cerrada;
+    k.platos = k.platos || {};
+    items.forEach(i => { k.platos[i.plato] = (k.platos[i.plato] || 0) + i.cant; });
+    const plato = platoDe(cfg.premio);
+    let ganados = 0;
+    while (plato && k.sellos >= cfg.meta) {
+      k.sellos -= cfg.meta;
+      ganados += 1;
+      d.premios.push({ id: nuevoId("pr"), cliente: k.id, plato: plato.id, nombre: plato.nombre, ganado: s.cerrada, sesion: s.id, canjeado: null });
+    }
+    anotar(s, `${c.nombre} sumó ${cosas} al club (lleva ${k.sellos} de ${cfg.meta})`, s.cerrada);
+    if (ganados) anotar(s, `¡${c.nombre} ganó ${plato.nombre} de regalo!`, s.cerrada);
+    return { cosas, ganados, sellos: k.sellos, meta: cfg.meta, premio: plato ? plato.nombre : "" };
+  }
+  function acreditar(d, s) {
+    if (!d.club || !d.club.activo) return;
+    d.comensales.filter(c => c.sesion === s.id && c.cliente && !c.acreditado).forEach(c => { c.acreditado = acreditarA(d, c, s); });
+  }
+  // Lo que ve el mismo cliente (y el panel con permiso "clientes", que además ve el mail)
+  function vistaCliente(d, k, conMail) {
+    const pr = d.premios.filter(p => p.cliente === k.id);
+    return {
+      id: k.id, nombre: k.nombre, color: k.color, alta: k.alta, ultima: k.ultima,
+      visitas: k.visitas, cosas: k.cosas, sellos: k.sellos, meta: d.club.meta,
+      favoritos: Object.entries(k.platos || {}).filter(([id]) => platoDe(id)).sort((a, b) => b[1] - a[1]).slice(0, 3).map(([plato, cant]) => ({ plato, cant })),
+      premios: pr.filter(p => !p.canjeado).map(p => ({ id: p.id, plato: p.plato, nombre: p.nombre, ganado: p.ganado, enPedido: enPedido(d, p.id) })),
+      canjeados: pr.filter(p => p.canjeado).length,
+      ...(conMail ? { email: k.email, novedades: !!k.novedades, historial: pr.map(p => ({ ...p })).sort((a, b) => b.ganado - a.ganado) } : {}),
+    };
+  }
+
+  const clubInicial = () => {
+    const c = L.club || {};
+    const premio = platoDe(c.premio) ? c.premio : (L.platos.find(p => p.categoria === "postres") || L.platos[0]).id;
+    return { activo: c.activo !== false, meta: Math.max(3, Math.min(50, Math.round(c.meta || 10))), premio };
+  };
+
+  // Los del club que ya vinieron otras veces (inventados, para la demo).
+  // platos: cuánto pidió de cada cosa; cosas: el total; sellos: lo que lleva para el próximo premio.
+  function clientesIniciales(ahora) {
+    const dia = n => ahora - n * 864e5;
+    const k = (id, nombre, email, color, alta, ultima, visitas, platos, novedades) => {
+      const cosas = Object.values(platos).reduce((a, b) => a + b, 0);
+      return { id, nombre, email, color, alta: dia(alta), ultima: dia(ultima), visitas, cosas, sellos: cosas % 10, platos, novedades };
+    };
+    return [
+      k("k-vale",  "Vale",  "vale.gomez@ejemplo.com",    "#A57BFF", 62, 9,  4, { "doble-bacon": 5, ipa: 6, aros: 3, flan: 3 }, true),
+      k("k-caro",  "Caro",  "carolina.paz@ejemplo.com",  "#FF6FB5", 120, 6, 7, { clasica: 6, fernet: 7, "papas-cheddar": 5, cheesecake: 4 }, true),
+      k("k-lucia", "Lucía", "lucia.ferrari@ejemplo.com", "#2BC48A", 150, 3, 9, { remolacha: 9, limonada: 12, flan: 6, "papas-cheddar": 4 }, true),
+      k("k-fede",  "Fede",  "fede.rios@ejemplo.com",     "#3DB2FF", 30, 14, 2, { fugazzeta: 2, fernet: 3 }, false),
+      k("k-pau",   "Pau",   "pau.sosa@ejemplo.com",      "#FFC43D", 45, 20, 2, { clasica: 2, ipa: 3 }, false),
+      k("k-rocio", "Rocío", "rocio.luna@ejemplo.com",    "#FF7A59", 80, 11, 4, { pepperoni: 4, limonada: 3, helado: 2 }, true),
+      k("k-tomas", "Tomás", "tomas.vidal@ejemplo.com",   "#2BC48A", 21, 21, 1, { pepperoni: 1, ipa: 2 }, false),
+      k("k-meli",  "Meli",  "meli.acosta@ejemplo.com",   "#FF6FB5", 40, 40, 2, { cheesecake: 2, clasica: 2, limonada: 2 }, true),
+    ];
+  }
+  // Los premios que ya ganaron (y los que ya usaron)
+  function premiosIniciales(ahora) {
+    const dia = n => ahora - n * 864e5;
+    const flan = platoDe("flan") ? "flan" : clubInicial().premio;
+    const pr = (cliente, ganado, canjeado) => ({
+      id: nuevoId("pr"), cliente, plato: flan, nombre: platoDe(flan).nombre, ganado: dia(ganado), sesion: null,
+      canjeado: canjeado == null ? null : { t: dia(canjeado), sesion: null, pedido: null },
+    });
+    return [pr("k-vale", 40, 30), pr("k-caro", 70, 55), pr("k-caro", 6), pr("k-lucia", 110, 98), pr("k-lucia", 50, 41), pr("k-lucia", 3)];
+  }
+
+  /* ---------------------------------------------------------------------------
+     Lo que ya está pasando en el local cuando se abre la demo
+     base: lo que se conserva de antes (el equipo, el club y sus clientes)
+     --------------------------------------------------------------------------- */
+  function ejemplo(base = {}) {
     const ahora = Date.now();
     const antes = m => ahora - m * 60e3;
+    const nuevos = !base.clientes;
     const d = {
-      v: VERSION, numero: 39, equipo: equipo || equipoInicial(),
+      v: VERSION, numero: 39, equipo: base.equipo || equipoInicial(),
+      club: base.club || clubInicial(), clientes: base.clientes || clientesIniciales(ahora), premios: base.premios || premiosIniciales(ahora),
       sesiones: [], comensales: [], carrito: [], pedidos: [], llamados: [], agotados: [], sim: { inicio: ahora, paso: 0 },
     };
+    // Los del club que están hoy en el local (si siguen en el club)
+    const socio = (c, id) => { if (clienteDe(d, id)) c.cliente = id; };
     // Quién hace cada cosa en lo que ya pasó: alguien del equipo con ese permiso
     const hace = (permiso, prefiere) => {
       const e = d.equipo.filter(x => tiene(x, permiso));
@@ -171,6 +266,7 @@
     const cobra = hace("cobrar", "sofi");
     Object.assign(m1.s, { cerrada: antes(41), cerradaPor: cobra, total: d.pedidos[0].total });
     anotar(m1.s, `${nombreEn(d, cobra)} cobró y liberó la mesa`, m1.s.cerrada);
+    socio(m1.gente[0], "k-pau");
     const m6 = mesa(6, 80, ["Rocío", "Lean", "Maca", "Ivo"]);
     pedido(32, m6, m6.gente[2], 74, [item("pepperoni", 1, m6.gente[0]), item("fugazzeta", 1, m6.gente[2]), item("fernet", 2, m6.gente[1]), item("limonada", 2, m6.gente[3])],
       { cocina: ["entregado", 52, "carla"], barra: ["entregado", 70, "carla"] });
@@ -178,15 +274,24 @@
     const cobra6 = hace("cobrar", "carla");
     Object.assign(m6.s, { cerrada: antes(12), cerradaPor: cobra6, total: d.pedidos.slice(1, 3).reduce((t, p) => t + p.total, 0) });
     anotar(m6.s, `${nombreEn(d, cobra6)} cobró y liberó la mesa`, m6.s.cerrada);
+    socio(m6.gente[0], "k-rocio");
+    // Pau y Rocío ya sumaron lo de hoy; a Rocío le tocó el premio al cobrar
+    if (nuevos) {
+      d.comensales.filter(c => c.cliente).forEach(c => {
+        c.acreditado = acreditarA(d, c, d.sesiones.find(s => s.id === c.sesion));
+      });
+    }
 
     // Las mesas ocupadas ahora
     const m5 = mesa(5, 46, ["Lucas", "Vale", "Agus", "Belu", "Santi"]);
     const [lucas, vale, agus, belu, santi] = m5.gente;
+    socio(vale, "k-vale");
     pedido(34, m5, lucas, 38, [item("doble-bacon", 1, lucas), item("doble-bacon", 1, agus), item("aros", 1, belu), item("ipa", 2, santi), item("ipa", 1, lucas)],
       { cocina: ["entregado", 22, "carla"], barra: ["entregado", 34, "carla"] });
 
     const m2 = mesa(2, 62, ["Caro", "Martu"]);
     const [caro, martu] = m2.gente;
+    socio(caro, "k-caro");
     const p35 = pedido(35, m2, caro, 52, [item("remolacha", 1, martu), item("clasica", 1, caro), item("papas-cheddar", 1, caro), item("limonada", 1, martu), item("fernet", 1, caro)],
       { cocina: ["entregado", 30, "carla"], barra: ["entregado", 46, "carla"] });
 
@@ -195,6 +300,7 @@
       { cocina: ["entregado", 10, "nico"] });
 
     const m9 = mesa(9, 24, ["Fede", "Sol"]);
+    socio(m9.gente[0], "k-fede");
     pedido(37, m9, m9.gente[1], 16, [item("fugazzeta", 1, m9.gente[1]), item("fernet", 1, m9.gente[0]), item("fernet", 1, m9.gente[1])],
       { cocina: ["listo", 1], barra: ["entregado", 12, "nico"] });
 
@@ -230,12 +336,23 @@
   /* ---------------------------------------------------------------------------
      Guardar y leer (vista previa: en este navegador)
      --------------------------------------------------------------------------- */
+  // De la demo anterior se conserva el equipo (con el permiso nuevo para quien maneja el equipo)
+  function heredado() {
+    try {
+      const v = JSON.parse(localStorage.getItem(VIEJA));
+      localStorage.removeItem(VIEJA);
+      if (v && Array.isArray(v.equipo) && v.equipo.length) {
+        return { equipo: v.equipo.map(e => ({ ...e, permisos: (e.permisos || []).includes("equipo") && !(e.permisos || []).includes("clientes") ? [...e.permisos, "clientes"] : e.permisos })) };
+      }
+    } catch { /* sin almacenamiento */ }
+    return {};
+  }
   function leer() {
     if (cache) return cache;
     let d = null;
     try { d = JSON.parse(localStorage.getItem(CLAVE)); } catch { d = null; }
     if (!d || d.v !== VERSION) {
-      d = memoria && memoria.v === VERSION ? memoria : ejemplo();
+      d = memoria && memoria.v === VERSION ? memoria : ejemplo(heredado());
       try { localStorage.setItem(CLAVE, JSON.stringify(d)); } catch { /* queda en memoria */ }
     }
     memoria = d;
@@ -283,6 +400,8 @@
     });
     d.llamados.forEach(l => { t(l, "creado"); t(l, "tomado"); t(l.atendido, "t"); });
     d.agotados.forEach(a => t(a, "t"));
+    (d.clientes || []).forEach(k => { t(k, "alta"); t(k, "ultima"); });
+    (d.premios || []).forEach(p => { t(p, "ganado"); t(p.canjeado, "t"); });
   }
   function revisarReloj() {
     if (document.visibilityState === "hidden") return;
@@ -292,7 +411,7 @@
     if (!vivo || ahora - vivo <= PAUSA) return;
     cache = null;
     let d = leer();
-    if (ahora - vivo > OTRO_DIA) d = ejemplo(d.equipo);
+    if (ahora - vivo > OTRO_DIA) d = ejemplo({ equipo: d.equipo, club: d.club, clientes: d.clientes, premios: d.premios });
     else {
       let ultimo = 0;
       tiempos(d, (o, k) => { ultimo = Math.max(ultimo, o[k]); });
@@ -322,6 +441,7 @@
       nombre = String(nombre || "").replace(/\s+/g, " ").trim().slice(0, 20) || `Invitado ${gente.length + 1}`;
       if (gente.some(c => c.nombre.toLowerCase() === nombre.toLowerCase())) nombre += " " + (gente.length + 1);
       const { color: pedido, ...resto } = extra;
+      if (resto.cliente && (!clienteDe(d, resto.cliente) || gente.some(x => x.cliente === resto.cliente))) delete resto.cliente;
       const c = {
         id: nuevoId("c"), sesion: s.id, nombre, unido: ahora, ...resto,
         color: COLORES.includes(pedido) && !usados.has(pedido) ? pedido
@@ -329,6 +449,7 @@
       };
       d.comensales.push(c);
       anotar(s, gente.length ? `${nombre} se sumó a la mesa` : `${nombre} escaneó el QR y abrió la mesa`, ahora);
+      if (c.cliente) anotar(s, `${nombre} es del club: ${clienteDe(d, c.cliente).visitas + 1}ª visita`, ahora);
       return { sesion: s, comensal: c };
     });
   }
@@ -353,7 +474,7 @@
   function cantidad(comensal, lineaId, delta) {
     return cambiar(d => {
       const l = d.carrito.find(x => x.id === lineaId && x.comensal === comensal);
-      if (!l || !deComensal(d, comensal)) return SIN;
+      if (!l || !deComensal(d, comensal) || (l.premio && delta > 0)) return SIN;     // un premio es uno
       l.cant += delta;
       if (l.cant <= 0) d.carrito = d.carrito.filter(x => x !== l);
       return l;
@@ -370,7 +491,7 @@
       const ahora = Date.now();
       const items = lineas.map(l => ({
         plato: l.plato, nombre: platoDe(l.plato).nombre, cant: l.cant, precio: l.precio, detalle: l.detalle,
-        eleccion: l.eleccion, comensal: l.comensal, estacion: estacionDe(l.plato),
+        eleccion: l.eleccion, comensal: l.comensal, estacion: estacionDe(l.plato), ...(l.premio ? { premio: l.premio } : {}),
       }));
       const partes = {};
       items.forEach(i => { partes[i.estacion] = partes[i.estacion] || { estado: "nuevo", cambio: ahora, quien: null }; });
@@ -386,6 +507,14 @@
       d.carrito = d.carrito.filter(l => !mandadas.has(l.id));
       const cuantos = new Set(items.map(i => i.comensal)).size;
       anotar(x.s, `${x.c.nombre} mandó la ronda ${p.ronda} (pedido ${p.numero})${cuantos > 1 ? `, con lo de ${cuantos} personas` : ""}`, ahora);
+      // Los premios que iban en la ronda quedan usados
+      items.filter(i => i.premio).forEach(i => {
+        const pr = d.premios.find(y => y.id === i.premio);
+        if (!pr) return;
+        pr.canjeado = { t: ahora, sesion: x.s.id, pedido: p.id };
+        const c = d.comensales.find(y => y.id === i.comensal);
+        anotar(x.s, `${c ? c.nombre : "Alguien"} pidió su premio del club: ${pr.nombre}`, ahora);
+      });
       return p;
     });
   }
@@ -446,6 +575,8 @@
       if (!puedeRechazar(quienEs(d, quien), p)) return sinPermiso();
       p.rechazado = { quien: quien || null, t: Date.now() };
       anotar(s, `${nombreEn(d, quien)} no tomó la ronda ${p.ronda}`, p.rechazado.t);
+      // Si iba un premio, vuelve a estar disponible
+      p.items.filter(i => i.premio).forEach(i => { const pr = d.premios.find(y => y.id === i.premio); if (pr) pr.canjeado = null; });
       return p;
     });
   }
@@ -518,6 +649,7 @@
       d.carrito = d.carrito.filter(l => l.sesion !== s.id);
       d.llamados.forEach(l => { if (l.sesion === s.id && !l.atendido) l.atendido = { quien: quien || null, t: ahora }; });
       anotar(s, `${nombreEn(d, quien)} cobró y liberó la mesa`, ahora);
+      acreditar(d, s);                                         // los del club suman lo que pidieron
       return s;
     });
   }
@@ -658,6 +790,165 @@
   }
   function salirEquipo() { try { sessionStorage.removeItem(SOY); localStorage.removeItem(SOY); } catch { /* nada */ } }
 
+  /* ---------------------------------------------------------------------------
+     El club desde el celular del comensal
+     Entrar es con el mail y un código de 6 números (sin contraseña). En la versión real el
+     código llega por mail (Supabase Auth); en la demo no se manda nada: se muestra en pantalla.
+     Una vez que entró, este celu queda con su cuenta y la próxima vez lo reconoce.
+     --------------------------------------------------------------------------- */
+  const CLUB_YO = "cartaviva.club.mail";
+  const alma = () => (otraPersona ? sessionStorage : localStorage);     // ?nuevo es otro celu
+  const limpiarMail = m => String(m || "").trim().toLowerCase().slice(0, 120);
+  const mailValido = m => /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(m);
+  const limpiarNombre = n => String(n || "").replace(/\s+/g, " ").trim().slice(0, 20);
+  const codigos = new Map();          // mail → { codigo, t, intentos }
+  function miMail() { try { return alma().getItem(CLUB_YO) || null; } catch { return null; } }
+  function club() {
+    const c = leer().club;
+    const p = platoDe(c.premio);
+    return { ...c, nombrePremio: p ? p.nombre : "" };
+  }
+  // Quién soy en el club (en este celu), o null
+  function miCliente() {
+    const d = leer(), mail = miMail();
+    const k = mail && d.club.activo && d.clientes.find(x => x.email === mail);
+    return k ? vistaCliente(d, k, true) : null;
+  }
+  async function pedirCodigo(email) {
+    email = limpiarMail(email);
+    if (!mailValido(email)) return { ok: false, motivo: "mail" };
+    const previo = codigos.get(email);
+    if (previo && Date.now() - previo.t < 20e3) return { ok: false, motivo: "espera" };
+    const codigo = String(100000 + Math.floor(Math.random() * 900000));
+    codigos.set(email, { codigo, t: Date.now(), intentos: 0 });
+    return { ok: true, email, demo: codigo };                  // en la versión real el código no vuelve: va al mail
+  }
+  async function verificarCodigo(email, codigo) {
+    email = limpiarMail(email);
+    const c = codigos.get(email);
+    if (!c || Date.now() - c.t > 10 * 60e3) return { ok: false, motivo: "vencido" };
+    if (c.intentos >= 5) return { ok: false, motivo: "intentos" };
+    if (String(codigo || "").replace(/\D/g, "") !== c.codigo) { c.intentos += 1; return { ok: false, motivo: "codigo" }; }
+    codigos.delete(email);
+    try { alma().setItem(CLUB_YO, email); } catch { /* queda solo mientras esté abierta */ }
+    return { ok: true, email, cliente: miCliente() };           // cliente null: todavía no es del club
+  }
+  function salirClub() { try { alma().removeItem(CLUB_YO); } catch { /* nada */ } avisar(); }
+
+  // Sumarse (o volver) al club desde la mesa: esta persona de la mesa es la de este mail.
+  // Si es nuevo, se crea con su nombre y su color de la mesa. Si la mesa ya se cobró (hace
+  // menos de 3 horas), lo que pidió también suma.  datos: { nombre, color, novedades }
+  function vincular(comensal, datos = {}) {
+    const email = miMail();
+    let res = { ok: false, motivo: "sin_cuenta" };
+    if (!email) return res;
+    cambiar(d => {
+      const no = motivo => { res = { ok: false, motivo }; return SIN; };
+      if (!d.club.activo) return no("club_apagado");
+      const c = d.comensales.find(x => x.id === comensal);
+      const s = c && d.sesiones.find(x => x.id === c.sesion);
+      if (!c || !s) return no("no_existe");
+      if (s.cerrada && Date.now() - s.cerrada > 3 * 3600e3) return no("mesa_cerrada");
+      let k = d.clientes.find(x => x.email === email);
+      if (c.cliente && (!k || c.cliente !== k.id)) return no("otra_cuenta");
+      if (k && d.comensales.some(x => x.sesion === s.id && x.cliente === k.id && x.id !== c.id)) return no("ya_en_la_mesa");
+      const nuevo = !k;
+      if (!k) {
+        k = { id: nuevoId("k"), email, nombre: limpiarNombre(datos.nombre) || c.nombre, color: COLORES.includes(datos.color) ? datos.color : c.color,
+              alta: Date.now(), ultima: null, visitas: 0, cosas: 0, sellos: 0, platos: {}, novedades: !!datos.novedades };
+        d.clientes.push(k);
+      } else if (datos.novedades) k.novedades = true;
+      if (c.cliente !== k.id) {
+        c.cliente = k.id;
+        anotar(s, nuevo ? `${c.nombre} se sumó al club` : `${c.nombre} es del club: ${k.visitas + 1}ª visita`, Date.now());
+      }
+      if (s.cerrada && !c.acreditado) c.acreditado = acreditarA(d, c, s);
+      res = { ok: true, nuevo, cliente: vistaCliente(d, k, true), acreditado: c.acreditado || null };
+      return c;
+    });
+    return res;
+  }
+
+  // Pedir un premio: va al pedido de la mesa, gratis. Sale con la próxima ronda.
+  function canjear(comensal, premioId) {
+    return cambiar(d => {
+      const x = deComensal(d, comensal);
+      const pr = x && x.c.cliente && d.premios.find(p => p.id === premioId && p.cliente === x.c.cliente && !p.canjeado);
+      if (!pr || enPedido(d, pr.id)) return SIN;
+      if (d.agotados.some(a => a.id === pr.plato)) { error(`${pr.nombre} se terminó por hoy. Tu premio te espera para la próxima.`); return SIN; }
+      const linea = {
+        id: nuevoId("l"), sesion: x.s.id, comensal, plato: pr.plato, eleccion: null, detalle: "", precio: 0,
+        clave: "premio-" + pr.id, cant: 1, premio: pr.id, creado: Date.now(),
+      };
+      d.carrito.push(linea);
+      return linea;
+    });
+  }
+  function novedades(si) {
+    const email = miMail();
+    return cambiar(d => { const k = email && d.clientes.find(x => x.email === email); if (!k || k.novedades === !!si) return SIN; k.novedades = !!si; return true; });
+  }
+  // Borrar mi cuenta del club: el mail, lo que pedí y los premios. Lo de la mesa queda.
+  function borrarme() {
+    const email = miMail();
+    const r = cambiar(d => {
+      const k = email && d.clientes.find(x => x.email === email);
+      if (!k) return SIN;
+      borrarDatos(d, k.id);
+      return true;
+    });
+    salirClub();
+    return { ok: !!r };
+  }
+  function borrarDatos(d, id) {
+    d.clientes = d.clientes.filter(x => x.id !== id);
+    d.premios = d.premios.filter(p => p.cliente !== id);
+    d.comensales.forEach(c => { if (c.cliente === id) { delete c.cliente; delete c.acreditado; } });
+    d.carrito = d.carrito.filter(l => !l.premio || d.premios.some(p => p.id === l.premio));
+  }
+
+  /* ---------- El club desde el panel ---------- */
+  // Lo que ve el mozo de alguien del club sentado en una mesa (sin el mail)
+  function clubDe(comensal) {
+    const d = leer();
+    const c = d.comensales.find(x => x.id === comensal);
+    const k = c && c.cliente && d.club.activo && clienteDe(d, c.cliente);
+    if (!k) return null;
+    const v = vistaCliente(d, k, false);
+    const fav = v.favoritos[0] && platoDe(v.favoritos[0].plato);
+    return { nombre: k.nombre, visita: k.visitas + (c.acreditado ? 0 : 1), sellos: k.sellos, meta: d.club.meta, favorito: fav ? fav.nombre : "", premios: v.premios };
+  }
+  // Todos los del club (permiso "clientes"): con su mail y sus premios
+  function clientes(quien) {
+    const d = leer();
+    if (!tiene(quienEs(d, quien), "clientes")) return null;
+    return d.clientes.map(k => vistaCliente(d, k, true)).sort((a, b) => (b.ultima || b.alta) - (a.ultima || a.alta));
+  }
+  function guardarClub(quien, x) {
+    let res = { ok: false, motivo: "error" };
+    cambiar(d => {
+      if (!tiene(quienEs(d, quien), "clientes")) { res = { ok: false, motivo: "sin_permiso" }; return SIN; }
+      const meta = Math.round(+x.meta);
+      if (!(meta >= 3 && meta <= 50)) { res = { ok: false, motivo: "meta" }; return SIN; }
+      if (!platoDe(x.premio)) { res = { ok: false, motivo: "premio" }; return SIN; }
+      d.club = { activo: x.activo !== false, meta, premio: x.premio };
+      res = { ok: true };
+      return true;
+    });
+    return res;
+  }
+  function borrarCliente(quien, id) {
+    let res = { ok: false, motivo: "no_existe" };
+    cambiar(d => {
+      if (!tiene(quienEs(d, quien), "clientes")) { res = { ok: false, motivo: "sin_permiso" }; return SIN; }
+      if (!clienteDe(d, id)) return SIN;
+      borrarDatos(d, id);
+      res = { ok: true };
+      return true;
+    });
+    return res;
+  }
+
   window.Datos = {
     modo: "vista-previa",
     listo: Promise.resolve(),
@@ -680,6 +971,9 @@
 
     entrar, sumar, cantidad, mandar, llamar,
 
+    // El club (el comensal)
+    club, miCliente, miMail, pedirCodigo, verificarCodigo, salirClub, vincular, canjear, novedades, borrarme,
+
     // El equipo
     equipo: equipoActivo,
     persona: id => { const e = quienEs(leer(), id); return e ? { ...e, pin: undefined } : null; },
@@ -691,6 +985,7 @@
     soyEquipo, entrarEquipo, salirEquipo,
     mover, rechazar, atender, deshacer, cerrarMesa, agotar,
     guardarPersona, cambiarPin, bajaPersona,
+    clubDe, clientes, guardarClub, borrarCliente,
     reiniciar: () => { memoria = null; cache = null; guardar(ejemplo()); },
 
     // Solo para la simulación de la demo

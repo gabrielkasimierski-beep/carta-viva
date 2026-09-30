@@ -3,7 +3,9 @@
 Carta 3D para locales gastronómicos: el comensal escanea el QR de su mesa, ve cada plato en 3D,
 lo arma a su gusto y lo pide desde el celular. Los de la mesa piden juntos, cada uno desde su
 celular, y el equipo del local lo recibe en su panel: cada persona entra con su PIN y ve solo
-lo que le toca (el dueño o el encargado eligen qué puede hacer cada uno).
+lo que le toca (el dueño o el encargado eligen qué puede hacer cada uno). El que quiere se suma
+al club del local con su mail (sin contraseña): suma sellos, gana premios y, cuando vuelve, la
+carta lo saluda por su nombre y el mozo sabe quién es.
 Producto propio de **Gaby y Juanma** (arrancado el 26-sep-2026).
 
 - Propuesta, decisiones y arquitectura: [`decisiones.md`](decisiones.md)
@@ -25,19 +27,25 @@ mesa 7 con vos, la cocina y la barra avanzan solas y otras mesas van pidiendo. S
 demo, el local queda en pausa (así las horas siguen teniendo sentido al volver).
 
 En el panel, "Probar como" cambia de persona: Carla (moza) no ve la cocina y le suena cuando
-algo está listo; Diego ve solo la cocina; Rober (dueño) y Sofi (encargada) tienen **Equipo**.
+algo está listo; Diego ve solo la cocina; Rober (dueño) y Sofi (encargada) tienen **Clientes**
+(los del club, sus premios y qué premio se da) y **Equipo**.
+
+El club en la demo: en la bienvenida, "Sumarme" pide el mail y el código aparece en pantalla (no
+se manda ningún mail). Pedí 10 cosas, liberá la mesa desde el panel y en el "gracias" ganás el
+Flan; al volver a la carta te saluda y lo pedís gratis. Vale (mesa 5), Caro (mesa 2) y Fede
+(mesa 9) son del club: en el plano tienen un aro dorado.
 
 ## Archivos
 
 ```
 app/index.html            la app: la carta del comensal y el panel del local (#panel)
-app/assets/local.js       TODO lo propio del local: carta, precios, armados, mesas, estaciones, puestos y equipo
+app/assets/local.js       TODO lo propio del local: carta, precios, armados, mesas, estaciones, puestos, equipo y club
 app/assets/platos3d.js    los platos modelados por código, por capas
 app/assets/escena.js      el escenario 3D (Three.js): un lienzo, un lugar por plato
-app/assets/datos.js       mesas, comensales, pedidos, llamados, agotados y equipo con permisos (demo: en el navegador)
+app/assets/datos.js       mesas, comensales, pedidos, llamados, agotados, equipo con permisos y el club (demo: en el navegador)
 app/assets/simulacion.js  lo que se simula en la demo: Juli y Tomi, cocina, barra y otras mesas
-app/assets/app.js         la carta: bienvenida, feed, armar, pedido de la mesa, seguimiento, mozo y cuenta
-app/assets/panel.js       el panel del local: para hacer, mesas, cocina, barra, carta (agotados), QR y equipo
+app/assets/app.js         la carta: bienvenida, feed, armar, pedido de la mesa, seguimiento, mozo, cuenta y el club
+app/assets/panel.js       el panel del local: para hacer, mesas, cocina, barra, carta (agotados), QR, clientes y equipo
 app/assets/estilos.css    estilos
 supabase/esquema.sql      la base real (Supabase): tablas, reglas y funciones
 supabase/semilla.js       arma semilla.sql (el local, su carta, mesas y equipo) a partir de local.js
@@ -55,13 +63,15 @@ npm run semilla         rearma supabase/semilla.sql después de cambiar local.js
 npm install + npm test  prueba la base (esquema + semilla) en un Postgres local
 ```
 
-## Estado (29-sep-2026)
+## Estado (30-sep-2026)
 
 - **Hecho:** la demo completa: bienvenida en 3D al escanear el QR, varias personas por mesa,
-  cocina y barra, panel con PIN y permisos por persona (sección Equipo), avisos que suenan,
-  deshacer. La base de Supabase hace cumplir lo mismo y pasa las pruebas (108).
+  cocina y barra, panel con PIN y permisos por persona (sección Equipo), avisos que suenan y se
+  apagan, deshacer, y el club (cuenta con mail sin contraseña, sellos, premios y clientes en el
+  panel). La base de Supabase hace cumplir lo mismo y pasa las pruebas (149).
 - **Falta:** conectar la app a Supabase (`datos-supabase.js`), la guía para publicarla y probarla
-  con celulares de verdad; avisos al celular del mozo con la app cerrada.
+  con celulares de verdad (con el mail del código del club); avisos al celular del mozo con la
+  app cerrada.
 
 ## Sumar un plato
 

@@ -38,10 +38,11 @@ window.LOCAL = {
   //   mesas: el plano del salón · atender: le suena cuando llaman al mozo · llevar: le suena
   //   cuando algo está listo para llevar · cobrar: la cuenta y liberar la mesa · cocina,
   //   barra (una por estación): sus comandas · carta: marcar agotados · qr: los códigos de
-  //   las mesas · equipo: sumar personas, PIN y permisos.
+  //   las mesas · clientes: los del club (con sus mails) y su premio · equipo: sumar
+  //   personas, PIN y permisos.
   roles: [
-    { id: "dueno",     nombre: "Dueño/a",     permisos: ["mesas", "atender", "llevar", "cobrar", "cocina", "barra", "carta", "qr", "equipo"] },
-    { id: "encargado", nombre: "Encargado/a", permisos: ["mesas", "atender", "llevar", "cobrar", "cocina", "barra", "carta", "qr", "equipo"] },
+    { id: "dueno",     nombre: "Dueño/a",     permisos: ["mesas", "atender", "llevar", "cobrar", "cocina", "barra", "carta", "qr", "clientes", "equipo"] },
+    { id: "encargado", nombre: "Encargado/a", permisos: ["mesas", "atender", "llevar", "cobrar", "cocina", "barra", "carta", "qr", "clientes", "equipo"] },
     { id: "mozo",      nombre: "Mozo/a",      permisos: ["mesas", "atender", "llevar", "cobrar"] },
     { id: "cocina",    nombre: "Cocina",      permisos: ["cocina", "carta"] },
     { id: "barra",     nombre: "Barra",       permisos: ["barra", "carta"] },
@@ -67,6 +68,12 @@ window.LOCAL = {
     { id: "cocina", nombre: "Cocina", donde: "la cocina", sale: "¡Sale la comida!" },
     { id: "barra",  nombre: "Barra",  donde: "la barra",  sale: "¡Salen las bebidas!" },
   ],
+
+  // El club del local: cada comensal puede guardar su cuenta con su mail, sin contraseña (le
+  // llega un código). Cada `meta` cosas que pide, gana `premio` (un plato de la carta) de
+  // regalo y lo pide desde su celu. Cuando vuelve, la carta lo reconoce y el mozo sabe
+  // quién es. Se cambia desde el panel (Clientes).
+  club: { activo: true, meta: 10, premio: "flan" },
 
   pagos: ["Efectivo", "Tarjeta", "Mercado Pago"],
   propinas: [0, 10, 15],            // en %

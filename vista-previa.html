@@ -853,6 +853,131 @@ svg { flex: none; }
 @keyframes sentarse { from { transform: scale(.3); opacity: 0; } }
 @keyframes saltito { 40% { transform: scale(1.18) translateY(-4px); } }
 
+/* ---------- El club: la cuenta con el mail, los sellos y los premios ----------
+   Dorado en los tres estilos: el aro de los del club, los sellos y el premio. */
+:root { --oro: #EDB93E; --oro-tinta: #2A1C02; }
+.avatar--club { outline: 2px solid var(--oro); outline-offset: 1.5px; }
+.avatar--mini.avatar--club { outline-width: 1.5px; outline-offset: .5px; }
+.velo.velo--alto { z-index: 12; }
+.hoja--club { z-index: 12; max-height: calc(100% - var(--arriba) - 32px); }
+
+.sellos { display: flex; flex-wrap: wrap; align-items: center; gap: 5px; }
+.sellos i {
+  width: 16px; height: 16px; border-radius: 50%; flex: none;
+  border: 1.5px dashed color-mix(in srgb, currentColor 34%, transparent);
+}
+.sellos i.lleno { border: 0; background: var(--oro); box-shadow: inset 0 -2px 0 rgba(0, 0, 0, .14); }
+.sellos i.nuevo { animation: sello .55s var(--ease) both; }
+.sellos__premio { width: 30px; height: 30px; margin-left: 3px; border-radius: 50%; background: var(--c); display: grid; place-items: center; overflow: hidden; box-shadow: 0 0 0 2px var(--oro); flex: none; }
+.sellos__premio img { width: 120%; height: 120%; object-fit: contain; }
+.sellos--barra { flex-wrap: nowrap; gap: 10px; }
+.club-barra { flex: 1; height: 10px; border-radius: 99px; background: color-mix(in srgb, currentColor 14%, transparent); overflow: hidden; }
+.club-barra i { display: block; width: var(--p); height: 100%; border-radius: inherit; background: var(--oro); }
+@keyframes sello { 0% { transform: scale(0); } 60% { transform: scale(1.35); } 100% { transform: scale(1); } }
+
+/* En la bienvenida */
+.bv__club { display: grid; gap: 10px; }
+.club-invita {
+  display: flex; align-items: center; gap: 12px; width: 100%; padding: 10px 12px; text-align: left;
+  border-radius: 16px; border: 1px dashed color-mix(in srgb, var(--oro) 70%, transparent);
+  background: color-mix(in srgb, var(--oro) 9%, transparent); color: var(--hoja-tinta);
+}
+.club-invita > span:nth-child(2) { flex: 1; min-width: 0; display: grid; line-height: 1.3; }
+.club-invita b { font-weight: 700; font-size: 15px; }
+.club-invita small { color: var(--hoja-suave); font-size: 13px; }
+.club-invita__icono { width: 38px; height: 38px; border-radius: 50%; flex: none; display: grid; place-items: center; background: var(--oro); color: var(--oro-tinta); }
+.club-invita__ir { flex: none; font-weight: 700; font-size: 14px; text-decoration: underline; text-underline-offset: 3px; }
+.bv-club__fila { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; color: var(--hoja-tinta); }
+.bv-club__fila p { margin: 0; flex: 1 1 180px; font-size: 13.5px; line-height: 1.35; color: var(--hoja-suave); }
+.bv-club__fila b { color: var(--hoja-tinta); }
+.bv-club__pie { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; }
+.club-siempre {
+  display: inline-flex; align-items: center; gap: 10px; min-height: 48px; padding: 4px 14px 4px 4px; border-radius: 99px;
+  border: 1px solid var(--hoja-chip-borde); background: var(--hoja-chip); color: var(--hoja-tinta); text-align: left;
+}
+.club-siempre span { display: grid; line-height: 1.15; }
+.club-siempre small { font-size: 11.5px; color: var(--hoja-suave); }
+.club-siempre b { font-size: 14px; }
+.club-siempre__foto { width: 40px; height: 40px; border-radius: 50%; background: var(--c); display: grid; place-items: center; overflow: hidden; flex: none; }
+.club-siempre__foto img { width: 120%; height: 120%; object-fit: contain; }
+.club-link { height: 36px; padding: 0 4px; border: 0; background: none; color: var(--hoja-suave); font-size: 13px; font-weight: 600; text-decoration: underline; text-underline-offset: 3px; }
+
+/* La tarjeta del club y los premios */
+.club-tarjeta { display: grid; gap: 10px; padding: 14px; border-radius: 18px; background: color-mix(in srgb, var(--oro) 10%, var(--hoja-campo)); border: 1px solid color-mix(in srgb, var(--oro) 38%, transparent); }
+.club-tarjeta__cabeza { display: flex; align-items: center; gap: 12px; }
+.club-tarjeta__cabeza > span:last-child { display: grid; line-height: 1.25; }
+.club-tarjeta__cabeza b { font-size: 17px; }
+.club-tarjeta__cabeza small { display: inline-flex; align-items: center; gap: 5px; color: var(--hoja-suave); font-size: 13px; }
+.club-tarjeta__cabeza small svg { color: var(--oro); }
+.club-tarjeta__avatar { width: 44px; height: 44px; font-size: 19px; }
+.club-tarjeta__falta { margin: 0; font-size: 14px; color: var(--hoja-suave); }
+.club-tarjeta__falta b { color: var(--hoja-tinta); }
+.club-premio { display: flex; align-items: center; gap: 12px; padding: 8px 8px 8px 6px; border-radius: 16px; background: var(--oro); color: var(--oro-tinta); }
+.club-premio > span:nth-child(2) { flex: 1; min-width: 0; display: grid; line-height: 1.25; }
+.club-premio b { font-weight: 800; font-size: 15px; }
+.club-premio small { font-size: 12.5px; opacity: .8; }
+.club-premio__foto { width: 52px; height: 52px; border-radius: 50%; flex: none; background: rgba(255, 255, 255, .55); display: grid; place-items: center; overflow: hidden; }
+.club-premio__foto img { width: 118%; height: 118%; object-fit: contain; }
+.club-premio__pedir { flex: none; height: 42px; padding: 0 16px; border: 0; border-radius: var(--radio-boton); background: var(--oro-tinta); color: #FFF3D6; font-weight: 800; font-size: 14px; }
+.club-premio__listo { flex: none; width: 42px; display: grid; place-items: center; }
+
+/* La hoja del club */
+.club-beneficios { list-style: none; margin: 4px 0 6px; padding: 0; display: grid; gap: 12px; }
+.club-beneficios li { display: flex; align-items: center; gap: 12px; font-size: 14.5px; line-height: 1.38; color: var(--hoja-suave); }
+.club-beneficios b { color: var(--hoja-tinta); }
+.club-beneficios__foto { width: 52px; height: 52px; border-radius: 50%; flex: none; background: var(--c); display: grid; place-items: center; overflow: hidden; box-shadow: 0 0 0 2px var(--oro); }
+.club-beneficios__foto img { width: 118%; height: 118%; object-fit: contain; }
+.club-beneficios__icono { width: 52px; height: 36px; flex: none; display: grid; place-items: center; color: var(--oro); }
+.club-check { display: flex; align-items: flex-start; gap: 10px; margin-top: 14px; font-size: 14px; line-height: 1.35; color: var(--hoja-tinta); cursor: pointer; }
+.club-check input { width: 20px; height: 20px; margin: 0; flex: none; accent-color: var(--oro); }
+.club-letra { margin: 12px 0 0; font-size: 12.5px; line-height: 1.4; color: var(--hoja-suave); }
+.club-texto { margin: 4px 0 0; font-size: 15px; line-height: 1.45; color: var(--hoja-suave); }
+.club-texto b { color: var(--hoja-tinta); overflow-wrap: anywhere; }
+.club-error { margin: 12px 0 0; padding: 10px 12px; border-radius: 12px; background: rgba(230, 70, 70, .14); color: var(--hoja-tinta); font-size: 14px; font-weight: 600; }
+.campo input.club-codigo { font-size: 28px; letter-spacing: .4em; text-align: center; font-variant-numeric: tabular-nums; padding-left: calc(16px + .4em); }
+.club-demo { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; margin: 12px 0 0; padding: 10px 12px; border-radius: 12px; border: 1px dashed var(--hoja-chip-borde); font-size: 13.5px; color: var(--hoja-suave); }
+.club-demo b { color: var(--hoja-tinta); letter-spacing: .12em; font-variant-numeric: tabular-nums; }
+.club-demo__tag { padding: 2px 7px; border-radius: 99px; background: var(--hoja-tinta); color: var(--hoja-fondo); font-size: 10px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
+.club-demo button { margin-left: auto; height: 32px; padding: 0 12px; border-radius: 99px; border: 1px solid var(--hoja-chip-borde); background: var(--hoja-chip); color: var(--hoja-tinta); font-weight: 700; font-size: 13px; }
+.club-otros { display: flex; flex-wrap: wrap; gap: 4px 18px; margin: 14px 0 0; }
+.club-otros button { height: 36px; padding: 0; border: 0; background: none; color: var(--hoja-suave); font-size: 13.5px; font-weight: 600; text-decoration: underline; text-underline-offset: 3px; }
+.club-otros button.confirmando { color: #E24C4C; }
+.club-favs { margin-top: 16px; }
+.club-favs ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.club-favs li { display: flex; align-items: center; gap: 12px; }
+.club-favs li > span:not(.club-favs__foto) { flex: 1; display: grid; line-height: 1.25; }
+.club-favs small { color: var(--hoja-suave); font-size: 13px; }
+.club-favs button { height: 38px; padding: 0 14px; border-radius: var(--radio-chico); border: 1px solid var(--hoja-chip-borde); background: var(--hoja-chip); color: var(--hoja-tinta); font-weight: 700; font-size: 14px; }
+.club-favs__foto { width: 48px; height: 48px; border-radius: 50%; flex: none; background: var(--c); display: grid; place-items: center; overflow: hidden; }
+.club-favs__foto img { width: 118%; height: 118%; object-fit: contain; }
+
+/* En el pedido: el premio para sumar o cómo vas */
+.club-fila { display: flex; align-items: center; gap: 12px; margin: 0 0 14px; padding: 8px 8px 8px 10px; border-radius: 16px; border: 1px solid color-mix(in srgb, var(--oro) 45%, transparent); background: color-mix(in srgb, var(--oro) 10%, transparent); }
+.club-fila > span:nth-child(2) { flex: 1; min-width: 0; display: grid; line-height: 1.25; }
+.club-fila b { font-size: 14.5px; }
+.club-fila small { color: var(--hoja-suave); font-size: 12.5px; }
+.club-fila button { flex: none; height: 38px; padding: 0 14px; border: 0; border-radius: var(--radio-boton); background: var(--oro); color: var(--oro-tinta); font-weight: 800; font-size: 14px; }
+.club-fila__icono { width: 36px; height: 36px; border-radius: 50%; flex: none; display: grid; place-items: center; background: var(--oro); color: var(--oro-tinta); }
+.club-fila__foto { width: 44px; height: 44px; border-radius: 50%; flex: none; background: var(--c); display: grid; place-items: center; overflow: hidden; box-shadow: 0 0 0 2px var(--oro); }
+.club-fila__foto img { width: 118%; height: 118%; object-fit: contain; }
+.linea--premio .foto-redonda { box-shadow: 0 0 0 3px var(--oro); }
+.linea__regalo { display: inline-flex; align-items: center; gap: 4px; color: var(--hoja-tinta) !important; font-weight: 600; }
+.linea__regalo svg { color: var(--oro); }
+.linea__sacar { height: 36px; padding: 0 12px; border-radius: var(--radio-chico); border: 1px solid var(--hoja-chip-borde); background: var(--hoja-chip); color: var(--hoja-suave); font-weight: 600; font-size: 13.5px; }
+
+/* En el seguimiento y en el "gracias" */
+.seg-club { display: flex; align-items: center; gap: 12px; margin-top: 14px; padding: 12px 14px; border-radius: 16px; border: 1px solid color-mix(in srgb, var(--oro) 50%, transparent); background: color-mix(in srgb, var(--oro) 12%, transparent); }
+.seg-club p { margin: 0; flex: 1; font-size: 14.5px; line-height: 1.4; }
+.seg-club button { flex: none; height: 40px; padding: 0 14px; border: 0; border-radius: var(--radio-boton); background: var(--oro); color: var(--oro-tinta); font-weight: 800; }
+.seg-club__icono { width: 34px; height: 34px; border-radius: 50%; flex: none; display: grid; place-items: center; background: var(--oro); color: var(--oro-tinta); }
+.gracias-club { display: grid; justify-items: center; gap: 10px; width: 100%; max-width: 380px; padding: 18px; border-radius: 22px; border: 1px solid color-mix(in srgb, var(--oro) 55%, transparent); background: color-mix(in srgb, var(--oro) 12%, transparent); }
+.gracias-club p { margin: 0; font-size: 15px; line-height: 1.42; opacity: .92; }
+.gracias-club .gracias-club__titulo { font-size: 19px; font-weight: 800; opacity: 1; }
+.gracias-club .sellos { justify-content: center; }
+.gracias-club__foto { width: 110px; height: 110px; border-radius: 50%; background: var(--c); display: grid; place-items: center; overflow: hidden; box-shadow: 0 0 0 4px var(--oro), 0 14px 40px rgba(0, 0, 0, .3); animation: sello .7s var(--ease) both; }
+.gracias-club__foto img { width: 118%; height: 118%; object-fit: contain; }
+.gracias-club__boton { height: 48px; padding: 0 20px; border: 0; border-radius: var(--radio-boton); background: var(--oro); color: var(--oro-tinta); font-weight: 800; font-size: 15px; display: inline-flex; align-items: center; gap: 8px; }
+
 .campo input {
   font: inherit; font-size: 18px; color: var(--hoja-tinta);
   height: 56px; padding: 0 16px; border-radius: 16px;
@@ -1559,6 +1684,60 @@ svg { flex: none; }
 .ed-hecho__pin span { width: 58px; height: 72px; border-radius: 14px; display: grid; place-items: center; background: var(--p-sup2); border: 1px solid var(--p-linea2); font: 800 38px/1 "Onest", system-ui, sans-serif; font-variant-numeric: tabular-nums; }
 .ed-hecho .panel__ayuda { max-width: 34ch; }
 
+/* Clientes: los del club, su premio y la mesa donde están */
+.detalle__club { display: grid; gap: 8px; padding: 10px 12px; border-radius: 14px; border: 1px solid color-mix(in srgb, var(--oro) 40%, transparent); background: color-mix(in srgb, var(--oro) 8%, transparent); }
+.detalle__club p { margin: 0; display: flex; align-items: flex-start; gap: 10px; font-size: 14px; line-height: 1.35; }
+.detalle__club p > span:last-child { display: grid; gap: 2px; }
+.detalle__club-premio { display: inline-flex; align-items: center; gap: 5px; color: #F6D27A; font-weight: 700; font-size: 13px; }
+.club-regla { display: flex; flex-wrap: wrap; align-items: center; gap: 14px 18px; margin: 0 0 18px; padding: 16px; border-radius: 18px; background: var(--p-sup); border: 1px solid color-mix(in srgb, var(--oro) 40%, transparent); }
+.club-regla--apagado { border-color: var(--p-linea); }
+.club-regla--apagado .club-regla__foto, .club-regla--apagado .club-regla__texto { opacity: .5; }
+.club-regla__foto { width: 72px; height: 72px; border-radius: 50%; flex: none; display: grid; place-items: center; overflow: hidden; background: color-mix(in srgb, var(--c) 30%, var(--p-sup2)); box-shadow: 0 0 0 2px var(--oro); }
+.club-regla__foto img { width: 118%; height: 118%; object-fit: contain; }
+.club-regla__texto { flex: 1 1 300px; display: grid; gap: 8px; min-width: 0; }
+.club-regla__frase { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: 17px; font-weight: 600; }
+.club-regla__meta { display: inline-flex; align-items: center; border-radius: 12px; border: 1px solid var(--p-linea2); }
+.club-regla__meta button { width: 40px; height: 40px; border: 0; background: none; color: var(--p-tinta); font-size: 20px; font-weight: 700; }
+.club-regla__meta b { min-width: 30px; text-align: center; font-size: 20px; font-variant-numeric: tabular-nums; }
+.club-regla select { height: 42px; max-width: 100%; padding: 0 12px; border-radius: 12px; border: 1px solid var(--p-linea2); background: var(--p-sup2); color: var(--p-tinta); font: inherit; font-weight: 700; }
+.clientes-barra { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 12px; }
+.clientes-barra input { flex: 1 1 240px; height: 44px; padding: 0 14px; border-radius: 12px; border: 1px solid var(--p-linea2); background: var(--p-sup); color: var(--p-tinta); font: inherit; font-size: 15px; }
+.clientes-barra input:focus { outline: none; border-color: var(--p-tinta); }
+.clientes { display: grid; gap: 8px; }
+.cliente {
+  display: grid; grid-template-columns: auto minmax(0, 1fr) auto auto 34px; align-items: center; gap: 14px;
+  width: 100%; padding: 12px 14px; border-radius: 16px; border: 1px solid var(--p-linea); background: var(--p-sup); color: var(--p-tinta); text-align: left;
+}
+.avatar--cliente { width: 40px; height: 40px; font-size: 17px; }
+.cliente__info { display: grid; min-width: 0; line-height: 1.3; }
+.cliente__info b { font-size: 15.5px; }
+.cliente__info small { color: var(--p-suave); font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cliente__aca { margin-left: 6px; padding: 2px 7px; border-radius: 99px; background: var(--oro); color: var(--oro-tinta); font-size: 10.5px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; vertical-align: 2px; }
+.cliente__visitas { display: grid; text-align: right; font-size: 13.5px; color: var(--p-suave); line-height: 1.25; }
+.cliente__visitas b { color: var(--p-tinta); font-size: 15px; }
+.cliente__visitas small { font-size: 12px; color: var(--p-tenue); }
+.cliente__sellos { display: grid; gap: 3px; width: 92px; text-align: right; }
+.cliente__sellos small { font-size: 12px; color: var(--p-suave); font-variant-numeric: tabular-nums; }
+.cliente__barra { height: 8px; border-radius: 99px; background: var(--p-sup2); overflow: hidden; }
+.cliente__barra i { display: block; width: var(--p); height: 100%; background: var(--oro); border-radius: inherit; }
+.cliente__premios { display: inline-flex; align-items: center; justify-content: flex-end; gap: 3px; color: var(--oro); font-weight: 800; font-size: 14px; }
+.cliente__ahora { margin: 0; display: flex; align-items: center; gap: 8px; padding: 8px 12px; border-radius: 12px; background: color-mix(in srgb, var(--oro) 14%, transparent); color: #F6D27A; font-weight: 700; font-size: 14px; }
+.cliente__favs, .cliente__premios-lista { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 8px; }
+.cliente__favs li { display: flex; align-items: center; gap: 10px; }
+.cliente__favs li span:not(.item-foto) { flex: 1; }
+.cliente__premios-lista li { display: flex; align-items: flex-start; gap: 10px; color: var(--p-suave); }
+.cliente__premios-lista li > span { display: grid; line-height: 1.3; }
+.cliente__premios-lista li b { color: var(--p-tinta); }
+.cliente__premios-lista li small { font-size: 12.5px; }
+.cliente__premios-lista li.libre svg { color: var(--oro); }
+@media (max-width: 560px) {
+  .cliente { grid-template-columns: auto minmax(0, 1fr) auto; row-gap: 8px; }
+  .cliente__visitas { grid-column: 2; grid-row: 2; text-align: left; display: block; }
+  .cliente__visitas small { margin-left: 6px; }
+  .cliente__sellos { grid-column: 3; grid-row: 1 / 3; width: 70px; }
+  .cliente__premios { grid-column: 1; grid-row: 2; justify-content: center; }
+}
+
 @keyframes sacudir { 20%, 60% { transform: translateX(-9px); } 40%, 80% { transform: translateX(9px); } }
 
 @media print {
@@ -1624,6 +1803,9 @@ svg { flex: none; }
   <symbol id="i-listo" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M8 12.5l2.8 2.8L16.5 9.5"/></symbol>
   <symbol id="i-mas" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></symbol>
   <symbol id="i-deshacer" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14L4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/></symbol>
+  <symbol id="i-regalo" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="8.5" width="17" height="4.5" rx="1.2"/><path d="M5 13v7.5h14V13M12 8.5v12"/><path d="M12 8.5C10.6 5 6.8 4.6 6.8 6.9S10 8.5 12 8.5zM12 8.5c1.4-3.5 5.2-3.9 5.2-1.6S14 8.5 12 8.5z"/></symbol>
+  <symbol id="i-estrella" viewBox="0 0 24 24" fill="currentColor"><path d="M12 3.2l2.7 5.5 6 .9-4.35 4.2 1.03 6L12 17l-5.38 2.8 1.03-6L3.3 9.6l6-.9z"/></symbol>
+  <symbol id="i-mail" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5.5" width="18" height="13" rx="2.5"/><path d="M3.8 7.2L12 13l8.2-5.8"/></symbol>
   <symbol id="i-fuego" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3c.6 3.2 5 5.4 5 10.2A5 5 0 0 1 7 13.5c0-2.3 1.2-3.8 2.4-4.8.1 1.6.9 2.8 2 3.3C11 9.3 10.9 6.3 12 3z"/></symbol>
 </svg>
 
@@ -1700,6 +1882,7 @@ svg { flex: none; }
         <div class="bv__colores" id="bv-colores" role="radiogroup" aria-label="Tu color en la mesa"></div>
       </div>
       <button class="boton-principal bv__entrar" id="bv-entrar" type="button">Entrar a la mesa</button>
+      <div class="bv__club" id="bv-club" hidden></div>
       <button class="bv__mirar" id="bv-mirar" type="button">Primero quiero mirar la carta</button>
     </div>
   </div>
@@ -1720,6 +1903,7 @@ svg { flex: none; }
     <button class="boton-icono boton-icono--hoja" type="button" data-cerrar aria-label="Cerrar"><svg width="18" height="18"><use href="#i-cerrar"/></svg></button>
   </header>
   <div class="hoja__cuerpo">
+    <div class="club-fila" id="pedido-club" hidden></div>
     <ul class="gente-pedido" id="pedido-lineas"></ul>
     <div class="campo" id="pedido-campo">
       <label for="pedido-nota">¿Alguna aclaración?</label>
@@ -1732,6 +1916,16 @@ svg { flex: none; }
     <p class="nota-pie" id="pedido-aclara"></p>
     <button class="avisos-mesa" id="avisos-mesa" type="button" aria-pressed="true" title="Los carteles de arriba: lo que suman los demás y cómo va el pedido"><svg width="15" height="15" aria-hidden="true"><use href="#i-campana"/></svg><span>Avisos prendidos</span></button>
   </footer>
+</section>
+
+<!-- El club: la cuenta del comensal con su mail (sin contraseña) y sus premios -->
+<section class="hoja hoja--club" id="hoja-club" role="dialog" aria-modal="true" aria-labelledby="club-titulo" hidden>
+  <header class="hoja__cabeza">
+    <div><p class="hoja__sobre" id="club-sobre"></p><h2 class="hoja__titulo" id="club-titulo"></h2></div>
+    <button class="boton-icono boton-icono--hoja" type="button" data-cerrar aria-label="Cerrar"><svg width="18" height="18"><use href="#i-cerrar"/></svg></button>
+  </header>
+  <div class="hoja__cuerpo" id="club-cuerpo"></div>
+  <footer class="hoja__pie" id="club-pie"></footer>
 </section>
 
 <section class="hoja hoja--alta" id="hoja-carta" role="dialog" aria-modal="true" aria-labelledby="carta-titulo" hidden>
@@ -1781,6 +1975,7 @@ svg { flex: none; }
     <ul class="seg-items" id="seg-items"></ul>
     <ul class="seg-rondas" id="seg-rondas" aria-label="Las otras rondas de la mesa" hidden></ul>
     <p class="seg-mesa" id="seg-mesa"></p>
+    <div class="seg-club" id="seg-club" hidden></div>
     <div class="seguimiento__acciones">
       <button class="boton-principal boton-principal--claro" id="seg-mas" type="button">Pedir algo más</button>
       <div class="fila">
@@ -1796,6 +1991,7 @@ svg { flex: none; }
     <p class="gracias__local" id="gracias-local"></p>
     <h2 class="gracias__titulo" id="gracias-titulo"></h2>
     <p class="gracias__texto" id="gracias-texto"></p>
+    <div class="gracias-club" id="gracias-club" hidden></div>
     <button class="boton-principal boton-principal--claro" id="gracias-otra" type="button">Volver a la carta</button>
   </div>
 </section>
@@ -1814,7 +2010,7 @@ svg { flex: none; }
     <div class="turno" id="turno"></div>
     <div class="ahora" id="ahora"></div>
     <div class="panel__vista" id="vistas" role="tabpanel"></div>
-    <p class="panel__pie" id="panel-pie">Demo: la Mesa 7 es la tuya (entrás desde la carta). Juli, Tomi, las otras mesas y el resto del equipo son simulados; lo que muevas vos a mano no lo toca nadie. Con "Probar como" entrás como otra persona y ves lo que le toca a cada una: Carla es moza, no ve la cocina y le suena cuando algo está listo para llevar. Como Rober (dueño) o Sofi (encargada) está <b>Equipo</b>: sumá gente y elegí qué puede hacer cada uno. Desde <b>QR</b> abrís mesas en otra pestaña, como otro celular. Si nadie mira la demo, el local queda en pausa. <button type="button" id="panel-reiniciar">Empezar de cero</button></p>
+    <p class="panel__pie" id="panel-pie">Demo: la Mesa 7 es la tuya (entrás desde la carta). Juli, Tomi, las otras mesas y el resto del equipo son simulados; lo que muevas vos a mano no lo toca nadie. Con "Probar como" entrás como otra persona y ves lo que le toca a cada una: Carla es moza, no ve la cocina y le suena cuando algo está listo para llevar. Como Rober (dueño) o Sofi (encargada) están <b>Clientes</b> (los del club, sus premios y qué premio se da) y <b>Equipo</b> (sumá gente y elegí qué puede hacer cada uno). En el plano, los del club tienen un aro dorado. Desde <b>QR</b> abrís mesas en otra pestaña, como otro celular. Si nadie mira la demo, el local queda en pausa. <button type="button" id="panel-reiniciar">Empezar de cero</button></p>
   </div>
   <div class="detalle-velo" id="detalle-velo" hidden></div>
   <aside class="detalle" id="detalle" role="dialog" aria-modal="true" aria-labelledby="detalle-titulo" hidden></aside>
@@ -1866,10 +2062,11 @@ window.LOCAL = {
   //   mesas: el plano del salón · atender: le suena cuando llaman al mozo · llevar: le suena
   //   cuando algo está listo para llevar · cobrar: la cuenta y liberar la mesa · cocina,
   //   barra (una por estación): sus comandas · carta: marcar agotados · qr: los códigos de
-  //   las mesas · equipo: sumar personas, PIN y permisos.
+  //   las mesas · clientes: los del club (con sus mails) y su premio · equipo: sumar
+  //   personas, PIN y permisos.
   roles: [
-    { id: "dueno",     nombre: "Dueño/a",     permisos: ["mesas", "atender", "llevar", "cobrar", "cocina", "barra", "carta", "qr", "equipo"] },
-    { id: "encargado", nombre: "Encargado/a", permisos: ["mesas", "atender", "llevar", "cobrar", "cocina", "barra", "carta", "qr", "equipo"] },
+    { id: "dueno",     nombre: "Dueño/a",     permisos: ["mesas", "atender", "llevar", "cobrar", "cocina", "barra", "carta", "qr", "clientes", "equipo"] },
+    { id: "encargado", nombre: "Encargado/a", permisos: ["mesas", "atender", "llevar", "cobrar", "cocina", "barra", "carta", "qr", "clientes", "equipo"] },
     { id: "mozo",      nombre: "Mozo/a",      permisos: ["mesas", "atender", "llevar", "cobrar"] },
     { id: "cocina",    nombre: "Cocina",      permisos: ["cocina", "carta"] },
     { id: "barra",     nombre: "Barra",       permisos: ["barra", "carta"] },
@@ -1895,6 +2092,12 @@ window.LOCAL = {
     { id: "cocina", nombre: "Cocina", donde: "la cocina", sale: "¡Sale la comida!" },
     { id: "barra",  nombre: "Barra",  donde: "la barra",  sale: "¡Salen las bebidas!" },
   ],
+
+  // El club del local: cada comensal puede guardar su cuenta con su mail, sin contraseña (le
+  // llega un código). Cada `meta` cosas que pide, gana `premio` (un plato de la carta) de
+  // regalo y lo pide desde su celu. Cuando vuelve, la carta lo reconoce y el mozo sabe
+  // quién es. Se cambia desde el panel (Clientes).
+  club: { activo: true, meta: 10, premio: "flan" },
 
   pagos: ["Efectivo", "Tarjeta", "Mercado Pago"],
   propinas: [0, 10, 15],            // en %
@@ -2049,14 +2252,18 @@ window.LOCAL = {
      nombre, para que no vayan dos a la misma mesa.
    · EQUIPO: cada persona con su PIN, su puesto y sus permisos (qué ve y qué puede hacer).
      Los maneja quien tiene el permiso "equipo" (el dueño o el encargado).
+   · CLUB: el comensal que quiere guarda su cuenta con su mail (sin contraseña: le llega un
+     código). Cuando se cobra la mesa, lo que pidió suma sellos; cada tantos, un premio de
+     regalo que pide desde su celu. Cuando vuelve, la carta lo saluda y el mozo sabe quién es.
    ============================================================================= */
 
 (function () {
   "use strict";
 
   const L = window.LOCAL;
-  const CLAVE = "cartaviva.demo.v4";
-  const VERSION = 4;
+  const CLAVE = "cartaviva.demo.v5";
+  const VIEJA = "cartaviva.demo.v4";      // de la versión anterior de la demo se hereda el equipo
+  const VERSION = 5;
   const ESTADOS = ["nuevo", "preparando", "listo", "entregado"];
   const COLORES = ["#FF7A59", "#3DB2FF", "#FFC43D", "#A57BFF", "#2BC48A", "#FF6FB5"];
   const COLORES_EQUIPO = ["#C4A4FF", "#7FD6FF", "#8BE3B4", "#FFB27A", "#FFD86B", "#F28FB0", "#9FB4FF", "#E6C79C"];
@@ -2108,6 +2315,7 @@ window.LOCAL = {
     })),
     { id: "carta",   grupo: "El local", corto: "Agotados", nombre: "Marcar agotados",      ayuda: "Lo que se termina deja de poder pedirse en todas las mesas." },
     { id: "qr",      grupo: "El local", corto: "QR",       nombre: "Los QR de las mesas",  ayuda: "Verlos e imprimirlos para pegar en cada mesa." },
+    { id: "clientes", grupo: "El local", corto: "Clientes", nombre: "Ver los clientes",    ayuda: "Los del club: quiénes vuelven, sus mails, lo que piden y sus premios. Y qué premio da el club." },
     { id: "equipo",  grupo: "El local", corto: "Equipo",   nombre: "Manejar el equipo",    ayuda: "Sumar personas, darles un PIN y elegir qué puede hacer cada una." },
   ];
   const TODOS = PERMISOS.map(p => p.id);
@@ -2147,15 +2355,105 @@ window.LOCAL = {
   }
 
   /* ---------------------------------------------------------------------------
-     Lo que ya está pasando en el local cuando se abre la demo
+     El club: las cuentas de los comensales y sus premios
+     Cada cliente: su mail, su nombre y su color, las veces que vino, lo que pidió de cada
+     cosa y los sellos que lleva. Los premios quedan registrados: cuándo lo ganó y cuándo
+     lo pidió. Lo que se pide como premio no suma sellos.
      --------------------------------------------------------------------------- */
-  function ejemplo(equipo) {
+  function clienteDe(d, id) { return (d.clientes || []).find(k => k.id === id) || null; }
+  function enPedido(d, premio) { return d.carrito.some(l => l.premio === premio); }
+  // Suma lo que pidió en esa mesa (cuando se cobra). Devuelve lo que sumó y si ganó premio.
+  function acreditarA(d, c, s) {
+    const k = clienteDe(d, c.cliente), cfg = d.club;
+    if (!k || !s || !s.cerrada || !cfg) return null;
+    const items = d.pedidos.filter(p => p.sesion === s.id && !p.rechazado).flatMap(p => p.items)
+      .filter(i => i.comensal === c.id && !i.premio);
+    const cosas = items.reduce((t, i) => t + i.cant, 0);
+    k.visitas += 1;
+    k.cosas += cosas;
+    k.sellos += cosas;
+    k.ultima = s.cerrada;
+    k.platos = k.platos || {};
+    items.forEach(i => { k.platos[i.plato] = (k.platos[i.plato] || 0) + i.cant; });
+    const plato = platoDe(cfg.premio);
+    let ganados = 0;
+    while (plato && k.sellos >= cfg.meta) {
+      k.sellos -= cfg.meta;
+      ganados += 1;
+      d.premios.push({ id: nuevoId("pr"), cliente: k.id, plato: plato.id, nombre: plato.nombre, ganado: s.cerrada, sesion: s.id, canjeado: null });
+    }
+    anotar(s, `${c.nombre} sumó ${cosas} al club (lleva ${k.sellos} de ${cfg.meta})`, s.cerrada);
+    if (ganados) anotar(s, `¡${c.nombre} ganó ${plato.nombre} de regalo!`, s.cerrada);
+    return { cosas, ganados, sellos: k.sellos, meta: cfg.meta, premio: plato ? plato.nombre : "" };
+  }
+  function acreditar(d, s) {
+    if (!d.club || !d.club.activo) return;
+    d.comensales.filter(c => c.sesion === s.id && c.cliente && !c.acreditado).forEach(c => { c.acreditado = acreditarA(d, c, s); });
+  }
+  // Lo que ve el mismo cliente (y el panel con permiso "clientes", que además ve el mail)
+  function vistaCliente(d, k, conMail) {
+    const pr = d.premios.filter(p => p.cliente === k.id);
+    return {
+      id: k.id, nombre: k.nombre, color: k.color, alta: k.alta, ultima: k.ultima,
+      visitas: k.visitas, cosas: k.cosas, sellos: k.sellos, meta: d.club.meta,
+      favoritos: Object.entries(k.platos || {}).filter(([id]) => platoDe(id)).sort((a, b) => b[1] - a[1]).slice(0, 3).map(([plato, cant]) => ({ plato, cant })),
+      premios: pr.filter(p => !p.canjeado).map(p => ({ id: p.id, plato: p.plato, nombre: p.nombre, ganado: p.ganado, enPedido: enPedido(d, p.id) })),
+      canjeados: pr.filter(p => p.canjeado).length,
+      ...(conMail ? { email: k.email, novedades: !!k.novedades, historial: pr.map(p => ({ ...p })).sort((a, b) => b.ganado - a.ganado) } : {}),
+    };
+  }
+
+  const clubInicial = () => {
+    const c = L.club || {};
+    const premio = platoDe(c.premio) ? c.premio : (L.platos.find(p => p.categoria === "postres") || L.platos[0]).id;
+    return { activo: c.activo !== false, meta: Math.max(3, Math.min(50, Math.round(c.meta || 10))), premio };
+  };
+
+  // Los del club que ya vinieron otras veces (inventados, para la demo).
+  // platos: cuánto pidió de cada cosa; cosas: el total; sellos: lo que lleva para el próximo premio.
+  function clientesIniciales(ahora) {
+    const dia = n => ahora - n * 864e5;
+    const k = (id, nombre, email, color, alta, ultima, visitas, platos, novedades) => {
+      const cosas = Object.values(platos).reduce((a, b) => a + b, 0);
+      return { id, nombre, email, color, alta: dia(alta), ultima: dia(ultima), visitas, cosas, sellos: cosas % 10, platos, novedades };
+    };
+    return [
+      k("k-vale",  "Vale",  "vale.gomez@ejemplo.com",    "#A57BFF", 62, 9,  4, { "doble-bacon": 5, ipa: 6, aros: 3, flan: 3 }, true),
+      k("k-caro",  "Caro",  "carolina.paz@ejemplo.com",  "#FF6FB5", 120, 6, 7, { clasica: 6, fernet: 7, "papas-cheddar": 5, cheesecake: 4 }, true),
+      k("k-lucia", "Lucía", "lucia.ferrari@ejemplo.com", "#2BC48A", 150, 3, 9, { remolacha: 9, limonada: 12, flan: 6, "papas-cheddar": 4 }, true),
+      k("k-fede",  "Fede",  "fede.rios@ejemplo.com",     "#3DB2FF", 30, 14, 2, { fugazzeta: 2, fernet: 3 }, false),
+      k("k-pau",   "Pau",   "pau.sosa@ejemplo.com",      "#FFC43D", 45, 20, 2, { clasica: 2, ipa: 3 }, false),
+      k("k-rocio", "Rocío", "rocio.luna@ejemplo.com",    "#FF7A59", 80, 11, 4, { pepperoni: 4, limonada: 3, helado: 2 }, true),
+      k("k-tomas", "Tomás", "tomas.vidal@ejemplo.com",   "#2BC48A", 21, 21, 1, { pepperoni: 1, ipa: 2 }, false),
+      k("k-meli",  "Meli",  "meli.acosta@ejemplo.com",   "#FF6FB5", 40, 40, 2, { cheesecake: 2, clasica: 2, limonada: 2 }, true),
+    ];
+  }
+  // Los premios que ya ganaron (y los que ya usaron)
+  function premiosIniciales(ahora) {
+    const dia = n => ahora - n * 864e5;
+    const flan = platoDe("flan") ? "flan" : clubInicial().premio;
+    const pr = (cliente, ganado, canjeado) => ({
+      id: nuevoId("pr"), cliente, plato: flan, nombre: platoDe(flan).nombre, ganado: dia(ganado), sesion: null,
+      canjeado: canjeado == null ? null : { t: dia(canjeado), sesion: null, pedido: null },
+    });
+    return [pr("k-vale", 40, 30), pr("k-caro", 70, 55), pr("k-caro", 6), pr("k-lucia", 110, 98), pr("k-lucia", 50, 41), pr("k-lucia", 3)];
+  }
+
+  /* ---------------------------------------------------------------------------
+     Lo que ya está pasando en el local cuando se abre la demo
+     base: lo que se conserva de antes (el equipo, el club y sus clientes)
+     --------------------------------------------------------------------------- */
+  function ejemplo(base = {}) {
     const ahora = Date.now();
     const antes = m => ahora - m * 60e3;
+    const nuevos = !base.clientes;
     const d = {
-      v: VERSION, numero: 39, equipo: equipo || equipoInicial(),
+      v: VERSION, numero: 39, equipo: base.equipo || equipoInicial(),
+      club: base.club || clubInicial(), clientes: base.clientes || clientesIniciales(ahora), premios: base.premios || premiosIniciales(ahora),
       sesiones: [], comensales: [], carrito: [], pedidos: [], llamados: [], agotados: [], sim: { inicio: ahora, paso: 0 },
     };
+    // Los del club que están hoy en el local (si siguen en el club)
+    const socio = (c, id) => { if (clienteDe(d, id)) c.cliente = id; };
     // Quién hace cada cosa en lo que ya pasó: alguien del equipo con ese permiso
     const hace = (permiso, prefiere) => {
       const e = d.equipo.filter(x => tiene(x, permiso));
@@ -2203,6 +2501,7 @@ window.LOCAL = {
     const cobra = hace("cobrar", "sofi");
     Object.assign(m1.s, { cerrada: antes(41), cerradaPor: cobra, total: d.pedidos[0].total });
     anotar(m1.s, `${nombreEn(d, cobra)} cobró y liberó la mesa`, m1.s.cerrada);
+    socio(m1.gente[0], "k-pau");
     const m6 = mesa(6, 80, ["Rocío", "Lean", "Maca", "Ivo"]);
     pedido(32, m6, m6.gente[2], 74, [item("pepperoni", 1, m6.gente[0]), item("fugazzeta", 1, m6.gente[2]), item("fernet", 2, m6.gente[1]), item("limonada", 2, m6.gente[3])],
       { cocina: ["entregado", 52, "carla"], barra: ["entregado", 70, "carla"] });
@@ -2210,15 +2509,24 @@ window.LOCAL = {
     const cobra6 = hace("cobrar", "carla");
     Object.assign(m6.s, { cerrada: antes(12), cerradaPor: cobra6, total: d.pedidos.slice(1, 3).reduce((t, p) => t + p.total, 0) });
     anotar(m6.s, `${nombreEn(d, cobra6)} cobró y liberó la mesa`, m6.s.cerrada);
+    socio(m6.gente[0], "k-rocio");
+    // Pau y Rocío ya sumaron lo de hoy; a Rocío le tocó el premio al cobrar
+    if (nuevos) {
+      d.comensales.filter(c => c.cliente).forEach(c => {
+        c.acreditado = acreditarA(d, c, d.sesiones.find(s => s.id === c.sesion));
+      });
+    }
 
     // Las mesas ocupadas ahora
     const m5 = mesa(5, 46, ["Lucas", "Vale", "Agus", "Belu", "Santi"]);
     const [lucas, vale, agus, belu, santi] = m5.gente;
+    socio(vale, "k-vale");
     pedido(34, m5, lucas, 38, [item("doble-bacon", 1, lucas), item("doble-bacon", 1, agus), item("aros", 1, belu), item("ipa", 2, santi), item("ipa", 1, lucas)],
       { cocina: ["entregado", 22, "carla"], barra: ["entregado", 34, "carla"] });
 
     const m2 = mesa(2, 62, ["Caro", "Martu"]);
     const [caro, martu] = m2.gente;
+    socio(caro, "k-caro");
     const p35 = pedido(35, m2, caro, 52, [item("remolacha", 1, martu), item("clasica", 1, caro), item("papas-cheddar", 1, caro), item("limonada", 1, martu), item("fernet", 1, caro)],
       { cocina: ["entregado", 30, "carla"], barra: ["entregado", 46, "carla"] });
 
@@ -2227,6 +2535,7 @@ window.LOCAL = {
       { cocina: ["entregado", 10, "nico"] });
 
     const m9 = mesa(9, 24, ["Fede", "Sol"]);
+    socio(m9.gente[0], "k-fede");
     pedido(37, m9, m9.gente[1], 16, [item("fugazzeta", 1, m9.gente[1]), item("fernet", 1, m9.gente[0]), item("fernet", 1, m9.gente[1])],
       { cocina: ["listo", 1], barra: ["entregado", 12, "nico"] });
 
@@ -2262,12 +2571,23 @@ window.LOCAL = {
   /* ---------------------------------------------------------------------------
      Guardar y leer (vista previa: en este navegador)
      --------------------------------------------------------------------------- */
+  // De la demo anterior se conserva el equipo (con el permiso nuevo para quien maneja el equipo)
+  function heredado() {
+    try {
+      const v = JSON.parse(localStorage.getItem(VIEJA));
+      localStorage.removeItem(VIEJA);
+      if (v && Array.isArray(v.equipo) && v.equipo.length) {
+        return { equipo: v.equipo.map(e => ({ ...e, permisos: (e.permisos || []).includes("equipo") && !(e.permisos || []).includes("clientes") ? [...e.permisos, "clientes"] : e.permisos })) };
+      }
+    } catch { /* sin almacenamiento */ }
+    return {};
+  }
   function leer() {
     if (cache) return cache;
     let d = null;
     try { d = JSON.parse(localStorage.getItem(CLAVE)); } catch { d = null; }
     if (!d || d.v !== VERSION) {
-      d = memoria && memoria.v === VERSION ? memoria : ejemplo();
+      d = memoria && memoria.v === VERSION ? memoria : ejemplo(heredado());
       try { localStorage.setItem(CLAVE, JSON.stringify(d)); } catch { /* queda en memoria */ }
     }
     memoria = d;
@@ -2315,6 +2635,8 @@ window.LOCAL = {
     });
     d.llamados.forEach(l => { t(l, "creado"); t(l, "tomado"); t(l.atendido, "t"); });
     d.agotados.forEach(a => t(a, "t"));
+    (d.clientes || []).forEach(k => { t(k, "alta"); t(k, "ultima"); });
+    (d.premios || []).forEach(p => { t(p, "ganado"); t(p.canjeado, "t"); });
   }
   function revisarReloj() {
     if (document.visibilityState === "hidden") return;
@@ -2324,7 +2646,7 @@ window.LOCAL = {
     if (!vivo || ahora - vivo <= PAUSA) return;
     cache = null;
     let d = leer();
-    if (ahora - vivo > OTRO_DIA) d = ejemplo(d.equipo);
+    if (ahora - vivo > OTRO_DIA) d = ejemplo({ equipo: d.equipo, club: d.club, clientes: d.clientes, premios: d.premios });
     else {
       let ultimo = 0;
       tiempos(d, (o, k) => { ultimo = Math.max(ultimo, o[k]); });
@@ -2354,6 +2676,7 @@ window.LOCAL = {
       nombre = String(nombre || "").replace(/\s+/g, " ").trim().slice(0, 20) || `Invitado ${gente.length + 1}`;
       if (gente.some(c => c.nombre.toLowerCase() === nombre.toLowerCase())) nombre += " " + (gente.length + 1);
       const { color: pedido, ...resto } = extra;
+      if (resto.cliente && (!clienteDe(d, resto.cliente) || gente.some(x => x.cliente === resto.cliente))) delete resto.cliente;
       const c = {
         id: nuevoId("c"), sesion: s.id, nombre, unido: ahora, ...resto,
         color: COLORES.includes(pedido) && !usados.has(pedido) ? pedido
@@ -2361,6 +2684,7 @@ window.LOCAL = {
       };
       d.comensales.push(c);
       anotar(s, gente.length ? `${nombre} se sumó a la mesa` : `${nombre} escaneó el QR y abrió la mesa`, ahora);
+      if (c.cliente) anotar(s, `${nombre} es del club: ${clienteDe(d, c.cliente).visitas + 1}ª visita`, ahora);
       return { sesion: s, comensal: c };
     });
   }
@@ -2385,7 +2709,7 @@ window.LOCAL = {
   function cantidad(comensal, lineaId, delta) {
     return cambiar(d => {
       const l = d.carrito.find(x => x.id === lineaId && x.comensal === comensal);
-      if (!l || !deComensal(d, comensal)) return SIN;
+      if (!l || !deComensal(d, comensal) || (l.premio && delta > 0)) return SIN;     // un premio es uno
       l.cant += delta;
       if (l.cant <= 0) d.carrito = d.carrito.filter(x => x !== l);
       return l;
@@ -2402,7 +2726,7 @@ window.LOCAL = {
       const ahora = Date.now();
       const items = lineas.map(l => ({
         plato: l.plato, nombre: platoDe(l.plato).nombre, cant: l.cant, precio: l.precio, detalle: l.detalle,
-        eleccion: l.eleccion, comensal: l.comensal, estacion: estacionDe(l.plato),
+        eleccion: l.eleccion, comensal: l.comensal, estacion: estacionDe(l.plato), ...(l.premio ? { premio: l.premio } : {}),
       }));
       const partes = {};
       items.forEach(i => { partes[i.estacion] = partes[i.estacion] || { estado: "nuevo", cambio: ahora, quien: null }; });
@@ -2418,6 +2742,14 @@ window.LOCAL = {
       d.carrito = d.carrito.filter(l => !mandadas.has(l.id));
       const cuantos = new Set(items.map(i => i.comensal)).size;
       anotar(x.s, `${x.c.nombre} mandó la ronda ${p.ronda} (pedido ${p.numero})${cuantos > 1 ? `, con lo de ${cuantos} personas` : ""}`, ahora);
+      // Los premios que iban en la ronda quedan usados
+      items.filter(i => i.premio).forEach(i => {
+        const pr = d.premios.find(y => y.id === i.premio);
+        if (!pr) return;
+        pr.canjeado = { t: ahora, sesion: x.s.id, pedido: p.id };
+        const c = d.comensales.find(y => y.id === i.comensal);
+        anotar(x.s, `${c ? c.nombre : "Alguien"} pidió su premio del club: ${pr.nombre}`, ahora);
+      });
       return p;
     });
   }
@@ -2478,6 +2810,8 @@ window.LOCAL = {
       if (!puedeRechazar(quienEs(d, quien), p)) return sinPermiso();
       p.rechazado = { quien: quien || null, t: Date.now() };
       anotar(s, `${nombreEn(d, quien)} no tomó la ronda ${p.ronda}`, p.rechazado.t);
+      // Si iba un premio, vuelve a estar disponible
+      p.items.filter(i => i.premio).forEach(i => { const pr = d.premios.find(y => y.id === i.premio); if (pr) pr.canjeado = null; });
       return p;
     });
   }
@@ -2550,6 +2884,7 @@ window.LOCAL = {
       d.carrito = d.carrito.filter(l => l.sesion !== s.id);
       d.llamados.forEach(l => { if (l.sesion === s.id && !l.atendido) l.atendido = { quien: quien || null, t: ahora }; });
       anotar(s, `${nombreEn(d, quien)} cobró y liberó la mesa`, ahora);
+      acreditar(d, s);                                         // los del club suman lo que pidieron
       return s;
     });
   }
@@ -2690,6 +3025,165 @@ window.LOCAL = {
   }
   function salirEquipo() { try { sessionStorage.removeItem(SOY); localStorage.removeItem(SOY); } catch { /* nada */ } }
 
+  /* ---------------------------------------------------------------------------
+     El club desde el celular del comensal
+     Entrar es con el mail y un código de 6 números (sin contraseña). En la versión real el
+     código llega por mail (Supabase Auth); en la demo no se manda nada: se muestra en pantalla.
+     Una vez que entró, este celu queda con su cuenta y la próxima vez lo reconoce.
+     --------------------------------------------------------------------------- */
+  const CLUB_YO = "cartaviva.club.mail";
+  const alma = () => (otraPersona ? sessionStorage : localStorage);     // ?nuevo es otro celu
+  const limpiarMail = m => String(m || "").trim().toLowerCase().slice(0, 120);
+  const mailValido = m => /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(m);
+  const limpiarNombre = n => String(n || "").replace(/\s+/g, " ").trim().slice(0, 20);
+  const codigos = new Map();          // mail → { codigo, t, intentos }
+  function miMail() { try { return alma().getItem(CLUB_YO) || null; } catch { return null; } }
+  function club() {
+    const c = leer().club;
+    const p = platoDe(c.premio);
+    return { ...c, nombrePremio: p ? p.nombre : "" };
+  }
+  // Quién soy en el club (en este celu), o null
+  function miCliente() {
+    const d = leer(), mail = miMail();
+    const k = mail && d.club.activo && d.clientes.find(x => x.email === mail);
+    return k ? vistaCliente(d, k, true) : null;
+  }
+  async function pedirCodigo(email) {
+    email = limpiarMail(email);
+    if (!mailValido(email)) return { ok: false, motivo: "mail" };
+    const previo = codigos.get(email);
+    if (previo && Date.now() - previo.t < 20e3) return { ok: false, motivo: "espera" };
+    const codigo = String(100000 + Math.floor(Math.random() * 900000));
+    codigos.set(email, { codigo, t: Date.now(), intentos: 0 });
+    return { ok: true, email, demo: codigo };                  // en la versión real el código no vuelve: va al mail
+  }
+  async function verificarCodigo(email, codigo) {
+    email = limpiarMail(email);
+    const c = codigos.get(email);
+    if (!c || Date.now() - c.t > 10 * 60e3) return { ok: false, motivo: "vencido" };
+    if (c.intentos >= 5) return { ok: false, motivo: "intentos" };
+    if (String(codigo || "").replace(/\D/g, "") !== c.codigo) { c.intentos += 1; return { ok: false, motivo: "codigo" }; }
+    codigos.delete(email);
+    try { alma().setItem(CLUB_YO, email); } catch { /* queda solo mientras esté abierta */ }
+    return { ok: true, email, cliente: miCliente() };           // cliente null: todavía no es del club
+  }
+  function salirClub() { try { alma().removeItem(CLUB_YO); } catch { /* nada */ } avisar(); }
+
+  // Sumarse (o volver) al club desde la mesa: esta persona de la mesa es la de este mail.
+  // Si es nuevo, se crea con su nombre y su color de la mesa. Si la mesa ya se cobró (hace
+  // menos de 3 horas), lo que pidió también suma.  datos: { nombre, color, novedades }
+  function vincular(comensal, datos = {}) {
+    const email = miMail();
+    let res = { ok: false, motivo: "sin_cuenta" };
+    if (!email) return res;
+    cambiar(d => {
+      const no = motivo => { res = { ok: false, motivo }; return SIN; };
+      if (!d.club.activo) return no("club_apagado");
+      const c = d.comensales.find(x => x.id === comensal);
+      const s = c && d.sesiones.find(x => x.id === c.sesion);
+      if (!c || !s) return no("no_existe");
+      if (s.cerrada && Date.now() - s.cerrada > 3 * 3600e3) return no("mesa_cerrada");
+      let k = d.clientes.find(x => x.email === email);
+      if (c.cliente && (!k || c.cliente !== k.id)) return no("otra_cuenta");
+      if (k && d.comensales.some(x => x.sesion === s.id && x.cliente === k.id && x.id !== c.id)) return no("ya_en_la_mesa");
+      const nuevo = !k;
+      if (!k) {
+        k = { id: nuevoId("k"), email, nombre: limpiarNombre(datos.nombre) || c.nombre, color: COLORES.includes(datos.color) ? datos.color : c.color,
+              alta: Date.now(), ultima: null, visitas: 0, cosas: 0, sellos: 0, platos: {}, novedades: !!datos.novedades };
+        d.clientes.push(k);
+      } else if (datos.novedades) k.novedades = true;
+      if (c.cliente !== k.id) {
+        c.cliente = k.id;
+        anotar(s, nuevo ? `${c.nombre} se sumó al club` : `${c.nombre} es del club: ${k.visitas + 1}ª visita`, Date.now());
+      }
+      if (s.cerrada && !c.acreditado) c.acreditado = acreditarA(d, c, s);
+      res = { ok: true, nuevo, cliente: vistaCliente(d, k, true), acreditado: c.acreditado || null };
+      return c;
+    });
+    return res;
+  }
+
+  // Pedir un premio: va al pedido de la mesa, gratis. Sale con la próxima ronda.
+  function canjear(comensal, premioId) {
+    return cambiar(d => {
+      const x = deComensal(d, comensal);
+      const pr = x && x.c.cliente && d.premios.find(p => p.id === premioId && p.cliente === x.c.cliente && !p.canjeado);
+      if (!pr || enPedido(d, pr.id)) return SIN;
+      if (d.agotados.some(a => a.id === pr.plato)) { error(`${pr.nombre} se terminó por hoy. Tu premio te espera para la próxima.`); return SIN; }
+      const linea = {
+        id: nuevoId("l"), sesion: x.s.id, comensal, plato: pr.plato, eleccion: null, detalle: "", precio: 0,
+        clave: "premio-" + pr.id, cant: 1, premio: pr.id, creado: Date.now(),
+      };
+      d.carrito.push(linea);
+      return linea;
+    });
+  }
+  function novedades(si) {
+    const email = miMail();
+    return cambiar(d => { const k = email && d.clientes.find(x => x.email === email); if (!k || k.novedades === !!si) return SIN; k.novedades = !!si; return true; });
+  }
+  // Borrar mi cuenta del club: el mail, lo que pedí y los premios. Lo de la mesa queda.
+  function borrarme() {
+    const email = miMail();
+    const r = cambiar(d => {
+      const k = email && d.clientes.find(x => x.email === email);
+      if (!k) return SIN;
+      borrarDatos(d, k.id);
+      return true;
+    });
+    salirClub();
+    return { ok: !!r };
+  }
+  function borrarDatos(d, id) {
+    d.clientes = d.clientes.filter(x => x.id !== id);
+    d.premios = d.premios.filter(p => p.cliente !== id);
+    d.comensales.forEach(c => { if (c.cliente === id) { delete c.cliente; delete c.acreditado; } });
+    d.carrito = d.carrito.filter(l => !l.premio || d.premios.some(p => p.id === l.premio));
+  }
+
+  /* ---------- El club desde el panel ---------- */
+  // Lo que ve el mozo de alguien del club sentado en una mesa (sin el mail)
+  function clubDe(comensal) {
+    const d = leer();
+    const c = d.comensales.find(x => x.id === comensal);
+    const k = c && c.cliente && d.club.activo && clienteDe(d, c.cliente);
+    if (!k) return null;
+    const v = vistaCliente(d, k, false);
+    const fav = v.favoritos[0] && platoDe(v.favoritos[0].plato);
+    return { nombre: k.nombre, visita: k.visitas + (c.acreditado ? 0 : 1), sellos: k.sellos, meta: d.club.meta, favorito: fav ? fav.nombre : "", premios: v.premios };
+  }
+  // Todos los del club (permiso "clientes"): con su mail y sus premios
+  function clientes(quien) {
+    const d = leer();
+    if (!tiene(quienEs(d, quien), "clientes")) return null;
+    return d.clientes.map(k => vistaCliente(d, k, true)).sort((a, b) => (b.ultima || b.alta) - (a.ultima || a.alta));
+  }
+  function guardarClub(quien, x) {
+    let res = { ok: false, motivo: "error" };
+    cambiar(d => {
+      if (!tiene(quienEs(d, quien), "clientes")) { res = { ok: false, motivo: "sin_permiso" }; return SIN; }
+      const meta = Math.round(+x.meta);
+      if (!(meta >= 3 && meta <= 50)) { res = { ok: false, motivo: "meta" }; return SIN; }
+      if (!platoDe(x.premio)) { res = { ok: false, motivo: "premio" }; return SIN; }
+      d.club = { activo: x.activo !== false, meta, premio: x.premio };
+      res = { ok: true };
+      return true;
+    });
+    return res;
+  }
+  function borrarCliente(quien, id) {
+    let res = { ok: false, motivo: "no_existe" };
+    cambiar(d => {
+      if (!tiene(quienEs(d, quien), "clientes")) { res = { ok: false, motivo: "sin_permiso" }; return SIN; }
+      if (!clienteDe(d, id)) return SIN;
+      borrarDatos(d, id);
+      res = { ok: true };
+      return true;
+    });
+    return res;
+  }
+
   window.Datos = {
     modo: "vista-previa",
     listo: Promise.resolve(),
@@ -2712,6 +3206,9 @@ window.LOCAL = {
 
     entrar, sumar, cantidad, mandar, llamar,
 
+    // El club (el comensal)
+    club, miCliente, miMail, pedirCodigo, verificarCodigo, salirClub, vincular, canjear, novedades, borrarme,
+
     // El equipo
     equipo: equipoActivo,
     persona: id => { const e = quienEs(leer(), id); return e ? { ...e, pin: undefined } : null; },
@@ -2723,6 +3220,7 @@ window.LOCAL = {
     soyEquipo, entrarEquipo, salirEquipo,
     mover, rechazar, atender, deshacer, cerrarMesa, agotar,
     guardarPersona, cambiarPin, bajaPersona,
+    clubDe, clientes, guardarClub, borrarCliente,
     reiniciar: () => { memoria = null; cache = null; guardar(ejemplo()); },
 
     // Solo para la simulación de la demo
@@ -2740,7 +3238,8 @@ window.LOCAL = {
    · La cocina (Diego) y la barra (Martín) empiezan y terminan lo que se pide.
    · Los mozos (Carla en el salón, Nico en la vereda) llevan lo que está listo, van
      cuando los llaman y, en tu mesa, te traen la cuenta y te cobran.
-   · Las otras mesas siguen su curso: piden otra ronda, llaman al mozo, se sienta gente.
+   · Las otras mesas siguen su curso: piden otra ronda, llaman al mozo, se sienta gente
+     (entre ellos, alguien del club que vuelve).
    Cada cosa la hace alguien del equipo que tiene ese permiso (si lo cambiás en Equipo,
    la simulación también). Lo que alguien mueve a mano desde el panel, la simulación no
    lo toca. Corre en una sola pestaña, la que se está mirando: si nadie mira, el local
@@ -2848,7 +3347,7 @@ window.LOCAL = {
     { en: 55e3,  hace: "mandar", mesa: 4 },
     { en: 125e3, hace: "llamar", mesa: 11, quien: "Luz" },
     { en: 195e3, hace: "ronda",  mesa: 5, quien: "Santi", items: [["ipa", 3], ["papas-cheddar", 1]] },
-    { en: 265e3, hace: "abrir",  mesa: 10, gente: ["Lara", "Juan"], items: [["fugazzeta", 1, 0], ["limonada", 2, 1]] },
+    { en: 265e3, hace: "abrir",  mesa: 10, gente: ["Lara", "Tomás"], club: { "Tomás": "k-tomas" }, items: [["fugazzeta", 1, 0], ["limonada", 2, 1]] },
     { en: 335e3, hace: "mandar", mesa: 10 },
     { en: 405e3, hace: "ronda",  mesa: 3, quien: "Mica", items: [["flan", 2], ["cheesecake", 1]] },
     { en: 480e3, hace: "llamar", mesa: 12, quien: "Nahue" },
@@ -2872,7 +3371,8 @@ window.LOCAL = {
       D.mandar(c.id, "");
     }
     if (libre && !s && paso.hace === "abrir") {
-      const cs = paso.gente.map(n => D.entrar(paso.mesa, n, { sim: true }));
+      // Tomás vuelve: es del club (el mozo lo ve en la mesa)
+      const cs = paso.gente.map(n => D.entrar(paso.mesa, n, { sim: true, ...(paso.club && paso.club[n] ? { cliente: paso.club[n] } : {}) }));
       paso.items.forEach(([id, n, q]) => cs[q] && sumarSim(cs[q].comensal.id, id, n));
     }
     marcar(x => { x.sim = { inicio: sim.inicio, paso: sim.paso + 1 }; });
@@ -4353,7 +4853,9 @@ function miMesa() {
   return m && !m.sesion.cerrada ? m : null;
 }
 const inicial = n => (String(n || "?").trim()[0] || "?").toUpperCase();
-const avatar = (c, clase = "") => `<span class="avatar ${clase}" style="--av:${c.color}" aria-hidden="true">${esc(inicial(c.nombre))}</span>`;
+// Los del club llevan un aro dorado
+const avatar = (c, clase = "") => `<span class="avatar ${clase}${c.cliente ? " avatar--club" : ""}" style="--av:${c.color}" aria-hidden="true">${esc(inicial(c.nombre))}</span>`;
+const icono = (id, tam = 16) => `<svg width="${tam}" height="${tam}" aria-hidden="true"><use href="#${id}"/></svg>`;
 const nombreEn = (m, id) => (m.comensales.find(c => c.id === id) || {}).nombre || "Alguien";
 
 /* ---------- Color: el color de cada plato, llevado a cada estilo ---------- */
@@ -4659,6 +5161,7 @@ function abrirHoja(h, { claro = false } = {}) {
   hojaAbierta = h;
   velo.hidden = false;
   velo.classList.toggle("velo--claro", claro);
+  velo.classList.toggle("velo--alto", h.classList.contains("hoja--club"));     // el club se abre también sobre el "gracias"
   h.hidden = false;
   document.body.classList.add("bloqueada");
   requestAnimationFrame(() => requestAnimationFrame(() => { velo.classList.add("abierto"); h.classList.add("abierta"); }));
@@ -4695,10 +5198,13 @@ function pedirNombre(despues, plato) {
   ocultarPista();
   bvAbierta = true;
   bvPlato = plato ? platos.indexOf(plato) : Math.max(0, actual);
-  miColor = null;
-  bvNombre.value = "";
+  // Si este celu es del club, ya sabemos quién es: su nombre y su color
+  const k = miCliente();
+  miColor = k ? k.color : null;
+  bvNombre.value = k ? k.nombre : "";
   $("#bv-bajada").textContent = plato
     ? `Para sumar ${plato.nombre}, decinos quién sos: así en la mesa se sabe qué pidió cada uno.`
+    : k && k.visitas ? `Es tu ${k.visitas + 1}ª visita a ${L.nombre}. Tu color y tus premios te estaban esperando.`
     : "Mirá cada plato en 3D, armalo a tu gusto y pidan juntos, cada uno desde su celu.";
   $("#bv-pista").hidden = !!plato;
   pintarBienvenida();
@@ -4734,6 +5240,7 @@ function pintarBienvenida() {
   bvGente();
   bvColores();
   bvYo();
+  bvClub();
 }
 // Quiénes ya están (con lo que ya pidieron): si entra alguien mientras mirás, aparece
 function bvGente() {
@@ -4762,7 +5269,10 @@ function bvYo() {
   yoEl.textContent = n ? inicial(n) : "?";
   yoEl.style.setProperty("--av", miColor || "#9A9A9A");
   yoEl.classList.toggle("con-nombre", !!n);
-  $("#bv-titulo").textContent = n ? `¡${saludo()}, ${n.split(" ")[0]}!` : `¡${saludo()}!`;
+  yoEl.classList.toggle("avatar--club", !!miCliente());
+  const k = miCliente();
+  const vuelve = k && k.visitas && n.toLowerCase() === k.nombre.toLowerCase();
+  $("#bv-titulo").textContent = vuelve ? `¡Hola de nuevo, ${n.split(" ")[0]}!` : n ? `¡${saludo()}, ${n.split(" ")[0]}!` : `¡${saludo()}!`;
   $("#bv-entrar").textContent = n ? `Entrar a la mesa ${mesa}` : "Entrar a la mesa";
 }
 bvNombre.addEventListener("input", () => {
@@ -4810,11 +5320,22 @@ async function entrar() {
     if (!r) return avisar("No pudimos entrar a la mesa. Probá de nuevo.");
     yo = r.comensal.id;
     D.recordarYo(r.comensal);
+    // Del club: esta persona de la mesa es la de la cuenta de este celu (o se suma recién)
+    let socio = null;
+    if (miCliente() || clubAlta) {
+      const v = await D.vincular(yo, clubAlta || {});
+      socio = v && v.ok ? v : null;
+      if (v && !v.ok) avisar(MOTIVOS_CLUB[v.motivo] || "No pudimos sumarte al club. Probá de nuevo.");
+    }
+    clubAlta = null;
     antes = null;
     cerrarBienvenida(true);
     refrescar();
-    requestAnimationFrame(() => volarYo(r.comensal));
-    avisar(`¡Listo, ${r.comensal.nombre}! Ya estás en la mesa ${mesa}.`, r.comensal);
+    const c = miComensal() || r.comensal;
+    requestAnimationFrame(() => volarYo(c));
+    avisar(!socio ? `¡Listo, ${c.nombre}! Ya estás en la mesa ${mesa}.`
+      : socio.nuevo ? `¡Listo, ${c.nombre}! Ya sos del club y estás en la mesa ${mesa}.`
+      : `¡Hola de nuevo, ${c.nombre}! Es tu ${socio.cliente.visitas + 1}ª visita.`, c);
     const f = alEntrar;
     alEntrar = null;
     if (f) setTimeout(f, 700);
@@ -4823,6 +5344,282 @@ async function entrar() {
   }
 }
 $("#bv-entrar").addEventListener("click", entrar);
+
+/* ---------- El club: la cuenta con el mail (sin contraseña), los sellos y los premios ----------
+   Cada comensal que quiere se suma con su mail: le llega un código de 6 números y listo.
+   Lo que pide suma sellos cuando se cobra la mesa; cada tantos, un premio de regalo que
+   pide desde acá y sale gratis. Cuando vuelve, la carta lo saluda con su nombre, su color,
+   lo que siempre pide y sus premios. */
+const hojaClub = $("#hoja-club");
+const cfgClub = () => (D.club ? D.club() : { activo: false });
+const miCliente = () => (D.miCliente ? D.miCliente() : null);
+const premioClub = () => porId(cfgClub().premio);
+const MOTIVOS_CLUB = {
+  mail: "Revisá el mail: parece que le falta algo.", espera: "Esperá unos segundos para pedir otro código.",
+  codigo: "Ese código no es. Revisalo y probá de nuevo.", vencido: "El código venció. Pedí uno nuevo.",
+  intentos: "Probaste muchas veces. Pedí un código nuevo.", nombre: "Decinos tu nombre.",
+  ya_en_la_mesa: "Tu cuenta ya está en esta mesa desde otro celu.", otra_cuenta: "En esta mesa ya entraste con otra cuenta del club.",
+  mesa_cerrada: "Esa mesa se cobró hace rato: lo de ese día ya no suma. Desde la próxima, sí.",
+  club_apagado: "El club no está funcionando ahora.", sin_cuenta: "Primero entrá con tu mail.",
+};
+let clubPaso = "mail", clubMail = "", clubDemo = "", clubError = "", clubNombre = "", clubNovedades = false;
+let clubRecien = false, clubBorrar = false, clubAlta = null, clubOcupado = false;
+const cuando = t => {
+  if (!t) return "";
+  const dias = Math.round((new Date().setHours(0, 0, 0, 0) - new Date(t).setHours(0, 0, 0, 0)) / 864e5);
+  return dias <= 0 ? "hoy" : dias === 1 ? "ayer" : "el " + new Date(t).toLocaleDateString("es-AR", { day: "numeric", month: "short" });
+};
+const veces = n => `${n} ${n === 1 ? "vez" : "veces"}`;
+
+// Los sellos: uno por cosa pedida; al completar la tarjeta, el premio (la foto del plato)
+function sellosHtml(sellos, meta, nuevos = 0) {
+  const p = premioClub();
+  const foto = p ? fotoRedonda(p, null, "sellos__premio") : "";
+  if (meta > 15) return `<span class="sellos sellos--barra"><span class="club-barra" style="--p:${Math.round(sellos / meta * 100)}%"><i></i></span>${foto}</span>`;
+  return `<span class="sellos" role="img" aria-label="${sellos} de ${meta} sellos">${Array.from({ length: meta }, (_, i) => {
+    const nuevo = i >= sellos - nuevos && i < sellos;
+    return `<i class="${i < sellos ? "lleno" : ""}${nuevo ? " nuevo" : ""}"${nuevo ? ` style="animation-delay:${0.25 + (i - (sellos - nuevos)) * 0.12}s"` : ""}></i>`;
+  }).join("")}${foto}</span>`;
+}
+function faltaTexto(k) {
+  const p = premioClub(), falta = k.meta - k.sellos;
+  if (!p) return "";
+  return k.sellos ? `Te ${falta === 1 ? "falta <b>1</b>" : `faltan <b>${falta}</b>`} para ${esc(p.nombre)} de regalo.`
+    : `Cada <b>${k.meta}</b> cosas que pidas, ${esc(p.nombre)} de regalo.`;
+}
+// Los premios que tiene para pedir
+function premiosHtml(k) {
+  return k.premios.map(pr => {
+    const p = porId(pr.plato);
+    return `<div class="club-premio">
+      ${p ? fotoRedonda(p, null, "club-premio__foto") : ""}
+      <span><b>${esc(pr.nombre)} de regalo</b><small>Lo ganaste ${cuando(pr.ganado)}${pr.enPedido ? " · ya está en el pedido" : ""}</small></span>
+      ${pr.enPedido ? `<span class="club-premio__listo">${icono("i-listo", 18)}</span>` : `<button type="button" class="club-premio__pedir" data-canjear="${pr.id}">Pedirlo</button>`}
+    </div>`;
+  }).join("");
+}
+function tarjetaClub(k) {
+  return `<div class="club-tarjeta">
+    <div class="club-tarjeta__cabeza">${avatar({ ...k, cliente: true }, "club-tarjeta__avatar")}<span><b>${esc(k.nombre)}</b><small>${icono("i-estrella", 12)} Club ${esc(L.nombre)} · ${k.visitas ? `${veces(k.visitas)} por acá` : "recién llegás"}</small></span></div>
+    ${sellosHtml(k.sellos, k.meta)}
+    <p class="club-tarjeta__falta">${faltaTexto(k)}</p>
+    ${premiosHtml(k)}
+  </div>`;
+}
+
+// En la bienvenida: la invitación, o la tarjeta de quien vuelve (con "lo de siempre")
+function bvClub() {
+  const el = $("#bv-club");
+  const cfg = cfgClub(), p = premioClub();
+  if (!cfg.activo || !p) { el.hidden = true; return; }
+  const k = miCliente();
+  let html;
+  if (k) {
+    const fav = k.favoritos.map(f => porId(f.plato)).find(x => x && !D.agotado(x.id));
+    html = `<div class="bv-club__fila">${sellosHtml(k.sellos, k.meta)}<p>${faltaTexto(k)}</p></div>
+      ${premiosHtml(k)}
+      <div class="bv-club__pie">
+        ${fav ? `<button type="button" class="club-siempre" data-fav="${fav.id}">${fotoRedonda(fav, null, "club-siempre__foto")}<span><small>¿Lo de siempre?</small><b>${esc(fav.nombre)}</b></span>${icono("i-mas", 16)}</button>` : ""}
+        <button type="button" class="club-link" data-club-salir>No soy ${esc(k.nombre)}</button>
+      </div>`;
+  } else {
+    html = `<button type="button" class="club-invita" data-club-abrir>
+      <span class="club-invita__icono">${icono("i-regalo", 20)}</span>
+      <span><b>Club ${esc(L.nombre)}</b><small>Cada ${cfg.meta} cosas, ${esc(p.nombre)} de regalo. Con tu mail, sin contraseña.</small></span>
+      <span class="club-invita__ir">Sumarme</span>
+    </button>`;
+  }
+  if (el._html !== html) { el.innerHTML = html; el._html = html; llenarFotos(el); }
+  el.hidden = false;
+}
+
+// La hoja del club: el mail → el código → tu cuenta
+function abrirClub() {
+  if (!cfgClub().activo) return;
+  clubError = "";
+  clubBorrar = false;
+  clubRecien = false;
+  clubPaso = miCliente() ? "yo" : "mail";
+  if (clubPaso === "mail" && !clubNombre) clubNombre = (miComensal() || {}).nombre || bvNombre.value.trim();
+  pintarClub();
+  abrirHoja(hojaClub);
+  setTimeout(() => hojaClub.querySelector(clubPaso === "mail" ? (hojaClub.querySelector("#club-nombre") ? "#club-nombre" : "#club-mail") : "[data-cerrar]")?.focus({ preventScroll: true }), 80);
+}
+function pintarClub() {
+  const cfg = cfgClub(), p = premioClub(), k = miCliente();
+  if (clubPaso === "yo" && !k) clubPaso = "mail";
+  const cuerpo = $("#club-cuerpo"), pie = $("#club-pie");
+  $("#club-sobre").textContent = `Club ${L.nombre}`;
+  const error = clubError ? `<p class="club-error" role="alert">${esc(clubError)}</p>` : "";
+  if (clubPaso === "mail") {
+    $("#club-titulo").textContent = "Sumate al club";
+    const pideNombre = !miComensal() && !bvNombre.value.trim();
+    cuerpo.innerHTML = `
+      <ul class="club-beneficios">
+        <li>${fotoRedonda(p, null, "club-beneficios__foto")}<span>Cada <b>${cfg.meta} cosas</b> que pidas, <b>${esc(p.nombre)}</b> de regalo. Lo pedís desde acá y sale gratis.</span></li>
+        <li><span class="club-beneficios__icono">${icono("i-estrella", 18)}</span><span>Cuando vuelvas, la carta te reconoce: tu color, lo que siempre pedís y tus premios.</span></li>
+        <li><span class="club-beneficios__icono">${icono("i-mail", 18)}</span><span>Sin contraseña: te mandamos un código a tu mail. Si ya sos del club, entrá con el mismo.</span></li>
+      </ul>
+      ${pideNombre ? `<div class="campo"><label for="club-nombre">Tu nombre</label><input id="club-nombre" type="text" autocomplete="given-name" autocapitalize="words" maxlength="20" value="${esc(clubNombre)}" placeholder="Como te dicen"></div>` : ""}
+      <div class="campo"><label for="club-mail">Tu mail</label><input id="club-mail" type="email" inputmode="email" autocomplete="email" autocapitalize="off" spellcheck="false" maxlength="120" value="${esc(clubMail)}" placeholder="nombre@mail.com" enterkeyhint="send"></div>
+      <label class="club-check"><input type="checkbox" id="club-novedades"${clubNovedades ? " checked" : ""}><span>Quiero que ${esc(L.nombre)} me mande novedades y promos</span></label>
+      ${error}
+      <p class="club-letra">${esc(L.nombre)} guarda tu nombre, tu mail y lo que pedís solo para el club. Lo borrás cuando quieras desde acá.</p>`;
+    pie.innerHTML = `<button class="boton-principal" type="button" data-club-codigo>${icono("i-mail", 18)} Mandame el código</button>`;
+  } else if (clubPaso === "codigo") {
+    $("#club-titulo").textContent = "Revisá tu mail";
+    cuerpo.innerHTML = `
+      <p class="club-texto">Te mandamos un código de 6 números a <b>${esc(clubMail)}</b>. Si no está, fijate en correo no deseado.</p>
+      <div class="campo"><label for="club-codigo">El código</label><input id="club-codigo" class="club-codigo" type="text" inputmode="numeric" pattern="[0-9]*" autocomplete="one-time-code" maxlength="6" placeholder="000000" enterkeyhint="done"></div>
+      ${clubDemo ? `<p class="club-demo"><span class="club-demo__tag">Demo</span><span>No se manda ningún mail: el código es <b>${clubDemo}</b>.</span><button type="button" data-club-demo>Usarlo</button></p>` : ""}
+      ${error}
+      <p class="club-otros"><button type="button" data-club-reenviar>Mandarlo de nuevo</button><button type="button" data-club-cambiar>Cambiar el mail</button></p>`;
+    pie.innerHTML = `<button class="boton-principal" type="button" data-club-verificar>Entrar al club</button>`;
+  } else {
+    $("#club-titulo").textContent = clubRecien ? `¡Listo, ${k.nombre}!` : `Hola, ${k.nombre}`;
+    const favs = k.favoritos.map(f => ({ ...f, p: porId(f.plato) })).filter(f => f.p);
+    const c = miComensal();
+    cuerpo.innerHTML = `
+      ${clubRecien ? `<p class="club-texto">${c && c.acreditado ? `Lo que pediste hoy ya sumó: <b>${c.acreditado.cosas}</b>.` : "Ya sos del club. Lo que pidas suma cuando paguen la mesa."}</p>` : ""}
+      ${tarjetaClub(k)}
+      ${favs.length ? `<div class="club-favs"><p class="grupo__titulo">Lo que más pedís</p><ul>${favs.map(f => `
+        <li>${fotoRedonda(f.p, null, "club-favs__foto")}<span><b>${esc(f.p.nombre)}</b><small>Lo pediste ${veces(f.cant)}</small></span>${miMesa() && !D.agotado(f.p.id) ? `<button type="button" data-fav="${f.p.id}">Sumar</button>` : ""}</li>`).join("")}</ul></div>` : ""}
+      <label class="club-check"><input type="checkbox" id="club-novedades-yo"${k.novedades ? " checked" : ""}><span>Quiero que ${esc(L.nombre)} me mande novedades y promos</span></label>
+      ${error}
+      <p class="club-letra">Entrás con ${esc(k.email)}. En este celu quedás adentro; en otro, te mandamos un código.</p>
+      <p class="club-otros"><button type="button" data-club-salir>Salir en este celu</button><button type="button" class="${clubBorrar ? "confirmando" : ""}" data-club-borrar>${clubBorrar ? "Tocá de nuevo: se borra todo" : "Borrar mi cuenta del club"}</button></p>`;
+    pie.innerHTML = `<button class="boton-principal" type="button" data-cerrar>Listo</button>`;
+  }
+  llenarFotos(cuerpo);
+}
+async function clubPedirCodigo() {
+  const nombre = $("#club-nombre");
+  if (nombre) clubNombre = nombre.value.trim();
+  clubMail = ($("#club-mail") || {}).value?.trim() || clubMail;
+  clubNovedades = !!($("#club-novedades") || {}).checked;
+  clubError = "";
+  if (nombre && !clubNombre) { clubError = MOTIVOS_CLUB.nombre; return pintarClub(); }
+  const r = await D.pedirCodigo(clubMail);
+  if (!r || !r.ok) { clubError = MOTIVOS_CLUB[r && r.motivo] || "No se pudo mandar el código. Probá de nuevo."; return pintarClub(); }
+  clubMail = r.email || clubMail;
+  clubDemo = r.demo || "";
+  clubPaso = "codigo";
+  pintarClub();
+  setTimeout(() => $("#club-codigo")?.focus({ preventScroll: true }), 60);
+}
+async function clubVerificar(codigo) {
+  if (clubOcupado) return;
+  clubOcupado = true;
+  try {
+    const r = await D.verificarCodigo(clubMail, codigo ?? $("#club-codigo")?.value);
+    if (!r || !r.ok) {
+      clubError = MOTIVOS_CLUB[r && r.motivo] || "No pudimos entrar. Probá de nuevo.";
+      pintarClub();
+      return $("#club-codigo")?.focus({ preventScroll: true });
+    }
+    clubError = "";
+    clubDemo = "";
+    const alta = { nombre: clubNombre, color: miColor, novedades: clubNovedades };
+    // Desde la bienvenida: entra a la mesa con su cuenta (si ya era del club, con su nombre y su color)
+    if (bvAbierta && !miMesa()) {
+      const k = r.cliente;
+      if (k) {
+        bvNombre.value = k.nombre;
+        if ((D.coloresLibres ? D.coloresLibres(mesa) : []).includes(k.color)) miColor = k.color;
+      } else if (clubNombre && !bvNombre.value.trim()) bvNombre.value = clubNombre;
+      clubAlta = k ? null : { ...alta, nombre: bvNombre.value.trim(), color: miColor };
+      cerrarHoja(true);
+      bvColores();
+      bvYo();
+      return entrar();
+    }
+    const c = miComensal();
+    if (!c) { cerrarHoja(); return avisar("Listo: cuando entres a una mesa, lo que pidas suma."); }
+    const v = await D.vincular(c.id, alta);
+    if (!v || !v.ok) { clubError = MOTIVOS_CLUB[v && v.motivo] || "No pudimos sumarte. Probá de nuevo."; clubPaso = "mail"; return pintarClub(); }
+    clubRecien = true;
+    clubPaso = "yo";
+    pintarClub();
+    refrescar();
+    avisar(v.nuevo ? `¡Ya sos del club, ${v.cliente.nombre}!` : `¡Hola de nuevo, ${v.cliente.nombre}!`, miComensal());
+  } finally {
+    clubOcupado = false;
+  }
+}
+hojaClub.addEventListener("click", async e => {
+  const b = s => e.target.closest(s);
+  if (b("[data-club-codigo]") || b("[data-club-reenviar]")) return clubPedirCodigo();
+  if (b("[data-club-verificar]")) return clubVerificar();
+  if (b("[data-club-demo]")) { const i = $("#club-codigo"); if (i) i.value = clubDemo; return clubVerificar(clubDemo); }
+  if (b("[data-club-cambiar]")) { clubPaso = "mail"; clubError = ""; pintarClub(); return $("#club-mail")?.focus(); }
+  if (b("[data-club-borrar]")) {
+    if (!clubBorrar) { clubBorrar = true; pintarClub(); setTimeout(() => { if (clubBorrar) { clubBorrar = false; if (hojaAbierta === hojaClub) pintarClub(); } }, 4000); return; }
+    clubBorrar = false;
+    await D.borrarme();
+    cerrarHoja();
+    refrescar();
+    return avisar("Listo: borramos tu cuenta del club.");
+  }
+});
+hojaClub.addEventListener("change", e => {
+  if (e.target.id === "club-novedades-yo") D.novedades(e.target.checked);
+});
+hojaClub.addEventListener("input", e => {
+  if (e.target.id === "club-codigo") {
+    const limpio = e.target.value.replace(/\D/g, "").slice(0, 6);
+    if (limpio !== e.target.value) e.target.value = limpio;
+    if (limpio.length === 6) clubVerificar(limpio);
+  }
+});
+hojaClub.addEventListener("keydown", e => {
+  if (e.key !== "Enter") return;
+  if (e.target.matches("#club-mail, #club-nombre")) { e.preventDefault(); clubPedirCodigo(); }
+  if (e.target.matches("#club-codigo")) { e.preventDefault(); clubVerificar(); }
+});
+
+// Pedir un premio: va al pedido de la mesa, gratis
+async function canjearPremio(id) {
+  if (!miMesa()) return;
+  const l = await D.canjear(yo, id);
+  if (!l) return;
+  pintarPastilla();
+  latir();
+  refrescar();
+  avisar("¡Tu premio va en el pedido! Sale gratis con la próxima ronda.", miComensal());
+}
+// "Lo de siempre": va al plato y lo suma
+function sumarDeSiempre(id) {
+  const p = porId(id);
+  if (!p) return;
+  const i = platos.indexOf(p);
+  if (i !== actual) irA(i, false);
+  setTimeout(() => { alDeslizar(); agregar(p, null); }, 380);
+}
+// Los botones del club que aparecen en la bienvenida, el pedido, el seguimiento y el "gracias"
+document.addEventListener("click", async e => {
+  if (!$("#panel").hidden) return;
+  const b = e.target.closest("[data-club-abrir], [data-canjear], [data-fav], [data-club-unir], [data-club-salir]");
+  if (!b) return;
+  if (b.matches("[data-club-abrir]")) return abrirClub();
+  if (b.matches("[data-club-salir]")) {
+    D.salirClub();
+    if (hojaAbierta === hojaClub) cerrarHoja();
+    if (bvAbierta) { bvNombre.value = ""; miColor = null; pintarBienvenida(); }
+    return avisar("Listo: en este celu ya no entrás con tu cuenta del club.");
+  }
+  if (b.matches("[data-club-unir]")) {
+    const v = await D.vincular(yo);
+    if (v && !v.ok) return avisar(MOTIVOS_CLUB[v.motivo] || "No se pudo. Probá de nuevo.");
+    refrescar();
+    return avisar("Listo: lo que pidas hoy suma para tus premios.", miComensal());
+  }
+  const id = b.dataset.canjear || b.dataset.fav;
+  const hacer = b.matches("[data-canjear]") ? () => canjearPremio(id) : () => sumarDeSiempre(id);
+  if (bvAbierta && !miMesa()) { alEntrar = hacer; return entrar(); }       // primero entra a la mesa
+  if (hojaAbierta) cerrarHoja();
+  if (!seg.hidden) return cerrarSeguimiento(hacer);
+  hacer();
+});
 
 /* ---------- ¿Qué tiene? ---------- */
 function explotar(si) {
@@ -4910,6 +5707,13 @@ $("#armar-agregar").addEventListener("click", () => {
 const sub = lineas => lineas.reduce((s, l) => s + l.precio * l.cant, 0);
 function lineaHtml(l, mia) {
   const p = porId(l.plato);
+  if (l.premio) {                                     // el premio del club: uno, gratis
+    return `<li class="linea linea--premio">
+      ${fotoRedonda(p, null)}
+      <div class="linea__info"><b>${esc(p.nombre)}</b><small class="linea__regalo">${icono("i-regalo", 13)} Premio del club</small><span class="linea__precio">Gratis</span></div>
+      ${mia ? `<button type="button" class="linea__sacar" data-menos="${l.id}" aria-label="Sacar el premio del pedido (lo pedís otro día)">Sacar</button>` : `<span class="linea__cant">×1</span>`}
+    </li>`;
+  }
   return `<li class="linea">
     ${fotoRedonda(p, l.eleccion)}
     <div class="linea__info"><b>${esc(p.nombre)}</b>${l.detalle ? `<small>${esc(l.detalle)}</small>` : ""}<span class="linea__precio">${plata(l.precio * l.cant)}</span></div>
@@ -4920,9 +5724,30 @@ function lineaHtml(l, mia) {
       </div>` : `<span class="linea__cant" aria-label="${l.cant} ${l.cant === 1 ? "unidad" : "unidades"}">×${l.cant}</span>`}
   </li>`;
 }
+// Arriba del pedido: el premio para sumar, cómo vas en el club o la invitación
+function pintarPedidoClub() {
+  const el = $("#pedido-club");
+  const cfg = cfgClub(), p = premioClub(), c = miComensal();
+  if (!cfg.activo || !p || !c) { el.hidden = true; return; }
+  const k = miCliente();
+  let html;
+  if (k && c.cliente) {
+    const pr = k.premios.find(x => !x.enPedido);
+    html = pr
+      ? `${fotoRedonda(porId(pr.plato), null, "club-fila__foto")}<span><b>Tenés ${esc(pr.nombre)} de regalo</b><small>Sumalo y sale gratis con esta ronda</small></span><button type="button" data-canjear="${pr.id}">Sumarlo</button>`
+      : `<span class="club-fila__icono">${icono("i-estrella", 16)}</span><span><b>Club: ${k.sellos} de ${k.meta}</b><small>Lo que pidas hoy suma cuando paguen</small></span><button type="button" data-club-abrir>Ver</button>`;
+  } else if (k) {
+    html = `<span class="club-fila__icono">${icono("i-estrella", 16)}</span><span><b>Sos del club, ${esc(k.nombre)}</b><small>Sumá lo de esta mesa a tu cuenta</small></span><button type="button" data-club-unir>Sumar</button>`;
+  } else {
+    html = `<span class="club-fila__icono">${icono("i-regalo", 16)}</span><span><b>Sumá premios con lo que pidas</b><small>Cada ${cfg.meta} cosas, ${esc(p.nombre)} de regalo</small></span><button type="button" data-club-abrir>Sumarme</button>`;
+  }
+  if (el._html !== html) { el.innerHTML = html; el._html = html; llenarFotos(el); }
+  el.hidden = false;
+}
 function pintarPedido() {
   const m = miMesa();
   if (!m) return cerrarHoja(true);
+  pintarPedidoClub();
   const n = m.comensales.length;
   $("#pedido-mesa").textContent = `Mesa ${mesa} · ${n} ${n === 1 ? "persona" : "personas"}`;
   const ul = $("#pedido-lineas");
@@ -5027,7 +5852,7 @@ function pintarSeguimiento() {
   ul.innerHTML = u.items.map(it => {
     const p = porId(it.plato);
     const c = m.comensales.find(x => x.id === it.comensal);
-    return `<li>${fotoRedonda(p, it.eleccion)}<span><b>${it.cant}× ${esc(it.nombre)}</b>${it.detalle ? `<small>${esc(it.detalle)}</small>` : ""}${c ? `<em class="de">${avatar(c, "avatar--chico")}${c.id === yo ? "Vos" : esc(c.nombre)}</em>` : ""}</span><span class="precio">${plata(it.precio * it.cant)}</span></li>`;
+    return `<li>${fotoRedonda(p, it.eleccion)}<span><b>${it.cant}× ${esc(it.nombre)}</b>${it.detalle ? `<small>${esc(it.detalle)}</small>` : ""}${it.premio ? `<small>Premio del club</small>` : ""}${c ? `<em class="de">${avatar(c, "avatar--chico")}${c.id === yo ? "Vos" : esc(c.nombre)}</em>` : ""}</span><span class="precio">${it.premio ? "Regalo" : plata(it.precio * it.cant)}</span></li>`;
   }).join("");
   llenarFotos(ul);
   const otras = rondas.filter(p => p !== u);
@@ -5041,6 +5866,27 @@ function pintarSeguimiento() {
   $("#seg-mesa").textContent = validas.length > 1
     ? `La mesa lleva ${plata(total)} en ${validas.length} rondas. Pagan al final.`
     : `Total: ${plata(total)}. Pagan al final, cuando pidan la cuenta.`;
+  pintarSegClub(m);
+}
+// Lo que te va a sumar en el club lo que pediste (o la invitación a sumarte)
+const misCosas = m => m.pedidos.filter(p => !p.rechazado).flatMap(p => p.items)
+  .filter(i => i.comensal === yo && !i.premio).reduce((t, i) => t + i.cant, 0);
+function pintarSegClub(m) {
+  const el = $("#seg-club");
+  const cfg = cfgClub(), p = premioClub(), c = miComensal(), k = miCliente();
+  const mias = misCosas(m);
+  if (!cfg.activo || !p || !c || !mias) { el.hidden = true; return; }
+  let html;
+  if (k && c.cliente) {
+    const total = k.sellos + mias;
+    html = `<span class="seg-club__icono">${icono("i-estrella", 16)}</span><p>${total >= k.meta
+      ? `Cuando paguen, <b>ganás ${esc(p.nombre)} de regalo</b>.`
+      : `Cuando paguen, sumás <b>${mias}</b> al club: vas a quedar en ${total} de ${k.meta}.`}</p>`;
+  } else {
+    html = `<span class="seg-club__icono">${icono("i-regalo", 16)}</span><p>Lo que pediste hoy te puede sumar <b>${mias}</b> para ${esc(p.nombre)} de regalo.</p><button type="button" data-club-abrir>Sumarme</button>`;
+  }
+  if (el._html !== html) { el.innerHTML = html; el._html = html; }
+  el.hidden = false;
 }
 function abrirSeguimiento(id) {
   const m = mesaParaSeguir();
@@ -5204,10 +6050,36 @@ function mostrarGracias() {
   $("#gracias-local").textContent = `${L.nombre} · Mesa ${mesa}`;
   $("#gracias-titulo").textContent = c ? `¡Gracias, ${c.nombre}!` : "¡Gracias por venir!";
   $("#gracias-texto").textContent = `Esperamos verlos pronto en ${L.nombre}. La mesa ${mesa} ya quedó libre para los que siguen.`;
+  pintarGraciasClub();
   gracias.hidden = false;
   document.body.classList.add("bloqueada");
   requestAnimationFrame(() => requestAnimationFrame(() => gracias.classList.add("abierta")));
   E.pausar(true);
+}
+// Lo que sumó en el club (y si ganó el premio), o la invitación a que lo de hoy le sume
+function pintarGraciasClub() {
+  const el = $("#gracias-club");
+  const cfg = cfgClub(), p = premioClub(), c = miComensal();
+  const m = c && D.mesa(c.sesion);
+  if (!cfg.activo || !p || !m) { el.hidden = true; return; }
+  let html;
+  const a = c.acreditado;
+  if (c.cliente && a) {
+    html = a.ganados
+      ? `${fotoRedonda(porId(p.id), null, "gracias-club__foto")}
+         <p class="gracias-club__titulo">¡Ganaste ${esc(a.premio || p.nombre)} de regalo!</p>
+         <p>Lo pedís desde tu celu la próxima vez que vengas. Sumaste ${a.cosas} y ya vas ${a.sellos} de ${a.meta} para el próximo.</p>`
+      : `<p class="gracias-club__titulo">Sumaste ${a.cosas} al club</p>
+         ${sellosHtml(a.sellos, a.meta, Math.min(a.cosas, a.sellos))}
+         <p>${a.meta - a.sellos === 1 ? "Te falta 1" : `Te faltan ${a.meta - a.sellos}`} para ${esc(p.nombre)} de regalo. ¡Te esperamos!</p>`;
+  } else if (!c.cliente) {
+    const mias = misCosas(m);
+    html = `<p class="gracias-club__titulo">${mias ? "¿Querés que lo de hoy te sume?" : "¿Venís seguido?"}</p>
+      <p>${mias ? `Sumate al club con tu mail y lo de hoy suma <b>${mias}</b>` : "Sumate al club con tu mail"}: cada ${cfg.meta} cosas, ${esc(p.nombre)} de regalo.</p>
+      <button type="button" class="gracias-club__boton" data-club-abrir>${icono("i-mail", 16)} Sumarme con mi mail</button>`;
+  } else { el.hidden = true; return; }
+  if (el._html !== html) { el.innerHTML = html; el._html = html; llenarFotos(el); }
+  el.hidden = false;
 }
 $("#gracias-otra").addEventListener("click", () => {
   olvidarYo();
@@ -5376,7 +6248,9 @@ function refrescar() {
   if (!seg.hidden) pintarSeguimiento();
   if (hojaAbierta === hojaPedido) pintarPedido();
   if (hojaAbierta === hojaMozo) { pintarMozoEstado(); if (!$("#cuenta").hidden) pintarCuenta(); }
-  if (bvAbierta) { bvGente(); bvColores(); bvYo(); }
+  if (hojaAbierta === hojaClub && clubPaso === "yo") pintarClub();         // en los otros pasos se está escribiendo
+  if (bvAbierta) { bvGente(); bvColores(); bvYo(); bvClub(); }
+  if (!gracias.hidden && gracias.classList.contains("abierta")) pintarGraciasClub();
 }
 
 /* ---------- Pista para la primera vez ---------- */
@@ -5449,7 +6323,7 @@ function iniciar() {
   alDeslizar();
   secciones[0].classList.add("entrada");
   // Si todavía no entró a la mesa, lo primero es la bienvenida (con el plato en el medio).
-  const enPanel = !$("#panel").hidden || /^#(panel|mesas|qr|equipo|cocina|barra)$/.test(location.hash);
+  const enPanel = !$("#panel").hidden || /^#(panel|mesas|qr|clientes|equipo|cocina|barra)$/.test(location.hash);
   if (mesa && !miMesa() && !enPanel) pedirNombre();
   else ponerPista();
 
@@ -5509,6 +6383,9 @@ iniciar();
                     sumado arriba. La pantalla no se apaga.
      · CARTA  — lo que se terminó (deja de poder pedirse en todas las mesas al instante).
      · QR     — los códigos para imprimir y pegar en cada mesa.
+     · CLIENTES — los del club: quiénes vuelven, sus mails, lo que piden, sus premios, y
+                  qué premio da el club. En el plano, los del club tienen un aro dorado y
+                  el mozo ve cuántas veces vinieron y qué suelen pedir.
      · EQUIPO — sumar personas, su PIN y qué puede ver y hacer cada una.
    Todo queda firmado ("Diego la empezó", "Carla fue a la mesa") y lo que se toca sin
    querer se puede deshacer durante unos segundos.
@@ -5554,19 +6431,19 @@ const puedeMover = (est, a, p = persona(yo)) => (a === "entregado" ? puede("llev
 const puedeRechazar = (ped, p = persona(yo)) => puede("mesas", p) || Object.keys(ped.partes).some(e => puede(e, p));
 const puedeEditarA = (e, p = persona(yo)) => puede("equipo", p) && (e.rol !== "dueno" || p.rol === "dueno");
 
-const VISTAS = { mesas: "Mesas", ...Object.fromEntries(ESTACIONES.map(e => [e.id, e.nombre])), carta: "Carta", qr: "QR", equipo: "Equipo" };
+const VISTAS = { mesas: "Mesas", ...Object.fromEntries(ESTACIONES.map(e => [e.id, e.nombre])), carta: "Carta", qr: "QR", clientes: "Clientes", equipo: "Equipo" };
 function vistasDe(p) {
   if (!p) return [];
   const v = [];
   if (deSalon(p)) v.push("mesas");
   EST.forEach(e => { if (puede(e, p)) v.push(e); });
-  ["carta", "qr", "equipo"].forEach(x => { if (puede(x, p)) v.push(x); });
+  ["carta", "qr", "clientes", "equipo"].forEach(x => { if (puede(x, p)) v.push(x); });
   return v;
 }
 // Quien lleva o atiende pero no ve el plano, tiene su lista de tareas
 const nombreVista = (v, p) => (v === "mesas" && !puede("mesas", p) ? "Para hacer" : VISTAS[v]);
 const avatarEquipo = (p, clase = "") => `<span class="avatar avatar--equipo ${clase}" style="--av:${p.color}" aria-hidden="true">${esc((p.nombre || "?")[0].toUpperCase())}</span>`;
-const avatarComensal = (c, clase = "") => `<span class="avatar ${clase}" style="--av:${c.color}" aria-hidden="true">${esc((c.nombre || "?")[0].toUpperCase())}</span>`;
+const avatarComensal = (c, clase = "") => `<span class="avatar ${clase}${c.cliente ? " avatar--club" : ""}" style="--av:${c.color}" aria-hidden="true">${esc((c.nombre || "?")[0].toUpperCase())}</span>`;
 
 /* ---------- Estados ---------- */
 const ESTADO_MESA = { libre: "Libre", eligiendo: "Eligiendo", nuevo: "Pidió", preparando: "Preparando", listo: "Para llevar", entregado: "Comiendo" };
@@ -5593,6 +6470,7 @@ let editor = null;                            // la persona que se está editand
 let liberando = null, rechazando = null, dobleT;
 let historiaAbierta = false, verTodo = false;
 let eligiendo = null, pin = "", pinMal = false;
+let clienteAbierto = null, buscarCliente = "", borrandoCliente = false;     // Clientes
 
 const datosMesa = n => mesasDelLocal().find(m => m.n === n) || { n, zona: "", lugares: 4 };
 const platoDe = id => L.platos.find(p => p.id === id);
@@ -5789,7 +6667,7 @@ function pintarMesas(d) {
 function itemsHtml(items, d, conQuien = true) {
   return items.map(it => {
     const c = conQuien && comensalDe(d, it.comensal);
-    const bajo = [it.detalle, c ? `para ${c.nombre}` : ""].filter(Boolean).join(" · ");
+    const bajo = [it.detalle, it.premio ? "regalo del club" : "", c ? `para ${c.nombre}` : ""].filter(Boolean).join(" · ");
     return `<li><b>${it.cant}</b>${fotoHtml(it.plato, it.eleccion, "item-foto")}<span>${esc(it.nombre)}${bajo ? `<small>${esc(bajo)}</small>` : ""}</span></li>`;
   }).join("");
 }
@@ -5847,8 +6725,19 @@ function cerrarAside() {
   veloDetalle.hidden = true;
   detalle._html = null;
 }
+// Los del club que están en la mesa: para saludarlos por su nombre
+function clubMesaHtml(m) {
+  const socios = m.comensales.map(c => ({ c, k: D.clubDe ? D.clubDe(c.id) : null })).filter(x => x.k);
+  if (!socios.length) return "";
+  return `<section class="detalle__club" aria-label="Del club">${socios.map(({ c, k }) => {
+    const libres = k.premios.filter(p => !p.enPedido);
+    return `<p>${avatarComensal(c, "avatar--chico")}<span><b>${esc(c.nombre)}</b> es del club · ${k.visita === 1 ? "primera visita" : `${k.visita}ª visita`}${k.favorito ? ` · suele pedir ${esc(k.favorito)}` : ""}${
+      libres.length ? `<small class="detalle__club-premio">${icono("i-regalo", 13)} Tiene ${esc(lista(libres.map(p => p.nombre)))} de regalo para pedir</small>` : ""}</span></p>`;
+  }).join("")}</section>`;
+}
 function pintarDetalle(d) {
   if (editor) return;                          // el editor de Equipo no se repinta solo
+  if (clienteAbierto) return pintarCliente(d);
   if (mesaAbierta == null || vista !== "mesas" || panel.hidden || !yo || !puede("mesas")) return cerrarAside();
   const m = mesaInfo(datosMesa(mesaAbierta), d);
   const nombres = m.comensales.map(c => c.nombre);
@@ -5867,6 +6756,7 @@ function pintarDetalle(d) {
         <span class="avatares">${m.comensales.slice(0, 6).map(c => avatarComensal(c)).join("")}</span>
         <span><b>${esc(lista(nombres))}</b><small>${nombres.length} ${nombres.length === 1 ? "persona" : "personas"} con la carta · abrieron la mesa ${haceCuanto(Date.now() - m.desde)}</small></span>
       </div>` : ""}
+      ${clubMesaHtml(m)}
       ${m.llama ? tareaHtml({ tipo: "mozo", m, l: m.llama, t: m.llama.creado }, d) : ""}
       ${m.cuenta ? cuentaHtml(m.cuenta, m, d) : ""}
       ${m.listos.map(x => tareaHtml({ ...x, t: x.cambio, m, tipo: "listo" }, d)).join("")}
@@ -5900,6 +6790,14 @@ function abrirMesa(n) {
 }
 function cerrarDetalle() {
   if (editor) return cerrarEditor();
+  if (clienteAbierto) {
+    const volver = clienteAbierto;
+    clienteAbierto = null;
+    borrandoCliente = false;
+    cerrarAside();
+    pintar();
+    return panel.querySelector(`[data-cliente="${volver}"]`)?.focus({ preventScroll: true });
+  }
   const volver = mesaAbierta;
   mesaAbierta = null;
   liberando = null;
@@ -6034,6 +6932,114 @@ function pintarQR() {
         ${L.demo ? `<a class="tarjeta-qr__probar" href="${esc(enlaceProbar(m))}" target="_blank" rel="noopener" title="Se abre como si fuera otro celular">Abrir la mesa ${m.n} ${icono("i-flecha", 13)}</a>` : ""}
       </article>`;
     }).join("")}</div>`;
+}
+
+/* ---------- Clientes: los del club y su premio ---------- */
+const fecha = t => new Date(t).toLocaleDateString("es-AR", { day: "numeric", month: "short", year: new Date(t).getFullYear() === new Date().getFullYear() ? undefined : "numeric" });
+const cuando = t => {
+  if (!t) return "";
+  const dias = Math.round((new Date().setHours(0, 0, 0, 0) - new Date(t).setHours(0, 0, 0, 0)) / 864e5);
+  return dias <= 0 ? "hoy" : dias === 1 ? "ayer" : dias < 7 ? `hace ${dias} días` : fecha(t);
+};
+function clubRegla() {
+  const cfg = D.club();
+  const opciones = L.categorias.map(c => `<optgroup label="${esc(c.nombre)}">${L.platos.filter(p => p.categoria === c.id)
+    .map(p => `<option value="${p.id}"${p.id === cfg.premio ? " selected" : ""}>${esc(p.nombre)}</option>`).join("")}</optgroup>`).join("");
+  return `<section class="club-regla${cfg.activo ? "" : " club-regla--apagado"}" aria-labelledby="club-regla-titulo">
+    ${fotoHtml(cfg.premio, null, "club-regla__foto")}
+    <div class="club-regla__texto">
+      <p class="ed-rotulo" id="club-regla-titulo">El premio del club</p>
+      <div class="club-regla__frase">
+        <span>Cada</span>
+        <span class="club-regla__meta"><button type="button" data-club-meta="-1" aria-label="Una cosa menos">−</button><b aria-live="polite">${cfg.meta}</b><button type="button" data-club-meta="1" aria-label="Una cosa más">+</button></span>
+        <span>cosas,</span>
+        <select id="club-premio" aria-label="El premio">${opciones}</select>
+        <span>de regalo.</span>
+      </div>
+      <p class="ed-ayuda">Cuentan las cosas que pide cada uno con su cuenta, cuando se cobra la mesa (lo que pide de regalo no cuenta). El premio lo pide desde su celu cuando quiera y sale gratis con su ronda.</p>
+    </div>
+    <button type="button" class="interruptor" role="switch" aria-checked="${cfg.activo}" aria-label="El club: ${cfg.activo ? "prendido" : "apagado"}" data-club-activo>${cfg.activo ? "Prendido" : "Apagado"}</button>
+  </section>`;
+}
+function clienteFicha(k) {
+  const aqui = mesaDelCliente(k.id);
+  return `<button type="button" class="cliente" data-cliente="${k.id}">
+    ${avatarComensal({ ...k, cliente: true }, "avatar--cliente")}
+    <span class="cliente__info"><b>${esc(k.nombre)}${aqui ? ` <span class="cliente__aca">Mesa ${aqui}</span>` : ""}</b><small>${esc(k.email)}</small></span>
+    <span class="cliente__visitas"><span><b>${k.visitas}</b> ${k.visitas === 1 ? "visita" : "visitas"}</span><small>${k.ultima ? "última " + cuando(k.ultima) : "recién se sumó"}</small></span>
+    <span class="cliente__sellos" title="${k.sellos} de ${k.meta} para el próximo premio"><span class="cliente__barra" style="--p:${Math.round(k.sellos / k.meta * 100)}%"><i></i></span><small>${k.sellos}/${k.meta}</small></span>
+    <span class="cliente__premios">${k.premios.length ? `${icono("i-regalo", 14)}${k.premios.length}` : ""}</span>
+  </button>`;
+}
+// Si está sentado ahora en alguna mesa
+function mesaDelCliente(id) {
+  const d = D.todo();
+  const c = d.comensales.find(x => x.cliente === id && d.sesiones.some(s => s.id === x.sesion && !s.cerrada));
+  return c ? (d.sesiones.find(s => s.id === c.sesion) || {}).mesa : null;
+}
+function pintarClientes() {
+  const todos = D.clientes(yo) || [];
+  const q = buscarCliente.trim().toLowerCase();
+  const vis = q ? todos.filter(k => k.nombre.toLowerCase().includes(q) || k.email.includes(q)) : todos;
+  const volvieron = todos.filter(k => k.visitas > 1).length;
+  const ganados = todos.reduce((t, k) => t + k.historial.length, 0);
+  const usados = todos.reduce((t, k) => t + k.canjeados, 0);
+  const promos = todos.filter(k => k.novedades).length;
+  return `
+    ${clubRegla()}
+    <div class="resumen">
+      <p><b>${todos.length}</b> en el club</p>
+      <p><b>${volvieron}</b> volvieron más de una vez</p>
+      <p><b>${ganados}</b> ${ganados === 1 ? "premio ganado" : "premios ganados"} · ${usados} ya ${usados === 1 ? "pedido" : "pedidos"}</p>
+    </div>
+    <div class="clientes-barra">
+      <input type="search" id="buscar-cliente" placeholder="Buscar por nombre o mail" value="${esc(buscarCliente)}" autocomplete="off" aria-label="Buscar clientes">
+      ${promos ? `<button type="button" class="ed-boton" data-copiar-mails title="Los mails de los que aceptaron recibir novedades">Copiar mails · ${promos} ${promos === 1 ? "acepta" : "aceptan"} promos</button>` : ""}
+    </div>
+    <div class="clientes">${vis.length ? vis.map(clienteFicha).join("")
+      : `<p class="panel__ayuda">${q ? "Nadie con ese nombre o mail." : "Todavía no se sumó nadie. Cada comensal se suma desde su celu, con su mail."}</p>`}</div>`;
+}
+function pintarCliente() {
+  const k = (D.clientes(yo) || []).find(x => x.id === clienteAbierto);
+  if (!k || vista !== "clientes" || panel.hidden) { clienteAbierto = null; return cerrarAside(); }
+  const aqui = mesaDelCliente(k.id);
+  const favs = k.favoritos.map(f => ({ ...f, p: platoDe(f.plato) })).filter(f => f.p);
+  const html = `
+    <header class="detalle__cabeza">
+      <div><p class="detalle__zona">Club · desde ${fecha(k.alta)}</p><h3 class="detalle__titulo" id="detalle-titulo">${esc(k.nombre)}</h3></div>
+      <button type="button" class="detalle__cerrar" data-cerrar-detalle aria-label="Cerrar">${icono("i-cerrar", 18)}</button>
+    </header>
+    <div class="detalle__cuerpo" data-scroll="cuerpo">
+      <div class="detalle__gente">${avatarComensal({ ...k, cliente: true }, "avatar--cliente")}<span><b>${esc(k.email)}</b><small>${k.novedades ? "Acepta que le manden novedades y promos" : "No quiere recibir promos"}</small></span></div>
+      ${aqui ? `<p class="cliente__ahora">${icono("i-estrella", 14)} Está en la mesa ${aqui} ahora</p>` : ""}
+      <dl class="detalle__cuenta">
+        <dt>Visitas</dt><dd>${k.visitas}</dd>
+        <dt>La última</dt><dd>${k.ultima ? cuando(k.ultima) : "—"}</dd>
+        <dt>Cosas que pidió</dt><dd>${k.cosas}</dd>
+        <dt>Para el próximo premio</dt><dd>${k.sellos} de ${k.meta}</dd>
+      </dl>
+      ${favs.length ? `<section><p class="ed-rotulo">Lo que más pide</p><ul class="cliente__favs">${favs.map(f => `<li>${fotoHtml(f.plato, null, "item-foto")}<span>${esc(f.p.nombre)}</span><b>${f.cant}</b></li>`).join("")}</ul></section>` : ""}
+      <section><p class="ed-rotulo">Premios</p>${k.historial.length ? `<ul class="cliente__premios-lista">${k.historial.map(p => `
+        <li class="${p.canjeado ? "" : "libre"}">${icono("i-regalo", 16)}<span><b>${esc(p.nombre)}</b><small>Lo ganó ${cuando(p.ganado)} · ${p.canjeado ? `lo pidió ${cuando(p.canjeado.t)}` : "todavía no lo pidió"}</small></span></li>`).join("")}</ul>`
+        : `<p class="ed-ayuda">Todavía ninguno: le faltan ${k.meta - k.sellos} cosas para el primero.</p>`}</section>
+    </div>
+    <footer class="detalle__pie">
+      <button type="button" class="ed-baja${borrandoCliente ? " confirmando" : ""}" data-borrar-cliente>${borrandoCliente ? `Tocá de nuevo: se borran el mail y todo lo de ${esc(k.nombre)}` : "Borrar sus datos del club"}</button>
+    </footer>`;
+  poner(detalle, html);
+  detalle.hidden = false;
+  veloDetalle.hidden = false;
+}
+function abrirCliente(id) {
+  clienteAbierto = id;
+  borrandoCliente = false;
+  mesaAbierta = null;
+  pintar();
+  setTimeout(() => detalle.querySelector("[data-cerrar-detalle]")?.focus({ preventScroll: true }), 30);
+}
+async function guardarClub(cambio) {
+  const r = await D.guardarClub(yo, { ...D.club(), ...cambio });
+  if (!r || !r.ok) avisoPanel(r && r.motivo === "meta" ? "Entre 3 y 50 cosas." : "No se pudo guardar. Probá de nuevo.");
 }
 
 /* ---------- Equipo: quién es quién y qué puede hacer cada uno ---------- */
@@ -6305,6 +7311,7 @@ function salir(aOtro) {
   D.salirEquipo();
   mesaAbierta = null;
   editor = null;
+  clienteAbierto = null;
   eligiendo = aOtro || null;
   pin = "";
   ocultarAlerta();
@@ -6521,6 +7528,7 @@ function pintar() {
     : vista === "mesas" ? pintarMesas(d)
     : vista === "carta" ? pintarStock(d)
     : vista === "qr" ? pintarQR()
+    : vista === "clientes" ? pintarClientes()
     : vista === "equipo" ? pintarEquipo()
     : pintarEstacion(d, vista);
   cont.setAttribute("aria-labelledby", "tab-" + vista);
@@ -6536,11 +7544,12 @@ function elegirVista(v) {
   if (editor) cerrarEditor();
   vista = v;
   if (v !== "mesas") mesaAbierta = null;
+  if (v !== "clientes") clienteAbierto = null;
   pintar();
   panel.scrollTop = 0;
 }
 
-const RUTAS = ["panel", "mesas", "qr", "equipo", ...EST];
+const RUTAS = ["panel", "mesas", "qr", "clientes", "equipo", ...EST];
 function segunDireccion() {
   const h = location.hash.slice(1);
   const ver = RUTAS.includes(h);
@@ -6550,6 +7559,7 @@ function segunDireccion() {
   if (!ver) {
     mesaAbierta = null;
     editor = null;
+    clienteAbierto = null;
     cerrarAside();
     ocultarAlerta();
     pantallaPrendida(false);
@@ -6621,14 +7631,48 @@ panel.addEventListener("click", async e => {
   if (b("[data-agotar]")) { const id = b("[data-agotar]").dataset.agotar; return D.agotar(id, !D.agotado(id), yo); }
   if (b("[data-imprimir]")) { try { window.print(); } catch { /* sin impresora */ } return; }
   if (b("[data-persona]")) return abrirEditor(b("[data-persona]").dataset.persona);
+  if (b("[data-cliente]")) return abrirCliente(b("[data-cliente]").dataset.cliente);
+  if (b("[data-club-meta]")) return guardarClub({ meta: D.club().meta + +b("[data-club-meta]").dataset.clubMeta });
+  if (b("[data-club-activo]")) {
+    const si = !D.club().activo;
+    await guardarClub({ activo: si });
+    return avisoPanel(si ? "El club está prendido: los comensales se pueden sumar con su mail." : "El club está apagado: nadie ve el club ni suma sellos (los datos quedan guardados).");
+  }
+  if (b("[data-copiar-mails]")) {
+    const mails = (D.clientes(yo) || []).filter(k => k.novedades).map(k => k.email);
+    try { await navigator.clipboard.writeText(mails.join(", ")); avisoPanel(`Copiaste ${mails.length} ${mails.length === 1 ? "mail" : "mails"}: solo los que aceptaron recibir promos.`); }
+    catch { avisoPanel("No se pudo copiar. Probá de nuevo."); }
+    return;
+  }
+  if (b("[data-borrar-cliente]")) {
+    clearTimeout(dobleT);
+    if (!borrandoCliente) { borrandoCliente = true; pintar(); dobleT = setTimeout(() => { borrandoCliente = false; pintar(); }, 4000); return; }
+    const k = (D.clientes(yo) || []).find(x => x.id === clienteAbierto);
+    const r = await D.borrarCliente(yo, clienteAbierto);
+    clienteAbierto = null;
+    borrandoCliente = false;
+    cerrarAside();
+    pintar();
+    return avisoPanel(r && r.ok ? `Listo: se borraron los datos de ${k ? k.nombre : "esa persona"}.` : "No se pudo borrar.");
+  }
   if (editor && b("#detalle")) return editorClic(b);
   if (b("#panel-reiniciar")) { mesaAbierta = null; editor = null; cerrarAside(); D.reiniciar(); }
 });
+// Clientes: buscar (sin perder el foco al repintar) y elegir el premio
+panel.addEventListener("input", e => {
+  if (e.target.id !== "buscar-cliente") return;
+  buscarCliente = e.target.value;
+  const donde = e.target.selectionStart;
+  pintar();
+  const i = $("#buscar-cliente");
+  if (i && document.activeElement !== i) { i.focus({ preventScroll: true }); try { i.setSelectionRange(donde, donde); } catch { /* nada */ } }
+});
+panel.addEventListener("change", e => { if (e.target.id === "club-premio") guardarClub({ premio: e.target.value }); });
 panel.addEventListener("toggle", e => { if (e.target.matches && e.target.matches(".historia")) historiaAbierta = e.target.open; }, true);
 document.addEventListener("keydown", e => {
   if (panel.hidden) return;
   if (!yo && eligiendo && (/^\d$/.test(e.key) || e.key === "Backspace")) { e.preventDefault(); return tecla(e.key === "Backspace" ? "borrar" : e.key); }
-  if (e.key === "Escape" && (mesaAbierta != null || editor)) cerrarDetalle();
+  if (e.key === "Escape" && (mesaAbierta != null || editor || clienteAbierto)) cerrarDetalle();
 });
 document.addEventListener("visibilitychange", () => { if (!panel.hidden && yo) pantallaPrendida(EST.includes(vista) && document.visibilityState === "visible"); });
 

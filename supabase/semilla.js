@@ -36,6 +36,9 @@ const carta = {
   roles: L.roles || [],               // los puestos y sus permisos de entrada
 };
 
+// El club: la regla de entrada (después se cambia desde el panel y la semilla no la pisa)
+const club = { activo: !L.club || L.club.activo !== false, meta: (L.club && L.club.meta) || 10, premio: (L.club && L.club.premio) || null };
+
 const mesas = L.mesas.map(m => `(${m.n}, ${txt(m.zona)}, ${m.lugares})`).join(",\n    ");
 const permisosDe = e => e.permisos || ((L.roles || []).find(r => r.id === e.rol) || { permisos: [] }).permisos;
 const arreglo = xs => `array[${xs.map(txt).join(", ")}]::text[]`;
@@ -47,12 +50,13 @@ const sql = `-- ================================================================
 --  (archivo generado por supabase/semilla.js a partir de app/assets/local.js: no editar a mano)
 -- =============================================================================
 --  Correr DESPUÉS de esquema.sql. Se puede volver a correr cuando cambie la carta:
---  actualiza platos y precios, suma mesas nuevas y NO cambia los códigos QR ni los PIN.
+--  actualiza platos y precios, suma mesas nuevas y NO cambia los códigos QR, los PIN ni el club.
 -- =============================================================================
 
-insert into public.locales (slug, nombre, carta)
-values (${txt(slug)}, ${txt(L.nombre)}, ${txt(JSON.stringify(carta))}::jsonb)
-on conflict (slug) do update set nombre = excluded.nombre, carta = excluded.carta;
+insert into public.locales (slug, nombre, carta, club)
+values (${txt(slug)}, ${txt(L.nombre)}, ${txt(JSON.stringify(carta))}::jsonb, ${txt(JSON.stringify(club))}::jsonb)
+on conflict (slug) do update set nombre = excluded.nombre, carta = excluded.carta,
+  club = case when locales.club->>'premio' is null then excluded.club else locales.club end;   -- el club, solo si todavía no tiene premio: después se maneja desde el panel
 
 insert into public.mesas (local_id, numero, zona, lugares)
 select l.id, m.numero, m.zona, m.lugares

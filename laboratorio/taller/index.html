@@ -1,0 +1,242 @@
+<!doctype html>
+<html lang="es-AR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Taller de cuadros</title>
+<style>
+  :root { --fondo: #1b1b1f; --t: #eee; }
+  body { margin: 0; background: var(--fondo); color: var(--t); font: 13px/1.4 system-ui, sans-serif; }
+  header { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: end; padding: 10px 14px; background: #26262c; }
+  label { display: grid; gap: 2px; font-size: 11px; color: #aaa; }
+  label.fila { display: flex; align-items: center; gap: 4px; }
+  input, select, button { font: inherit; padding: 4px 6px; background: #111; color: #eee; border: 1px solid #444; border-radius: 6px; }
+  input[type=number] { width: 64px; }
+  button { cursor: pointer; background: #3a3a44; }
+  #estado { padding: 8px 14px; color: #9fd; white-space: pre-wrap; font-family: ui-monospace, monospace; }
+  .grilla { display: grid; grid-template-columns: repeat(6, 1fr); gap: 6px; padding: 10px 14px; }
+  .grilla figure { margin: 0; background: repeating-conic-gradient(#555 0 25%, #777 0 50%) 0 0 / 16px 16px; }
+  .grilla canvas { width: 100%; display: block; }
+  .grilla figcaption { background: #000; font-size: 11px; padding: 1px 4px; }
+</style>
+</head>
+<body>
+<!-- Saca los cuadros de un video de Higgsfield (fondo azul liso), les saca el azul y los junta en
+     una sola imagen (atlas, .webp con transparencia) para girar o servir con el dedo.
+     Primero mira todos los cuadros chiquitos (dónde está el plato y cuánto cambia de uno a otro);
+     después arma el atlas con los elegidos, a buen tamaño. "Parejo": elige los cuadros para que de
+     uno a otro cambie lo mismo (en un giro: los mismos grados, aunque el video acelere y frene). -->
+<header>
+  <label>Video <select id="video"></select></label>
+  <label>Desde (s) <input id="desde" type="number" step="0.01" value="0"></label>
+  <label>Hasta (s) <input id="hasta" type="number" step="0.01" value="0"></label>
+  <label>Cuadros <input id="n" type="number" value="48"></label>
+  <label class="fila"><input id="parejo" type="checkbox"> Parejo</label>
+  <label>Ancho del cuadro <input id="ancho" type="number" value="420"></label>
+  <label>Azul desde <input id="lo" type="number" value="38"></label>
+  <label>Azul hasta <input id="hi" type="number" value="110"></label>
+  <label>Aire (%) <input id="aire" type="number" value="3"></label>
+  <label>Caja fija (x0,y0,x1,y1) <input id="caja" value="" size="16"></label>
+  <label>Esfumar arriba (%) <input id="esfumar" type="number" value="0"></label>
+  <label>Calidad <input id="calidad" type="number" step="0.01" value="0.82"></label>
+  <button id="ver">Ver</button>
+  <label>Guardar como <input id="nombre" value="" size="16"></label>
+  <button id="atlas">Guardar atlas</button>
+  <label>Cuadro suelto <input id="suelto" type="number" value="-1"></label>
+  <button id="foto">Guardar foto</button>
+</header>
+<div id="estado">…</div>
+<div class="grilla" id="grilla"></div>
+<script>
+"use strict";
+const VIDEOS = ["clasica-giro.mp4", "doble-bacon-giro.mp4", "remolacha-giro.mp4", "aros-giro.mp4", "ipa-servir.mp4", "fernet-servir.mp4", "limonada-servir.mp4"];
+const FPS = 24, CHICO = 0.25;
+const $ = id => document.getElementById(id);
+const estado = t => ($("estado").textContent = t);
+const q = new URLSearchParams(location.search);
+VIDEOS.forEach(v => $("video").add(new Option(v, v)));
+if (q.get("v")) $("video").value = q.get("v");
+for (const k of ["desde", "hasta", "n", "ancho", "lo", "hi", "aire", "calidad", "nombre", "caja", "esfumar"]) if (q.has(k)) $(k).value = q.get(k);
+if (q.has("parejo")) $("parejo").checked = true;
+
+let video = null, todos = [], elegidos = [], caja = null;
+function cargar(nombre) {
+  return new Promise((ok, mal) => {
+    const v = document.createElement("video");
+    v.muted = true; v.playsInline = true; v.preload = "auto"; v.src = "videos/" + nombre;
+    v.addEventListener("loadeddata", () => ok(v), { once: true });
+    v.addEventListener("error", () => mal(new Error("no carga " + nombre)), { once: true });
+  });
+}
+const buscar = (v, t) => new Promise(ok => { v.addEventListener("seeked", ok, { once: true }); v.currentTime = Math.min(v.duration - 0.005, t); });
+
+// Saca el azul: cuánto más azul que rojo y verde tiene cada punto
+function recortar(img, lo, hi) {
+  const d = img.data;
+  for (let i = 0; i < d.length; i += 4) {
+    const r = d[i], g = d[i + 1], b = d[i + 2], m = Math.max(r, g), exceso = b - m;
+    let a = 1 - Math.min(1, Math.max(0, (exceso - lo) / (hi - lo)));
+    a = a * a * (3 - 2 * a);
+    if (a < 0.04) a = 0;
+    if (exceso > 10) d[i + 2] = m + 10;                    // sin el reflejo azul en los bordes
+    d[i + 3] = Math.round(a * 255);
+  }
+  return img;
+}
+function lienzo(w, h) { const c = document.createElement("canvas"); c.width = w; c.height = h; return c; }
+
+// 1. Todos los cuadros, chiquitos: dónde está el plato y cuánto cambia
+async function ver() {
+  const nombre = $("video").value;
+  estado("cargando " + nombre + "…");
+  video = await cargar(nombre);
+  const dur = video.duration, W = video.videoWidth, H = video.videoHeight;
+  if (!Number($("hasta").value)) $("hasta").value = dur.toFixed(2);
+  if (!$("nombre").value) $("nombre").value = nombre.replace(/\.mp4$/, "");
+  const desde = Number($("desde").value), hasta = Number($("hasta").value);
+  const lo = Number($("lo").value), hi = Number($("hi").value);
+  const w = Math.round(W * CHICO), h = Math.round(H * CHICO), c = lienzo(w, h), g = c.getContext("2d", { willReadFrequently: true });
+  const total = Math.max(2, Math.round((hasta - desde) * FPS));
+  todos = [];
+  let x0 = w, y0 = h, x1 = 0, y1 = 0, antes = null;
+  for (let i = 0; i < total; i++) {
+    const t = desde + (i + 0.5) / FPS;
+    await buscar(video, t);
+    g.drawImage(video, 0, 0, w, h);
+    const img = recortar(g.getImageData(0, 0, w, h), lo, hi), d = img.data;
+    let dif = 0;
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+      const k = (y * w + x) * 4;
+      if (d[k + 3] > 60) { if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; }
+      if (antes) dif += Math.abs(d[k] - antes[k]) + Math.abs(d[k + 1] - antes[k + 1]) + Math.abs(d[k + 2] - antes[k + 2]) + Math.abs(d[k + 3] - antes[k + 3]);
+    }
+    todos.push({ t, img, dif });
+    antes = d;
+    if (i % 8 === 0) estado(`mirando ${i + 1}/${total}…`);
+  }
+  const aire = (Math.max(x1 - x0, y1 - y0) * Number($("aire").value)) / 100;
+  const k = 1 / CHICO;
+  caja = [Math.max(0, Math.floor((x0 - aire) * k)), Math.max(0, Math.floor((y0 - aire) * k)), Math.min(W, Math.ceil((x1 + 1 + aire) * k)), Math.min(H, Math.ceil((y1 + 1 + aire) * k))];
+  if ($("caja").value.trim()) caja = $("caja").value.split(",").map(Number);
+  elegir();
+  mostrar();
+  estado(`${nombre}: ${W}×${H}, ${dur.toFixed(2)} s · ${total} cuadros de ${desde}s a ${hasta}s · caja ${caja.join(",")} (${caja[2] - caja[0]}×${caja[3] - caja[1]})\n` +
+    `elegidos (${elegidos.length}): ${elegidos.join(",")}`);
+}
+// Cuáles van: parejos en el tiempo o parejos en lo que cambia la imagen
+function elegir() {
+  const n = Math.min(Number($("n").value), todos.length);
+  if (!$("parejo").checked) { elegidos = Array.from({ length: n }, (_, i) => Math.floor((i * todos.length) / n)); return; }
+  const acum = [0];
+  for (let i = 1; i < todos.length; i++) acum.push(acum[i - 1] + todos[i].dif);
+  // la vuelta cierra: lo que cambia del último al primero también cuenta
+  const d0 = todos[0].img.data, dl = todos[todos.length - 1].img.data;
+  let cierre = 0; for (let k = 0; k < d0.length; k++) cierre += Math.abs(d0[k] - dl[k]);
+  const largo = acum[acum.length - 1] + cierre;
+  elegidos = [];
+  let j = 0;
+  for (let i = 0; i < n; i++) {
+    const meta = (i * largo) / n;
+    while (j < acum.length - 1 && acum[j + 1] <= meta) j++;
+    elegidos.push(j);
+  }
+}
+function mostrar() {
+  const [cx0, cy0, cx1, cy1] = caja.map(v => Math.round(v * CHICO));
+  $("grilla").innerHTML = "";
+  const muestra = elegidos.filter((_, i) => i % Math.max(1, Math.round(elegidos.length / 24)) === 0);
+  muestra.forEach(i => {
+    const f = document.createElement("figure"), cv = lienzo(cx1 - cx0, cy1 - cy0);
+    cv.getContext("2d").putImageData(todos[i].img, -cx0, -cy0);
+    f.append(cv);
+    f.insertAdjacentHTML("beforeend", `<figcaption>${i} · ${todos[i].t.toFixed(2)} s</figcaption>`);
+    $("grilla").append(f);
+  });
+}
+
+// 2. Un cuadro a buen tamaño, recortado
+async function grande(i, ancho) {
+  const [cx0, cy0, cx1, cy1] = caja, cw = cx1 - cx0, ch = cy1 - cy0;
+  await buscar(video, todos[i].t);
+  const s = lienzo(cw, ch), gs = s.getContext("2d", { willReadFrequently: true });
+  gs.drawImage(video, cx0, cy0, cw, ch, 0, 0, cw, ch);
+  gs.putImageData(recortar(gs.getImageData(0, 0, cw, ch), Number($("lo").value), Number($("hi").value)), 0, 0);
+  const w = ancho, h = Math.round((ch * ancho) / cw), c = lienzo(w, h), g = c.getContext("2d");
+  g.imageSmoothingQuality = "high";
+  g.drawImage(s, 0, 0, w, h);
+  // Lo que entra de arriba (el chorro) aparece de a poco
+  const esf = Number($("esfumar").value) / 100;
+  if (esf > 0) {
+    const gr = g.createLinearGradient(0, 0, 0, h * esf);
+    gr.addColorStop(0, "rgba(0,0,0,1)"); gr.addColorStop(1, "rgba(0,0,0,0)");
+    g.globalCompositeOperation = "destination-out"; g.fillStyle = gr; g.fillRect(0, 0, w, h * esf); g.globalCompositeOperation = "source-over";
+  }
+  return c;
+}
+const guardar = (ruta, blob) => fetch("/guardar?ruta=" + encodeURIComponent(ruta), { method: "POST", body: blob }).then(r => r.text());
+const comoBlob = (c, tipo, cal) => new Promise(ok => c.toBlob(ok, tipo, cal));
+
+async function atlas() {
+  if (!caja) return;
+  const n = elegidos.length, ancho = Number($("ancho").value);
+  const [cx0, cy0, cx1, cy1] = caja, alto = Math.round(((cy1 - cy0) * ancho) / (cx1 - cx0));
+  let cols = Math.ceil(Math.sqrt((n * alto) / ancho));
+  while (cols * ancho > 4096) cols--;
+  const filas = Math.ceil(n / cols);
+  const c = lienzo(cols * ancho, filas * alto), g = c.getContext("2d");
+  for (let k = 0; k < n; k++) {
+    g.drawImage(await grande(elegidos[k], ancho), (k % cols) * ancho, Math.floor(k / cols) * alto);
+    if (k % 6 === 0) estado(`armando ${k + 1}/${n}…`);
+  }
+  const blob = await comoBlob(c, "image/webp", Number($("calidad").value));
+  const ruta = `laboratorio/assets/cuadros/${$("nombre").value}.webp`;
+  const r = await guardar(ruta, blob);
+  estado(`${r}\natlas ${c.width}×${c.height} · ${cols} columnas · cuadro ${ancho}×${alto} · ${n} cuadros · ${(blob.size / 1024).toFixed(0)} KB\n` +
+    `cuadros: { src: "assets/cuadros/${$("nombre").value}.webp", n: ${n}, cols: ${cols}, tam: [${ancho}, ${alto}] }`);
+}
+
+// Un cuadro como foto del plato (color + alfa, como las demás)
+async function foto() {
+  if (!caja) return;
+  let i = Number($("suelto").value);
+  if (i < 0) i = todos.length - 1;
+  const c = await grande(i, Math.min(900, caja[2] - caja[0]));
+  const d = c.getContext("2d").getImageData(0, 0, c.width, c.height);
+  const col = new ImageData(new Uint8ClampedArray(d.data), c.width, c.height), alf = new ImageData(c.width, c.height);
+  for (let k = 0; k < d.data.length; k += 4) { col.data[k + 3] = 255; const a = d.data[k + 3]; alf.data[k] = alf.data[k + 1] = alf.data[k + 2] = a; alf.data[k + 3] = 255; }
+  const a = lienzo(c.width, c.height); a.getContext("2d").putImageData(col, 0, 0);
+  const b = lienzo(c.width, c.height); b.getContext("2d").putImageData(alf, 0, 0);
+  const base = `laboratorio/assets/fotos/${$("nombre").value}`;
+  const r1 = await guardar(base + ".jpg", await comoBlob(a, "image/jpeg", 0.86));
+  const r2 = await guardar(base + "-alfa.jpg", await comoBlob(b, "image/jpeg", 0.92));
+  estado(`${r1}\n${r2}\ntam: [${c.width}, ${c.height}] (cuadro ${i})`);
+}
+
+// Una hoja con los cuadros elegidos (para revisarlos sin mirar la pantalla)
+async function hoja(cols = 12, ancho = 160) {
+  const [cx0, cy0, cx1, cy1] = caja.map(v => Math.round(v * CHICO));
+  const cw = cx1 - cx0, ch = cy1 - cy0, alto = Math.round((ch * ancho) / cw);
+  const muestra = elegidos.filter((_, i) => i % Math.max(1, Math.round(elegidos.length / 24)) === 0);
+  const c = lienzo(cols * ancho, Math.ceil(muestra.length / cols) * (alto + 14)), g = c.getContext("2d");
+  g.fillStyle = "#6a6a72"; g.fillRect(0, 0, c.width, c.height);
+  g.fillStyle = "#7c7c86";
+  for (let y = 0; y < c.height; y += 12) for (let x = (y / 12) % 2 ? 12 : 0; x < c.width; x += 24) g.fillRect(x, y, 12, 12);
+  const t = lienzo(cw, ch), gt = t.getContext("2d");
+  muestra.forEach((i, k) => {
+    gt.clearRect(0, 0, cw, ch); gt.putImageData(todos[i].img, -cx0, -cy0);
+    const x = (k % cols) * ancho, y = Math.floor(k / cols) * (alto + 14);
+    g.drawImage(t, x, y, ancho, alto);
+    g.fillStyle = "#000"; g.fillRect(x, y + alto, ancho, 14);
+    g.fillStyle = "#fff"; g.font = "11px sans-serif"; g.fillText(`${i} · ${todos[i].t.toFixed(2)}s`, x + 3, y + alto + 11);
+  });
+  return guardar("laboratorio/taller/videos/hoja.jpg", await comoBlob(c, "image/jpeg", 0.85));
+}
+
+$("ver").onclick =() => ver().catch(e => estado("error: " + e.message));
+$("atlas").onclick = () => atlas().catch(e => estado("error: " + e.message));
+$("foto").onclick = () => foto().catch(e => estado("error: " + e.message));
+$("parejo").onchange = () => { if (todos.length) { elegir(); mostrar(); } };
+if (q.get("v")) ver().catch(e => estado("error: " + e.message));
+</script>
+</body>
+</html>

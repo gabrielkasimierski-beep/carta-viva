@@ -2,8 +2,9 @@
    CARTA VIVA · laboratorio — el plato de la foto, con el trato del 3D
    Hace con la foto recortada lo que escena.js hace en la app con el 3D: el plato flota
    en su lugar de la carta, se mueve con el dedo y salta con un toque.
-   · De costado (burgers, tragos, flan, aros) dan la vuelta entera con el dedo: la foto se
-     envuelve en un cilindro y gira (un toque: una vuelta completa).
+   · Las burgers y los aros dan la vuelta entera de verdad: son los cuadros de un video (el plato
+     girando), y el dedo elige cuál se ve (un toque: una vuelta completa).
+   · Los postres y las bebidas tienen su juego (juegos.js): servir, temblar, hamacarse, comer.
    · Desde arriba (las pizzas) se acuestan como un plato de verdad y giran.
    · "¿Qué tiene?": el plato queda entero y alrededor aparece cada ingrediente, con su foto.
    · "Armala": la burger se rearma con las franjas de su foto (simple, doble, triple; lo que
@@ -68,15 +69,18 @@
     p.r = null;
     p.bandas = null;
     p.vista = (d && d.vista) || "frente";
-    p.entera = !!(d && d.giro360 && !d.propia);
+    soltarGiro(p);
+    p.entera = !!(d && d.giro && !d.propia);
+    p.juego = d && d.juego && !d.propia && window.Juegos ? Juegos.crear(p, d) : null;
+    p.presentado = false;
+    if (p.pistaJ) { p.pistaJ.remove(); p.pistaJ = null; }
     p.fp.dataset.vista = p.vista;
-    p.fp.classList.remove("listo", "con-capas", "girando");
+    p.fp.classList.remove("listo", "con-capas", "girando", "jugando");
     p.caja = d && !d.propia ? Recorte.caja(d) : null;
     p.aspecto = p.caja ? (p.caja[2] - p.caja[0]) / (p.caja[3] - p.caja[1]) : 1;
     p.redondo = Math.abs(p.aspecto - 1) < 0.12;
     if (p.vista === "arriba" && !p.redondo) p.giro = 0;
     if (p.canto) { p.canto.remove(); p.canto = null; }
-    Rueda.soltar(p);
     // Mientras se hace el recorte: la foto con el borde esfumado
     let html = "";
     if (p.caja) {
@@ -97,7 +101,7 @@
     p.aspecto = r.ancho / r.alto;
     const img = `<img src="${r.url}" alt="" draggable="false">`;
     let html = `<div class="fp__entero">${img}</div><div class="fp__capas"></div>`;
-    if (p.vista !== "arriba" && !p.entera) html += `<div class="fp__brillo" style="--mascara:url(${r.url})"></div>`;
+    if (p.vista !== "arriba" && !p.entera && !p.juego) html += `<div class="fp__brillo" style="--mascara:url(${r.url})"></div>`;
     const boceto = p.plato3.querySelector(".fp__boceto");
     p.plato3.innerHTML = html;
     if (boceto) { p.plato3.prepend(boceto); setTimeout(() => boceto.remove(), 700); }
@@ -110,6 +114,8 @@
       p.canto.innerHTML = img;
       p.mueve.prepend(p.canto);
     }
+    if (p.entera) ponerGiro(p);
+    if (p.juego) p.juego.armar(r);
     ubicar(p);
     void p.fp.offsetWidth;                                     // que el cambio se vea como transición
     p.fp.classList.add("listo");
@@ -305,107 +311,53 @@
     setTimeout(() => viejas.forEach(e => e.remove()), MOVIMIENTO ? 240 : 0);
   }
 
-  /* ---------- La vuelta entera: la foto envuelta en un cilindro (WebGL, uno solo para todos) ----------
-     Cada fila del plato se toma como un cilindro de su ancho: al girar, lo de la foto corre de
-     costado, se achica en los bordes y vuelve por atrás (espejado). El contorno queda igual,
-     como pasa con una burger de verdad. En 0° es exactamente la foto. */
-  const Rueda = (() => {
-    let cv = null, gl = null, uGiro, uK, uSombra, texFoto, texFilas, duenio = null, roto = false;
-    const VS = "attribute vec2 p;varying vec2 uv;void main(){uv=vec2((p.x+1.)/2.,(1.-p.y)/2.);gl_Position=vec4(p,0.,1.);}";
-    const FS = `precision highp float;uniform sampler2D foto;uniform sampler2D filas;uniform float giro;uniform float k;uniform float sombra;varying vec2 uv;
-      float dec(float a,float b){return (a*65280.+b*255.)/65535.;}
-      void main(){vec4 a=texture2D(foto,uv);if(a.a<.004){gl_FragColor=vec4(0.);return;}
-        vec4 f=texture2D(filas,vec2(.5,uv.y));float c=dec(f.r,f.g),r=dec(f.b,f.a);vec3 col=a.rgb;float luz=1.;
-        if(r>.004){float u=clamp((uv.x-c)/r,-1.,1.);float fi=asin(u)+giro;col=texture2D(foto,vec2(c+r*k*sin(fi),uv.y)).rgb;
-          luz=mix(1.,.8+.2*sqrt(1.-u*u),sombra)*(cos(fi)<0.?mix(1.,.93,sombra):1.);}
-        gl_FragColor=vec4(col*luz*a.a,a.a);}`;
-    function iniciar() {
-      if (gl || roto) return !!gl;
-      try {
-        cv = document.createElement("canvas");
-        cv.className = "fp__rueda";
-        gl = cv.getContext("webgl", { premultipliedAlpha: true, alpha: true, antialias: false });
-        if (!gl) throw 0;
-        const sh = (t, s) => { const x = gl.createShader(t); gl.shaderSource(x, s); gl.compileShader(x); if (!gl.getShaderParameter(x, gl.COMPILE_STATUS)) throw gl.getShaderInfoLog(x); return x; };
-        const pr = gl.createProgram();
-        gl.attachShader(pr, sh(gl.VERTEX_SHADER, VS));
-        gl.attachShader(pr, sh(gl.FRAGMENT_SHADER, FS));
-        gl.linkProgram(pr);
-        gl.useProgram(pr);
-        const b = gl.createBuffer();
-        gl.bindBuffer(gl.ARRAY_BUFFER, b);
-        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]), gl.STATIC_DRAW);
-        const loc = gl.getAttribLocation(pr, "p");
-        gl.enableVertexAttribArray(loc);
-        gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
-        uGiro = gl.getUniformLocation(pr, "giro"); uK = gl.getUniformLocation(pr, "k"); uSombra = gl.getUniformLocation(pr, "sombra");
-        gl.uniform1i(gl.getUniformLocation(pr, "foto"), 0);
-        gl.uniform1i(gl.getUniformLocation(pr, "filas"), 1);
-        const tex = () => { const t = gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D, t); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE); return t; };
-        gl.activeTexture(gl.TEXTURE0); texFoto = tex(); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-        gl.activeTexture(gl.TEXTURE1); texFilas = tex(); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
-        return true;
-      } catch { roto = true; gl = null; return false; }
+  /* ---------- La vuelta entera: los cuadros del video (el plato girando) ----------
+     Se cargan cuando el plato está cerca y se sueltan cuando queda lejos. En 0° se ve la foto (más
+     nítida); girando, el cuadro que toca (mezclado con el vecino, para que no salte). */
+  function pedirGiro(p) {
+    if (p.giroPedido || !p.entera) return;
+    const yo = (p.giroPedido = {});
+    Cuadros.pedir(p.d.giro).then(a => {
+      if (p.giroPedido !== yo) { if (a) Cuadros.soltar(p.d.giro); return; }
+      p.atlas = a;
+      ponerGiro(p);
+    });
+  }
+  function soltarGiro(p) {
+    if (p.giroPedido && p.d && p.d.giro) Cuadros.soltar(p.d.giro);
+    p.giroPedido = null;
+    p.atlas = null;
+    p.gGiro = null;
+    if (p.cvGiro) { p.cvGiro.remove(); p.cvGiro = null; }
+    p.fp.classList.remove("girando");
+  }
+  // El lienzo del giro, calzado sobre la foto (lo que ocupa el plato en el cuadro 0 = lo que ocupa en la foto)
+  function ponerGiro(p) {
+    if (!p.atlas || !p.r || !p.plato3.querySelector(".fp__entero")) return;
+    if (!p.cvGiro || !p.cvGiro.isConnected) {
+      p.cvGiro = document.createElement("canvas");
+      p.cvGiro.className = "fp__cuadros";
+      p.plato3.appendChild(p.cvGiro);
     }
-    // Por cada fila: el centro y el ancho del plato (de la foto recortada)
-    function filasDe(p) {
-      if (p.filas) return p.filas;
-      const img = p.plato3.querySelector(".fp__entero img");
-      if (!img || !img.complete || !img.naturalWidth) return null;
-      const W = img.naturalWidth, H = img.naturalHeight, c = document.createElement("canvas");
-      c.width = W; c.height = H;
-      const g = c.getContext("2d", { willReadFrequently: true });
-      g.drawImage(img, 0, 0);
-      const px = g.getImageData(0, 0, W, H).data, out = new Uint8Array(H * 4);
-      for (let y = 0; y < H; y++) {
-        let l = -1, r = -1;
-        for (let x = 0; x < W; x++) if (px[(y * W + x) * 4 + 3] > 128) { if (l < 0) l = x; r = x; }
-        if (l < 0) continue;
-        const cc = Math.round(((l + r + 1) / 2 / W) * 65535), rr = Math.round(((r + 1 - l) / 2 / W) * 65535);
-        out.set([cc >> 8, cc & 255, rr >> 8, rr & 255], y * 4);
-      }
-      p.filas = out;
-      p.imgRueda = img;
-      return out;
-    }
-    function dibujar(p, grados) {
-      if (!iniciar()) return false;
-      if (duenio !== p) {
-        const filas = filasDe(p);
-        if (!filas) return false;
-        if (duenio) soltar(duenio);
-        duenio = p;
-        const W = Math.round(topes(p.w * Math.min(devicePixelRatio || 1, 2), 64, p.r.ancho)), H = Math.round((W * p.r.alto) / p.r.ancho);
-        cv.width = W; cv.height = H;
-        gl.viewport(0, 0, W, H);
-        gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, texFoto);
-        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, p.imgRueda);
-        gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D, texFilas);
-        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 1, filas.length / 4, 0, gl.RGBA, gl.UNSIGNED_BYTE, filas);
-        p.plato3.appendChild(cv);
-        p.fp.classList.add("girando");
-      }
-      const rad = (grados * Math.PI) / 180, s = Math.min(1, Math.abs(Math.sin(rad)) * 2.5);
-      gl.uniform1f(uGiro, rad);
-      gl.uniform1f(uK, 1 - 0.1 * s);
-      gl.uniform1f(uSombra, s);
-      gl.clearColor(0, 0, 0, 0);
-      gl.clear(gl.COLOR_BUFFER_BIT);
-      gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
-      return true;
-    }
-    function soltar(p) {
-      if (duenio !== p) return;
-      duenio = null;
-      if (cv && cv.parentNode) cv.remove();
-      p.fp.classList.remove("girando");
-    }
-    return { dibujar, soltar, duenio: () => duenio };
-  })();
+    const a = p.atlas, [u0, v0, u1, v1] = Cuadros.util(a, 0), [s0, t0, s1, t1] = p.r.util;
+    const W = (s1 - s0) / (u1 - u0), H = (t1 - t0) / (v1 - v0);
+    Object.assign(p.cvGiro.style, { left: `${(s0 - u0 * W) * 100}%`, top: `${(t0 - v0 * H) * 100}%`, width: `${W * 100}%`, height: `${H * 100}%` });
+    p.cvGiro.width = a.tam[0]; p.cvGiro.height = a.tam[1];
+    p.gGiro = p.cvGiro.getContext("2d");
+    p.pintadoGiro = null;
+  }
+  function dibujarGiro(p, grados) {
+    if (!p.gGiro) return;
+    const a = p.atlas, f = ((grados * (p.d.giro.sentido || 1)) / 360) * a.n;
+    if (p.pintadoGiro !== null && Math.abs(f - p.pintadoGiro) < 0.02) return;
+    Cuadros.dibujar(p.gGiro, a, f, p.cvGiro.width, p.cvGiro.height, true);
+    p.pintadoGiro = f;
+  }
 
   /* ---------- Con el dedo: vuelta entera, giro o inclinación; un toque, salta ---------- */
   function gestos(el) {
-    let x0 = 0, xIni = 0, t0 = 0, recorrido = 0, dedo = null, p = null;
+    let x0 = 0, xIni = 0, t0 = 0, recorrido = 0, dedo = null, p = null, jugando = false;
+    const enPlato = e => { const r = p.fp.getBoundingClientRect(); return [e.clientX - r.left, e.clientY - r.top]; };
     el.addEventListener("pointerdown", e => {
       p = puestos.get(el);
       if (!p || e.target.closest("button, a, input")) return;
@@ -413,13 +365,21 @@
       x0 = xIni = e.clientX;
       t0 = performance.now();
       recorrido = 0;
+      jugando = !!(p.juego && p.juego.abajo(e, ...enPlato(e)));
+      if (jugando) { quitarPista(p); if (e.pointerType === "mouse") el.setPointerCapture(dedo); return; }
       p.arrastrando = true;
       p.velDedo = 0;
       if (e.pointerType === "mouse") el.setPointerCapture(dedo);
     });
     el.addEventListener("pointermove", e => {
-      if (!p || e.pointerId !== dedo || !p.arrastrando) return;
+      if (!p || e.pointerId !== dedo || (!p.arrastrando && !jugando)) return;
       const dx = e.clientX - x0, ahora = performance.now(), dt = Math.max(8, ahora - t0) / 1000;
+      if (jugando) {
+        x0 = e.clientX; t0 = ahora; recorrido += Math.abs(dx);
+        p.juego.mover(e, ...enPlato(e), dx);
+        if (recorrido > 12) el.dispatchEvent(new CustomEvent("escena:giro", { bubbles: true }));
+        return;
+      }
       x0 = e.clientX;
       t0 = ahora;
       recorrido += Math.abs(dx);
@@ -435,12 +395,19 @@
         p.rotObj = topes((e.clientX - xIni) * 0.28, -34, 34);
         p.velDedo = dx / dt;
       }
-      if (recorrido > 12) el.dispatchEvent(new CustomEvent("escena:giro", { bubbles: true }));
+      if (recorrido > 12) { el.dispatchEvent(new CustomEvent("escena:giro", { bubbles: true })); quitarPista(p); }
     });
     const fin = e => {
       if (!p || e.pointerId !== dedo) return;
-      p.arrastrando = false;
       dedo = null;
+      if (jugando) {
+        jugando = false;
+        const toque = e.type === "pointerup" && recorrido < 6;
+        p.juego.arriba(e, toque, ...enPlato(e));
+        if (toque) el.dispatchEvent(new CustomEvent("escena:toque", { bubbles: true }));
+        return;
+      }
+      p.arrastrando = false;
       const quieto = performance.now() - t0 > 120;
       if (conVuelta(p)) { if (quieto) p.velVuelta *= 0.3; }
       else if (p.vista === "arriba") { if (quieto) p.velGiro *= 0.3; }
@@ -456,7 +423,7 @@
     el.addEventListener("pointerup", fin);
     el.addEventListener("pointercancel", fin);
   }
-  const conVuelta = p => p.entera && p.r && !p.eleccion;
+  const conVuelta = p => p.entera && p.r && p.atlas && !p.eleccion;
 
   /* ---------- Cada cuadro: flota, gira, salta ---------- */
   function cuadro(ahora) {
@@ -465,21 +432,51 @@
     reloj = ahora;
     if (document.hidden || pausa) return;
     const t = ahora / 1000, alto = innerHeight;
-    const vivos = [];
     for (const p of puestos.values()) {
       const r = p.el.getBoundingClientRect();
-      if (p.h && r.bottom > -alto * 0.2 && r.top < alto * 1.2) vivos.push({ p, lejos: Math.abs(r.top + r.height / 2 - alto / 2) });
+      const v = {
+        cerca: r.bottom > -alto * 0.6 && r.top < alto * 1.6,             // el de al lado: ya se cargan sus cuadros
+        visible: r.bottom > 0 && r.top < alto,
+        centrado: Math.abs(r.top + r.height / 2 - alto / 2) < alto * 0.22,
+      };
+      if (v.cerca) { pedirGiro(p); p.lejos = false; }
+      else if (r.bottom < -alto * 1.5 || r.top > alto * 2.5) {           // lejos: se sueltan (ocupan memoria)
+        if (p.atlas) soltarGiro(p);
+        if (p.juego && !p.lejos) { p.lejos = true; p.juego.lejos(); }
+      }
+      if (p.juego && p.r) p.juego.cuadro(t, dt, v);
+      if (v.centrado && p.r && !p.presentado && (p.juego || p.atlas) && !p.modo) presentar(p);
+      if (p.h && r.bottom > -alto * 0.2 && r.top < alto * 1.2) mover(p, t, dt);
     }
-    // La vuelta entera se dibuja en uno solo: el que se está moviendo o el más cerca del medio
-    const conRueda = vivos.filter(v => conVuelta(v.p)).sort((a, b) => (b.p.arrastrando || Math.abs(b.p.velVuelta) > 30) - (a.p.arrastrando || Math.abs(a.p.velVuelta) > 30) || a.lejos - b.lejos)[0];
-    vivos.forEach(({ p }) => mover(p, t, dt, conRueda && conRueda.p === p));
   }
-  function mover(p, t, dt, rueda) {
+  // La primera vez que se ve: la burger da una vuelta sola; en todos, qué se puede hacer
+  function presentar(p) {
+    p.presentado = true;
+    if (p.atlas && MOVIMIENTO && !p.eleccion) p.velVuelta += 430;
+    const texto = p.juego ? p.juego.pista : "Girala con el dedo · un toque, una vuelta";
+    if (!texto || p.el.querySelector(".pista")) return;
+    p.pistaJ = document.createElement("div");
+    p.pistaJ.className = "pista pista--juego";
+    p.pistaJ.innerHTML = `<svg width="18" height="18" aria-hidden="true"><use href="#${p.juego ? "i-dedo" : "i-giro"}"/></svg>${esc(texto)}`;
+    p.el.appendChild(p.pistaJ);
+    setTimeout(() => quitarPista(p), 6500);
+  }
+  function quitarPista(p) {
+    const e = p && p.pistaJ;
+    if (!e) return;
+    p.pistaJ = null;
+    e.classList.add("fuera");
+    setTimeout(() => e.remove(), 500);
+  }
+  function mover(p, t, dt) {
     p.salto = Math.max(0, p.salto - dt * 1.9);
     const s = p.salto > 0 ? Math.sin((1 - p.salto) * Math.PI) : 0;
     const flota = MOVIMIENTO ? Math.sin(t * 1.5 + p.fase) * 0.014 * p.h : 0;
     const y = flota - s * 0.15 * p.h;
-    if (conVuelta(p)) {
+    if (p.juego) {
+      // Los juegos se mueven solos: acá, solo que flote
+      p.mueve.style.transform = `translate3d(0, ${y.toFixed(2)}px, 0)`;
+    } else if (conVuelta(p)) {
       // Suelto: sigue con el envión, frena y vuelve a quedar de frente (a la vuelta más cercana)
       if (!p.arrastrando) {
         p.velVuelta *= Math.exp(-dt * 2);
@@ -489,10 +486,9 @@
         }
         p.vuelta += p.velVuelta * dt;
       }
-      const vista = p.vuelta + (MOVIMIENTO && rueda && !p.arrastrando ? Math.sin(t * 0.7 + p.fase) * 16 : 0);
-      const grados = ((vista % 360) + 360) % 360;
-      if (rueda && Math.min(grados, 360 - grados) > 0.3) { if (!Rueda.dibujar(p, vista)) Rueda.soltar(p); }
-      else Rueda.soltar(p);
+      const grados = ((p.vuelta % 360) + 360) % 360, girando = Math.min(grados, 360 - grados) > 0.4 || p.arrastrando;
+      if (girando) dibujarGiro(p, p.vuelta);
+      p.fp.classList.toggle("girando", girando && !!p.gGiro);
       p.mueve.style.transform = `translate3d(0, ${y.toFixed(2)}px, 0) scale(${(1 + s * 0.035).toFixed(4)})`;
     } else if (p.vista === "arriba" && !p.redondo) {
       // La fuente ovalada: se hamaca, sigue al dedo y vuelve (como un resorte)
@@ -510,7 +506,7 @@
       p.mueve.style.transform = `translate3d(0, ${y.toFixed(2)}px, 0)`;
       girar(p);
     } else {
-      if (p.entera) Rueda.soltar(p);
+      if (p.entera) p.fp.classList.remove("girando");
       const obj = p.arrastrando ? p.rotObj : MOVIMIENTO ? Math.sin(t * 0.55 + p.fase) * 5 : 0;
       if (p.arrastrando) { p.rot += (obj - p.rot) * (1 - Math.exp(-dt * 16)); p.velRot = 0; }
       else { p.velRot += ((obj - p.rot) * 55 - p.velRot * 8) * dt; p.rot += p.velRot * dt; }
@@ -538,8 +534,6 @@
       for (const p of puestos.values()) {
         ubicar(p);
         if (p.modo === "explotando") ingredientes(p);
-        p.filas = null;
-        Rueda.soltar(p);
       }
     });
   });
@@ -555,7 +549,7 @@
     },
     saltar(el, fuerza = 1) {
       const p = puestos.get(el);
-      if (!p) return;
+      if (!p || p.juego) return;
       p.salto = Math.max(p.salto, fuerza);
       if (conVuelta(p)) p.velVuelta += 200 * fuerza;
       else if (p.vista === "arriba") p.velGiro += 160 * fuerza;
@@ -577,7 +571,7 @@
         img.onload = () => {
           propias[plato.id] = { src, tam: [img.naturalWidth, img.naturalHeight] };
           delete recortes[plato.id];
-          for (const p of puestos.values()) if (p.plato === plato) { p.caja = null; p.filas = null; preparar(p); }
+          for (const p of puestos.values()) if (p.plato === plato) { p.caja = null; preparar(p); }
           pedirRecorte(plato).then(listo);
         };
         img.onerror = () => listo(null);
@@ -585,5 +579,6 @@
       });
     },
     pausar(si) { pausa = !!si; },
+    _puesto: el => puestos.get(el),                              // para revisar desde la consola
   };
 })();

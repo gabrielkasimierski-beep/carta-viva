@@ -17,7 +17,14 @@ el laboratorio solo lee de ahí los platos, `local.js`, y el diseño, `estilos.c
 - `assets/escena-fotos.js`: en lugar del 3D, el plato es la foto recortada. Flota, se mueve con el dedo,
   salta con un toque. Las pizzas y la fuente del helado (fotos desde arriba) se acuestan y giran.
   "¿Qué tiene?": las burgers se abren en capas; lo demás muestra cada parte con una lupa.
-- `assets/recorte.js`: saca el plato de la foto (las de Higgsfield ya vienen recortadas: color + alfa). Con el contorno marcado "más o menos", el borde se
+- `assets/recorte.js`: saca el plato de la foto (las de Higgsfield ya vienen recortadas: color + alfa).
+- `assets/cuadros.js`: los cuadros de un video (la vuelta de las burgers, el vaso que se llena), todos
+  en una imagen (`assets/cuadros/*.webp`); se cargan cuando el plato está cerca y se sueltan lejos.
+- `assets/juegos.js`: los juegos de postres y bebidas (servir, flan que tiembla, helado que se hamaca,
+  cheesecake con cuchara).
+- `taller/`: la herramienta que pasa un video de Higgsfield (fondo azul) a cuadros recortados.
+  `node herramientas/taller.js` y abrir http://localhost:5186/laboratorio/taller/?v=clasica-giro.mp4
+  (los videos van en `taller/videos/`, que no se sube al repo). Con el contorno marcado "más o menos", el borde se
   ajusta solo a la foto (mira el color del plato y del fondo, y lo afina siguiendo los bordes).
 
 ## Qué se probó
@@ -35,6 +42,12 @@ el laboratorio solo lee de ahí los platos, `local.js`, y el diseño, `estilos.c
   hechas según la receta de la carta. Los platos vienen con fondo transparente: no hace falta marcar
   el contorno. Las burgers, de costado y en capas parejas, para que "Armala" las rearme mejor. El
   cucurucho ahora es un cucurucho de verdad (de costado, da la vuelta entera).
+- 30-sep (2): pedidos de Gaby. La vuelta 360 fingida (la foto en un cilindro) se veía mal a los costados:
+  ahora las burgers y los aros giran con los cuadros de un video de Higgsfield (Kling 3.0: el plato
+  girando sobre fondo azul). Flan y aros, fotos nuevas. Postres y bebidas con juego: las bebidas se
+  sirven solas al llegar (la IPA rebalsa) y se sirven con el dedo; el flan tiembla; las bochas del
+  cucurucho se hamacan y la cereza salta; el cheesecake se come con la cuchara (corta, caen migas, y
+  cuando se termina aparece otra porción).
 
 ## Fotos
 
@@ -42,5 +55,9 @@ Generadas con Higgsfield (modelo GPT Image 2.5), el 30-sep, desde la cuenta de G
 calidad alta con fondo transparente; ingredientes en calidad baja (se ven chicos) sobre fondo blanco.
 Se guardan ya recortadas y achicadas: `fotos/<plato>.jpg` (color) + `fotos/<plato>-alfa.jpg` (lo
 transparente, en gris). Los PNG originales quedan en la cuenta de Higgsfield.
+
+Videos (Kling 3.0, 5 s, sin sonido): la vuelta de cada burger y de los aros (mismo cuadro al empezar y
+al terminar), y cada bebida sirviéndose (desde el vaso vacío; fernet y limonada, también con el vaso
+lleno al final, porque solos hacían zoom). Las bebidas en la carta son el último cuadro de su video.
 
 Las anteriores (Unsplash) quedaron en el historial del repo.

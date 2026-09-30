@@ -9,7 +9,12 @@
              solo a la foto). O elipse [cx, cy, rx, ry] / superelipse [cx, cy, rx, ry, n].
              extra: más partes que suman (lo que sobresale); huecos: lo que no va.
    lleva:    lo que tiene (según la carta): [foto de ingredientes, nombre]. Es el "¿Qué tiene?".
-   giro360:  da la vuelta entera con el dedo (de costado: burgers, tragos, flan, aros).
+   giro:     la vuelta entera de verdad: los cuadros de un video de Higgsfield (el plato girando en
+             un fondo azul), recortados y juntos en una imagen (assets/cuadros, ver laboratorio/taller).
+             sentido: para qué lado gira el video (1: lo de adelante va a la derecha).
+   juego:    lo que se puede hacer con el dedo en los postres y las bebidas (ver juegos.js):
+             "servir" (el vaso se llena: cuadros de un video), "flan" (tiembla), "helado" (las
+             bochas se hamacan, la cereza salta), "cuchara" (el cheesecake se come con la cuchara).
    capas:    en las burgers, la foto en franjas de arriba hacia abajo (hasta: [izquierda, centro,
              derecha] donde termina cada una; tiene: qué ingredientes hay en esa franja). Con
              "Armala" se sacan, se repiten (doble, triple) o se suman cosas.
@@ -19,7 +24,8 @@
 window.FOTOS = {
   "clasica": {
     foto: "assets/fotos/clasica.jpg", alfa: "assets/fotos/clasica-alfa.jpg", tam: [900, 776], vista: "frente",
-    lleva: [["pan", "Pan de papa"], ["medallon", "Medallón"], ["cheddar", "Cheddar"], ["lechuga", "Lechuga"], ["tomate", "Tomate"], ["cebolla", "Cebolla morada"], ["salsa", "Salsa de la casa"]], giro360: true,
+    lleva: [["pan", "Pan de papa"], ["medallon", "Medallón"], ["cheddar", "Cheddar"], ["lechuga", "Lechuga"], ["tomate", "Tomate"], ["cebolla", "Cebolla morada"], ["salsa", "Salsa de la casa"]],
+    giro: { src: "assets/cuadros/clasica-giro.webp", n: 48, cols: 7, tam: [420, 361], sentido: -1 },
     capas: [
       { nombre: "Pan de papa", hasta: [268, 250, 268] },
       { nombre: "Salsa y cebolla morada", tiene: ["cebolla"], hasta: [328, 340, 336] },
@@ -32,7 +38,8 @@ window.FOTOS = {
   },
   "doble-bacon": {
     foto: "assets/fotos/doble-bacon.jpg", alfa: "assets/fotos/doble-bacon-alfa.jpg", tam: [900, 710], vista: "frente",
-    lleva: [["pan", "Pan de papa"], ["medallon", "Dos medallones"], ["cheddar", "Doble cheddar"], ["panceta", "Panceta crocante"], ["barbacoa", "Barbacoa ahumada"]], giro360: true,
+    lleva: [["pan", "Pan de papa"], ["medallon", "Dos medallones"], ["cheddar", "Doble cheddar"], ["panceta", "Panceta crocante"], ["barbacoa", "Barbacoa ahumada"]],
+    giro: { src: "assets/cuadros/doble-bacon-giro.webp", n: 48, cols: 7, tam: [420, 333], sentido: -1 },
     capas: [
       { nombre: "Pan de papa", hasta: [235, 225, 235] },
       { nombre: "Panceta y barbacoa", hasta: [370, 305, 365] },
@@ -43,7 +50,8 @@ window.FOTOS = {
   },
   "remolacha": {
     foto: "assets/fotos/remolacha.jpg", alfa: "assets/fotos/remolacha-alfa.jpg", tam: [895, 857], vista: "frente",
-    lleva: [["remolacha", "Medallón de remolacha"], ["palta", "Palta"], ["lechuga", "Lechuga"], ["tomate", "Tomate"], ["albahaca", "Mayo de albahaca"]], giro360: true,
+    lleva: [["remolacha", "Medallón de remolacha"], ["palta", "Palta"], ["lechuga", "Lechuga"], ["tomate", "Tomate"], ["albahaca", "Mayo de albahaca"]],
+    giro: { src: "assets/cuadros/remolacha-giro.webp", n: 48, cols: 7, tam: [420, 398], sentido: -1 },
     capas: [
       { nombre: "Pan integral y mayo de albahaca", hasta: [298, 296, 300] },
       { nombre: "Tomate", tiene: ["tomate"], hasta: [362, 352, 368] },
@@ -67,32 +75,43 @@ window.FOTOS = {
     lleva: [["papas", "Papas rústicas"], ["cheddar", "Cheddar fundido"], ["verdeo", "Verdeo"]],
   },
   "aros": {
-    foto: "assets/fotos/aros.jpg", alfa: "assets/fotos/aros-alfa.jpg", tam: [900, 849], vista: "frente",
-    lleva: [["cebolla", "Cebolla morada"], ["cerveza", "Rebozado en birra"], ["barbacoa", "Dip de barbacoa"]], giro360: true,
+    foto: "assets/fotos/aros.jpg", alfa: "assets/fotos/aros-alfa.jpg", tam: [488, 900], vista: "frente",
+    lleva: [["cebolla", "Cebolla morada"], ["cerveza", "Rebozado en birra"], ["barbacoa", "Dip de barbacoa"]],
+    giro: { src: "assets/cuadros/aros-giro.webp", n: 48, cols: 10, tam: [280, 508], sentido: -1 },
   },
   "flan": {
-    foto: "assets/fotos/flan.jpg", alfa: "assets/fotos/flan-alfa.jpg", tam: [900, 471], vista: "frente",
-    lleva: [["huevo", "Huevos de campo"], ["dulcedeleche", "Dulce de leche"], ["crema", "Crema"]], giro360: true,
+    foto: "assets/fotos/flan.jpg", alfa: "assets/fotos/flan-alfa.jpg", tam: [900, 676], vista: "frente",
+    lleva: [["huevo", "Huevos de campo"], ["dulcedeleche", "Dulce de leche"], ["crema", "Crema"]],
+    juego: "flan", base: 0.835, arriba: 0.02, centro: 0.497, columna: [0.195, 0.8],   // columna: de dónde a dónde va el flan (lo demás, el plato, queda quieto)
   },
   "helado": {
     foto: "assets/fotos/helado.jpg", alfa: "assets/fotos/helado-alfa.jpg", tam: [285, 900], vista: "frente",
-    lleva: [["cucurucho", "Cucurucho"], ["dulcedeleche", "Dulce de leche"], ["frutilla", "Frutilla a la crema"], ["pistacho", "Pistacho"], ["cereza", "Cereza"]], giro360: true,
+    lleva: [["cucurucho", "Cucurucho"], ["dulcedeleche", "Dulce de leche"], ["frutilla", "Frutilla a la crema"], ["pistacho", "Pistacho"], ["cereza", "Cereza"]],
+    juego: "helado", cortes: [0.165, 0.353, 0.511, 0.639],
   },
   "cheesecake": {
-    foto: "assets/fotos/cheesecake.jpg", alfa: "assets/fotos/cheesecake-alfa.jpg", tam: [900, 625], vista: "frente",
+    foto: "assets/fotos/cheesecake.jpg", alfa: "assets/fotos/cheesecake-alfa.jpg", tam: [754, 585], vista: "frente",
     lleva: [["quesocrema", "Queso crema"], ["galletitas", "Base de galletitas"], ["frutosrojos", "Coulis de frutos rojos"]],
+    juego: "cuchara",
+    // dónde va cada parte en la foto (x, y, ancho, alto, en fracción de la foto)
+    porcion: { foto: "assets/fotos/cheesecake-porcion.jpg", alfa: "assets/fotos/cheesecake-porcion-alfa.jpg", caja: [0.0995, 0, 0.7997, 0.735] },
+    platito: { foto: "assets/fotos/cheesecake-plato.jpg", alfa: "assets/fotos/cheesecake-plato-alfa.jpg", caja: [0, 0.4085, 1, 0.5915] },
+    cuchara: { foto: "assets/fotos/cuchara.jpg", alfa: "assets/fotos/cuchara-alfa.jpg", hueco: [0.183, 0.444], punta: 0.02 },
   },
   "limonada": {
-    foto: "assets/fotos/limonada.jpg", alfa: "assets/fotos/limonada-alfa.jpg", tam: [437, 900], vista: "frente",
-    lleva: [["limon", "Limón"], ["menta", "Menta"], ["jengibre", "Jengibre"], ["hielo", "Hielo"]], giro360: true,
+    foto: "assets/fotos/limonada.jpg", alfa: "assets/fotos/limonada-alfa.jpg", tam: [400, 820], vista: "frente",
+    lleva: [["limon", "Limón"], ["menta", "Menta"], ["jengibre", "Jengibre"], ["hielo", "Hielo"]],
+    juego: "servir", cuadros: { src: "assets/cuadros/limonada-servir.webp", n: 48, cols: 10, tam: [300, 615] },
   },
   "ipa": {
-    foto: "assets/fotos/ipa.jpg", alfa: "assets/fotos/ipa-alfa.jpg", tam: [447, 900], vista: "frente",
-    lleva: [["lupulo", "Lúpulo"], ["malta", "Malta"]], giro360: true,
+    foto: "assets/fotos/ipa.jpg", alfa: "assets/fotos/ipa-alfa.jpg", tam: [400, 820], vista: "frente",
+    lleva: [["lupulo", "Lúpulo"], ["malta", "Malta"]],
+    juego: "servir", cuadros: { src: "assets/cuadros/ipa-servir.webp", n: 48, cols: 10, tam: [300, 615] },
   },
   "fernet": {
-    foto: "assets/fotos/fernet.jpg", alfa: "assets/fotos/fernet-alfa.jpg", tam: [412, 893], vista: "frente",
-    lleva: [["hierbas", "Fernet"], ["cola", "Coca"], ["hielo", "Hielo"]], giro360: true,
+    foto: "assets/fotos/fernet.jpg", alfa: "assets/fotos/fernet-alfa.jpg", tam: [400, 820], vista: "frente",
+    lleva: [["hierbas", "Fernet"], ["cola", "Coca"], ["hielo", "Hielo"]],
+    juego: "servir", cuadros: { src: "assets/cuadros/fernet-servir.webp", n: 48, cols: 10, tam: [300, 615] },
   },
 };
 

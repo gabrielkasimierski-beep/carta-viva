@@ -5,12 +5,16 @@
 // todo tiene que ir dentro de un único HTML. Este script copia el sitio y mete adentro
 // cada hoja de estilos, cada script y cada imagen.
 //
-// Uso:  node vista-previa.js <sitio/index.html> <salida.html>
+// Uso:  node vista-previa.js <sitio/index.html> <salida.html> [--afuera=assets/cuadros/]
+//   --afuera: las imágenes que empiezan así no se meten adentro: quedan como archivos aparte, al
+//   lado del HTML (se publican junto con él). Sirve para lo pesado que se carga cuando hace falta.
 
 const fs = require("fs");
 const path = require("path");
 
 const [, , entrada, salida] = process.argv;
+const afuera = process.argv.filter(a => a.startsWith("--afuera=")).map(a => a.slice(9));
+const aparte = new Set();
 if (!entrada || !salida) {
   console.error("Uso: node vista-previa.js <sitio/index.html> <salida.html>");
   process.exit(1);
@@ -49,6 +53,8 @@ html = html.replace(/[ \t]*<script[^>]+src="((?!https?:|\/\/)[^"]+\.js)"[^>]*><\
 // 3. Imágenes, como data URI
 const hechas = {};
 html = html.replace(/\/?assets\/[\w\/.-]+\.(jpe?g|png|webp|svg)/gi, ruta => {
+  const limpia = ruta.replace(/^\//, "");
+  if (afuera.some(a => limpia.startsWith(a))) { if (leer(ruta)) aparte.add(limpia); return limpia; }
   if (!hechas[ruta]) {
     const abs = leer(ruta);
     if (!abs) return ruta;
@@ -59,5 +65,6 @@ html = html.replace(/\/?assets\/[\w\/.-]+\.(jpe?g|png|webp|svg)/gi, ruta => {
 
 fs.writeFileSync(salida, html);
 const mb = (fs.statSync(salida).size / 1024 / 1024).toFixed(2);
+if (aparte.size) console.log(`aparte (publicarlas junto al HTML, con la misma ruta): ${[...aparte].join(", ")}`);
 console.log(`${estilos} estilos · ${scripts} scripts · ${Object.keys(hechas).length} imágenes → ${salida} (${mb} MB)`);
 if (faltan.length) { console.error("FALTAN:", [...new Set(faltan)].join(", ")); process.exit(2); }

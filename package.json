@@ -6,7 +6,7 @@
     "start": "node herramientas/servidor.js app 5184",
     "vista-previa": "node herramientas/vista-previa.js app/index.html vista-previa.html",
     "laboratorio": "node herramientas/servidor.js . 5185",
-    "laboratorio:link": "node herramientas/vista-previa.js laboratorio/index.html laboratorio/vista-previa.html",
+    "laboratorio:link": "node herramientas/vista-previa.js laboratorio/index.html laboratorio/vista-previa.html --afuera=assets/cuadros/",
     "semilla": "node supabase/semilla.js",
     "test": "node supabase/pruebas.mjs"
   },

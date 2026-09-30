@@ -49,7 +49,7 @@
 <div class="grilla" id="grilla"></div>
 <script>
 "use strict";
-const VIDEOS = ["clasica-giro.mp4", "doble-bacon-giro.mp4", "remolacha-giro.mp4", "aros-giro.mp4", "ipa-servir.mp4", "fernet-servir.mp4", "limonada-servir.mp4"];
+const VIDEOS = ["clasica-giro2.mp4", "doble-bacon-giro2.mp4", "remolacha-giro.mp4", "aros-giro.mp4", "ipa-servir.mp4", "fernet-servir.mp4", "limonada-servir.mp4", "flan-tiembla.mp4", "papas-cheddar.mp4", "clasica-giro.mp4", "doble-bacon-giro.mp4"];
 const FPS = 24, CHICO = 0.25;
 const $ = id => document.getElementById(id);
 const estado = t => ($("estado").textContent = t);
@@ -180,19 +180,28 @@ async function atlas() {
   if (!caja) return;
   const n = elegidos.length, ancho = Number($("ancho").value);
   const [cx0, cy0, cx1, cy1] = caja, alto = Math.round(((cy1 - cy0) * ancho) / (cx1 - cx0));
+  // Cada imagen, de 4096 px como mucho (lo que aguantan todos los celulares): si no entran, van en partes
   let cols = Math.ceil(Math.sqrt((n * alto) / ancho));
   while (cols * ancho > 4096) cols--;
-  const filas = Math.ceil(n / cols);
-  const c = lienzo(cols * ancho, filas * alto), g = c.getContext("2d");
-  for (let k = 0; k < n; k++) {
-    g.drawImage(await grande(elegidos[k], ancho), (k % cols) * ancho, Math.floor(k / cols) * alto);
-    if (k % 6 === 0) estado(`armando ${k + 1}/${n}…`);
+  const porParte = cols * Math.min(Math.floor(4096 / alto), Math.ceil(n / cols)), partes = Math.ceil(n / porParte);
+  const nombres = [], textos = [];
+  let total = 0;
+  for (let pa = 0; pa < partes; pa++) {
+    const cuantos = Math.min(porParte, n - pa * porParte), filas = Math.ceil(cuantos / cols);
+    const c = lienzo(cols * ancho, filas * alto), g = c.getContext("2d");
+    for (let k = 0; k < cuantos; k++) {
+      g.drawImage(await grande(elegidos[pa * porParte + k], ancho), (k % cols) * ancho, Math.floor(k / cols) * alto);
+      if (k % 6 === 0) estado(`armando ${pa * porParte + k + 1}/${n}…`);
+    }
+    const blob = await comoBlob(c, "image/webp", Number($("calidad").value));
+    const nombre = `${$("nombre").value}${partes > 1 ? "-" + (pa + 1) : ""}.webp`;
+    textos.push(await guardar(`laboratorio/assets/cuadros/${nombre}`, blob) + ` · ${c.width}×${c.height}`);
+    nombres.push(`"assets/cuadros/${nombre}"`);
+    total += blob.size;
   }
-  const blob = await comoBlob(c, "image/webp", Number($("calidad").value));
-  const ruta = `laboratorio/assets/cuadros/${$("nombre").value}.webp`;
-  const r = await guardar(ruta, blob);
-  estado(`${r}\natlas ${c.width}×${c.height} · ${cols} columnas · cuadro ${ancho}×${alto} · ${n} cuadros · ${(blob.size / 1024).toFixed(0)} KB\n` +
-    `cuadros: { src: "assets/cuadros/${$("nombre").value}.webp", n: ${n}, cols: ${cols}, tam: [${ancho}, ${alto}] }`);
+  const src = partes > 1 ? `[${nombres.join(", ")}]` : nombres[0];
+  estado(`${textos.join("\n")}\n${cols} columnas · cuadro ${ancho}×${alto} · ${n} cuadros · ${(total / 1024).toFixed(0)} KB en total\n` +
+    `{ src: ${src}, n: ${n}, cols: ${cols}, tam: [${ancho}, ${alto}]${partes > 1 ? `, porParte: ${porParte}` : ""} }`);
 }
 
 // Un cuadro como foto del plato (color + alfa, como las demás)

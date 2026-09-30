@@ -48,6 +48,13 @@ el laboratorio solo lee de ahí los platos, `local.js`, y el diseño, `estilos.c
   sirven solas al llegar (la IPA rebalsa) y se sirven con el dedo; el flan tiembla; las bochas del
   cucurucho se hamacan y la cereza salta; el cheesecake se come con la cuchara (corta, caen migas, y
   cuando se termina aparece otra porción).
+- 30-sep (3): pedidos de Gaby. Giro de las burgers más natural y nítido: videos nuevos de Clásica y
+  Doble Bacon (Kling 3.0 pro, 8 s, 1440p), 96 cuadros de 520 px; el paso de la foto a los cuadros se
+  funde, el giro sigue con el envión, queda donde lo dejan y al rato vuelve de frente solo. Flan: el
+  temblor ahora es un video (el de antes, con la foto deformada, dejaba ver un cuadrado). Cheesecake:
+  la cuchara corta de canto desde la punta, levanta el pedazo y la porción va quedando cada vez más
+  chica. Papas: se sirven como las bebidas (el cheddar cae y después el verdeo). Los cuadros ya no
+  van adentro del link: se publican aparte y se cargan cuando el plato está cerca (el link pesa 4 MB).
 
 ## Fotos
 

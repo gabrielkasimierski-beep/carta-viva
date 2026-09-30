@@ -13,7 +13,7 @@
              un fondo azul), recortados y juntos en una imagen (assets/cuadros, ver laboratorio/taller).
              sentido: para qué lado gira el video (1: lo de adelante va a la derecha).
    juego:    lo que se puede hacer con el dedo en los postres y las bebidas (ver juegos.js):
-             "servir" (el vaso se llena: cuadros de un video), "flan" (tiembla), "helado" (las
+             "servir" (el vaso se llena o el cheddar cae: cuadros de un video), "flan" (tiembla: también un video), "helado" (las
              bochas se hamacan, la cereza salta), "cuchara" (el cheesecake se come con la cuchara).
    capas:    en las burgers, la foto en franjas de arriba hacia abajo (hasta: [izquierda, centro,
              derecha] donde termina cada una; tiene: qué ingredientes hay en esa franja). Con
@@ -25,7 +25,7 @@ window.FOTOS = {
   "clasica": {
     foto: "assets/fotos/clasica.jpg", alfa: "assets/fotos/clasica-alfa.jpg", tam: [900, 776], vista: "frente",
     lleva: [["pan", "Pan de papa"], ["medallon", "Medallón"], ["cheddar", "Cheddar"], ["lechuga", "Lechuga"], ["tomate", "Tomate"], ["cebolla", "Cebolla morada"], ["salsa", "Salsa de la casa"]],
-    giro: { src: "assets/cuadros/clasica-giro.webp", n: 48, cols: 7, tam: [420, 361], sentido: -1 },
+    giro: { src: ["assets/cuadros/clasica-giro-1.webp", "assets/cuadros/clasica-giro-2.webp"], n: 96, cols: 7, tam: [520, 445], porParte: 63, sentido: -1 },
     capas: [
       { nombre: "Pan de papa", hasta: [268, 250, 268] },
       { nombre: "Salsa y cebolla morada", tiene: ["cebolla"], hasta: [328, 340, 336] },
@@ -39,7 +39,7 @@ window.FOTOS = {
   "doble-bacon": {
     foto: "assets/fotos/doble-bacon.jpg", alfa: "assets/fotos/doble-bacon-alfa.jpg", tam: [900, 710], vista: "frente",
     lleva: [["pan", "Pan de papa"], ["medallon", "Dos medallones"], ["cheddar", "Doble cheddar"], ["panceta", "Panceta crocante"], ["barbacoa", "Barbacoa ahumada"]],
-    giro: { src: "assets/cuadros/doble-bacon-giro.webp", n: 48, cols: 7, tam: [420, 333], sentido: -1 },
+    giro: { src: ["assets/cuadros/doble-bacon-giro-1.webp", "assets/cuadros/doble-bacon-giro-2.webp"], n: 96, cols: 7, tam: [520, 404], porParte: 70, sentido: 1 },
     capas: [
       { nombre: "Pan de papa", hasta: [235, 225, 235] },
       { nombre: "Panceta y barbacoa", hasta: [370, 305, 365] },
@@ -51,7 +51,7 @@ window.FOTOS = {
   "remolacha": {
     foto: "assets/fotos/remolacha.jpg", alfa: "assets/fotos/remolacha-alfa.jpg", tam: [895, 857], vista: "frente",
     lleva: [["remolacha", "Medallón de remolacha"], ["palta", "Palta"], ["lechuga", "Lechuga"], ["tomate", "Tomate"], ["albahaca", "Mayo de albahaca"]],
-    giro: { src: "assets/cuadros/remolacha-giro.webp", n: 48, cols: 7, tam: [420, 398], sentido: -1 },
+    giro: { src: ["assets/cuadros/remolacha-giro-1.webp", "assets/cuadros/remolacha-giro-2.webp"], n: 96, cols: 7, tam: [520, 493], porParte: 56, sentido: -1 },
     capas: [
       { nombre: "Pan integral y mayo de albahaca", hasta: [298, 296, 300] },
       { nombre: "Tomate", tiene: ["tomate"], hasta: [362, 352, 368] },
@@ -73,6 +73,8 @@ window.FOTOS = {
   "papas-cheddar": {
     foto: "assets/fotos/papas-cheddar.jpg", alfa: "assets/fotos/papas-cheddar-alfa.jpg", tam: [900, 751], vista: "frente",
     lleva: [["papas", "Papas rústicas"], ["cheddar", "Cheddar fundido"], ["verdeo", "Verdeo"]],
+    juego: "servir", cuadros: { src: "assets/cuadros/papas-cheddar.webp", n: 48, cols: 7, tam: [460, 425] },
+    pista: "Deslizá para bañarlas en cheddar · tocalas y se sirven de nuevo", esfumar: 0.3,
   },
   "aros": {
     foto: "assets/fotos/aros.jpg", alfa: "assets/fotos/aros-alfa.jpg", tam: [488, 900], vista: "frente",
@@ -82,7 +84,7 @@ window.FOTOS = {
   "flan": {
     foto: "assets/fotos/flan.jpg", alfa: "assets/fotos/flan-alfa.jpg", tam: [900, 676], vista: "frente",
     lleva: [["huevo", "Huevos de campo"], ["dulcedeleche", "Dulce de leche"], ["crema", "Crema"]],
-    juego: "flan", base: 0.835, arriba: 0.02, centro: 0.497, columna: [0.195, 0.8],   // columna: de dónde a dónde va el flan (lo demás, el plato, queda quieto)
+    juego: "flan", cuadros: { src: "assets/cuadros/flan-tiembla.webp", n: 64, cols: 8, tam: [500, 385] },
   },
   "helado": {
     foto: "assets/fotos/helado.jpg", alfa: "assets/fotos/helado-alfa.jpg", tam: [285, 900], vista: "frente",

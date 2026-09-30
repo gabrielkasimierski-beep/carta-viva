@@ -75,7 +75,7 @@
     p.presentado = false;
     if (p.pistaJ) { p.pistaJ.remove(); p.pistaJ = null; }
     p.fp.dataset.vista = p.vista;
-    p.fp.classList.remove("listo", "con-capas", "girando", "jugando");
+    p.fp.classList.remove("listo", "con-capas", "girando", "girado", "jugando");
     p.caja = d && !d.propia ? Recorte.caja(d) : null;
     p.aspecto = p.caja ? (p.caja[2] - p.caja[0]) / (p.caja[3] - p.caja[1]) : 1;
     p.redondo = Math.abs(p.aspecto - 1) < 0.12;
@@ -329,7 +329,7 @@
     p.atlas = null;
     p.gGiro = null;
     if (p.cvGiro) { p.cvGiro.remove(); p.cvGiro = null; }
-    p.fp.classList.remove("girando");
+    p.fp.classList.remove("girando", "girado");
   }
   // El lienzo del giro, calzado sobre la foto (lo que ocupa el plato en el cuadro 0 = lo que ocupa en la foto)
   function ponerGiro(p) {
@@ -384,8 +384,9 @@
       t0 = ahora;
       recorrido += Math.abs(dx);
       if (conVuelta(p)) {
-        p.vuelta += dx * 0.6;
-        p.velVuelta = topes((dx * 0.6) / dt, -1400, 1400);
+        p.vuelta += dx * 0.55;
+        p.velVuelta += (topes((dx * 0.55) / dt, -1300, 1300) - p.velVuelta) * 0.5;
+        p.metaVuelta = null; p.quieto = 0;
       } else if (p.vista === "arriba" && p.redondo) {
         p.giro += dx * 0.5;
         p.velGiro = topes((dx * 0.5) / dt, -720, 720);
@@ -409,12 +410,12 @@
       }
       p.arrastrando = false;
       const quieto = performance.now() - t0 > 120;
-      if (conVuelta(p)) { if (quieto) p.velVuelta *= 0.3; }
+      if (conVuelta(p)) { if (quieto) p.velVuelta = 0; }
       else if (p.vista === "arriba") { if (quieto) p.velGiro *= 0.3; }
       else { p.rotObj = 0; p.velRot += topes(p.velDedo * 0.06, -160, 160); }
       if (e.type === "pointerup" && recorrido < 6) {
         p.salto = 1;
-        if (conVuelta(p)) p.velVuelta += p.velVuelta >= 0 ? 760 : -760;        // un toque: una vuelta entera
+        if (conVuelta(p)) vueltaEntera(p, p.velVuelta >= 0 ? 1 : -1, 16);     // un toque: una vuelta entera
         else if (p.vista === "arriba") p.velGiro += p.redondo ? 220 : 90;
         else p.velRot += 140;
         el.dispatchEvent(new CustomEvent("escena:toque", { bubbles: true }));
@@ -424,6 +425,11 @@
     el.addEventListener("pointercancel", fin);
   }
   const conVuelta = p => p.entera && p.r && p.atlas && !p.eleccion;
+  // Una vuelta justa, suave (rigidez: más, más rápida), hasta quedar de frente otra vez
+  function vueltaEntera(p, sentido, rigidez) {
+    p.metaVuelta = Math.round(p.vuelta / 360) * 360 + 360 * sentido;
+    p.rigidez = rigidez;
+  }
 
   /* ---------- Cada cuadro: flota, gira, salta ---------- */
   function cuadro(ahora) {
@@ -452,7 +458,7 @@
   // La primera vez que se ve: la burger da una vuelta sola; en todos, qué se puede hacer
   function presentar(p) {
     p.presentado = true;
-    if (p.atlas && MOVIMIENTO && !p.eleccion) p.velVuelta += 430;
+    if (p.atlas && MOVIMIENTO && !p.eleccion) vueltaEntera(p, 1, 9);
     const texto = p.juego ? p.juego.pista : "Girala con el dedo · un toque, una vuelta";
     if (!texto || p.el.querySelector(".pista")) return;
     p.pistaJ = document.createElement("div");
@@ -477,18 +483,30 @@
       // Los juegos se mueven solos: acá, solo que flote
       p.mueve.style.transform = `translate3d(0, ${y.toFixed(2)}px, 0)`;
     } else if (conVuelta(p)) {
-      // Suelto: sigue con el envión, frena y vuelve a quedar de frente (a la vuelta más cercana)
+      // Suelto: sigue con el envión y frena de a poco, como en un plato giratorio; queda donde lo
+      // dejaron y, si nadie lo toca, al rato vuelve solo a quedar de frente (sin rebotar)
       if (!p.arrastrando) {
-        p.velVuelta *= Math.exp(-dt * 2);
-        if (Math.abs(p.velVuelta) < 110) {
-          const meta = Math.round(p.vuelta / 360) * 360;
-          p.velVuelta += ((meta - p.vuelta) * 26 - p.velVuelta * 7) * dt;
+        if (p.metaVuelta != null) {
+          const k = p.rigidez || 7, c = 2 * Math.sqrt(k) * 0.96;
+          p.velVuelta += ((p.metaVuelta - p.vuelta) * k - p.velVuelta * c) * dt;
+          p.vuelta += p.velVuelta * dt;
+          if (Math.abs(p.metaVuelta - p.vuelta) < 0.25 && Math.abs(p.velVuelta) < 4) { p.vuelta = p.metaVuelta; p.velVuelta = 0; p.metaVuelta = null; p.quieto = 0; }
+        } else {
+          p.velVuelta *= Math.exp(-dt * 1.5);
+          p.vuelta += p.velVuelta * dt;
+          const frente = Math.round(p.vuelta / 360) * 360;
+          if (Math.abs(p.velVuelta) < 10 && Math.abs(frente - p.vuelta) > 0.25) {
+            p.quieto = (p.quieto || 0) + dt;
+            if (p.quieto > 2.2) { p.metaVuelta = frente; p.rigidez = 6; }
+          } else p.quieto = 0;
         }
-        p.vuelta += p.velVuelta * dt;
       }
-      const grados = ((p.vuelta % 360) + 360) % 360, girando = Math.min(grados, 360 - grados) > 0.4 || p.arrastrando;
-      if (girando) dibujarGiro(p, p.vuelta);
-      p.fp.classList.toggle("girando", girando && !!p.gGiro);
+      // Cerca del frente se ve la foto (más nítida); al girar, se funde con los cuadros del video
+      const grados = ((p.vuelta % 360) + 360) % 360, lejos = Math.min(grados, 360 - grados);
+      const mezcla = p.gGiro ? topes(lejos / 7, 0, 1) : 0;
+      if (mezcla > 0.001) { dibujarGiro(p, p.vuelta); p.cvGiro.style.opacity = mezcla.toFixed(3); }
+      p.fp.classList.toggle("girando", mezcla > 0.001);
+      p.fp.classList.toggle("girado", mezcla > 0.995);
       p.mueve.style.transform = `translate3d(0, ${y.toFixed(2)}px, 0) scale(${(1 + s * 0.035).toFixed(4)})`;
     } else if (p.vista === "arriba" && !p.redondo) {
       // La fuente ovalada: se hamaca, sigue al dedo y vuelve (como un resorte)
@@ -506,7 +524,7 @@
       p.mueve.style.transform = `translate3d(0, ${y.toFixed(2)}px, 0)`;
       girar(p);
     } else {
-      if (p.entera) p.fp.classList.remove("girando");
+      if (p.entera) p.fp.classList.remove("girando", "girado");
       const obj = p.arrastrando ? p.rotObj : MOVIMIENTO ? Math.sin(t * 0.55 + p.fase) * 5 : 0;
       if (p.arrastrando) { p.rot += (obj - p.rot) * (1 - Math.exp(-dt * 16)); p.velRot = 0; }
       else { p.velRot += ((obj - p.rot) * 55 - p.velRot * 8) * dt; p.rot += p.velRot * dt; }
@@ -551,7 +569,7 @@
       const p = puestos.get(el);
       if (!p || p.juego) return;
       p.salto = Math.max(p.salto, fuerza);
-      if (conVuelta(p)) p.velVuelta += 200 * fuerza;
+      if (conVuelta(p)) vueltaEntera(p, 1, 12);
       else if (p.vista === "arriba") p.velGiro += 160 * fuerza;
       else p.velRot += 110 * fuerza;
     },

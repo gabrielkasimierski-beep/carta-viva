@@ -361,9 +361,9 @@ svg { flex: none; }
 .sello::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--a); box-shadow: 0 0 10px var(--a); }
 .sello--agotado::before { background: #FF5A4F; box-shadow: none; }
 
-.plato__fila { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-width: 0; min-height: 34px; margin-top: 4px; }
+.plato__fila { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; min-width: 0; min-height: 34px; margin-top: 4px; }
 .plato__fila .plato__cat { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.plato__herramientas { display: flex; gap: 6px; flex: none; }
+.plato__herramientas { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 6px; margin-left: auto; }
 .chip-linea {
   height: 34px; padding: 0 11px; border-radius: var(--radio-chico);
   background: transparent; border: 1px solid color-mix(in srgb, var(--tc) 30%, transparent); color: var(--tc);
@@ -374,13 +374,13 @@ svg { flex: none; }
 .chip-linea:hover { border-color: var(--tc); }
 .chip-linea:disabled { opacity: .4; pointer-events: none; }
 
-.plato__info { display: grid; gap: 8px; align-content: end; max-width: 560px; color: var(--tc); }
+.plato__info { display: grid; gap: 8px; align-content: end; max-width: 560px; color: var(--tc); container-type: inline-size; }
 .plato__cat { margin: 0; font: var(--rotulo-peso) var(--rotulo-tam)/1.2 var(--rotulo); letter-spacing: var(--rotulo-espacio); text-transform: uppercase; color: var(--sc); }
 .plato__nombre {
   margin: 0;
   font-family: var(--display); font-weight: var(--display-peso); font-style: var(--display-estilo);
   font-stretch: var(--display-ancho); text-transform: var(--display-caja);
-  font-size: var(--nombre-tam); line-height: var(--display-alto); letter-spacing: var(--display-espacio);
+  font-size: min(var(--nombre-tam), 22cqi); line-height: var(--display-alto);   /* (cqi: que el nombre entre en su columna) */ letter-spacing: var(--display-espacio);
   text-wrap: balance;
 }
 .plato__desc {
@@ -529,8 +529,9 @@ svg { flex: none; }
 .acciones__textos { display: flex; align-items: baseline; gap: 9px; min-width: 0; }
 .acciones__precio { font-family: var(--precio-fuente); font-weight: var(--precio-peso); font-variant-numeric: tabular-nums; opacity: .78; }
 .acciones__precio:not(:empty)::before { content: "·"; margin-right: 9px; }
-/* Con el pedido al lado, el precio baja a una segunda línea para que entre todo */
-@media (max-width: 520px) {
+/* Con el pedido al lado, el precio baja a una segunda línea para que entre todo (en el celu, y en
+   pantallas anchas pero no tanto, donde la barra va angosta a la derecha) */
+@media (max-width: 520px), (min-width: 900px) and (max-width: 1150px) {
   .acciones.con-pedido .acciones__agregar { padding: 0 16px; gap: 8px; }
   .acciones.con-pedido .acciones__textos { flex-direction: column; align-items: flex-start; gap: 2px; line-height: 1.05; }
   .acciones.con-pedido .acciones__precio { font-size: 13.5px; }
@@ -4894,7 +4895,8 @@ window.SUMAR = {
       // Queda entero, más chico, en el medio: alrededor van los ingredientes
       w = Math.min(W * (angosto ? 0.5 : 0.36), (H * (angosto ? 0.42 : 0.5) * a) / bajo, maximo);
     } else {
-      w = Math.min(W * (angosto ? 1.12 : 1), (H * 0.97 * a) / bajo, maximo);
+      // (la pizza 3D se dibuja más grande que su caja: en el celu, más chica para que entre entera)
+      w = Math.min(W * (angosto ? (p.grosor ? 0.92 : 1.12) : 1), (H * 0.97 * a) / bajo, maximo);
     }
     const h = w / a;
     p.w = w;
@@ -4922,6 +4924,10 @@ window.SUMAR = {
     if (!p) { if (cambiar) cambiar(); return; }
     p.modo = si ? "explotando" : null;
     quitarEtiquetas(p);
+    quitarPista(p);
+    // Las pizzas se quedan quietas mientras se mira qué tienen (la de video, de frente)
+    if (p.tres) p.tres.posar(si);
+    if (si && conVuelta(p)) { p.metaVuelta = Math.round(p.vuelta / 360) * 360; p.rigidez = 14; }
     mudarse(p, cambiar);
     if (si) { p.salto = 0.7; ingredientes(p); }
   }
@@ -5004,6 +5010,7 @@ window.SUMAR = {
         p.tres = t;
         p.cajaTres = caja;
         p.fp.classList.add("con-grosor");
+        if (p.modo === "explotando") t.posar(true);
       }).catch(() => caja.remove());
     });
   }
@@ -5362,7 +5369,7 @@ window.SUMAR = {
    ocho porciones separadas por el corte. Gira con el dedo (con envión) y se inclina; con un toque
    se levanta la porción de adelante y el queso se estira hasta que se corta.
 
-   crearPizza3D(contenedor, { foto, alfa, desfase, salsa, gestos }) → { tocar(), agarrar(), arrastrar(dx, dt), soltar(quieta), destruir() }
+   crearPizza3D(contenedor, { foto, alfa, desfase, salsa, gestos }) → { tocar(), agarrar(), arrastrar(dx, dt), soltar(quieta), posar(si), destruir() }
      foto / alfa: la foto desde arriba y su transparencia (en gris)
      desfase: grados para que los cortes de la malla caigan sobre los de la foto ("auto": los busca)
      gestos: false si los toques los maneja otro (en la carta: escena-fotos.js, así el dedo
@@ -5513,7 +5520,8 @@ export async function crearPizza3D(contenedor, o) {
   const da = gc.getImageData(0, 0, W, H).data;
   let x0 = W, y0 = H, x1 = 0, y1 = 0;
   for (let y = 0; y < H; y += 2) for (let x = 0; x < W; x += 2) if (da[(y * W + x) * 4] > 128) { if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; }
-  const uv0 = [(x0 + x1) / 2 / W, 1 - (y0 + y1) / 2 / H, ((x1 - x0) / 2 / W) * 0.995];
+  // (un poco adentro del contorno: el borde de la foto trae restos del fondo)
+  const uv0 = [(x0 + x1) / 2 / W, 1 - (y0 + y1) / 2 / H, ((x1 - x0) / 2 / W) * 0.975];
   // El relieve: lo claro (queso, burbujas, borde) un poco más alto
   gc.drawImage(foto, 0, 0, W, H);
   const dd = gc.getImageData(0, 0, W, H), px = dd.data;
@@ -5542,8 +5550,22 @@ export async function crearPizza3D(contenedor, o) {
     }
     if (suma < mejor) { mejor = suma; desfaseAuto = d; }
   }
-  const tFoto = new THREE.Texture(foto);
-  tFoto.colorSpace = THREE.SRGBColorSpace; tFoto.anisotropy = 8; tFoto.needsUpdate = true;
+  // La foto sin su fondo: lo que queda afuera de la pizza (fondo negro, pelusa roja) pasa a ser
+  // del color del borde, así no aparece en el canto de la masa
+  const limpia = document.createElement("canvas"); limpia.width = W; limpia.height = H;
+  const gl = limpia.getContext("2d");
+  const recortada = new ImageData(W, H), rp = recortada.data;
+  for (let i = 0; i < rp.length; i += 4) {
+    rp[i] = df[i]; rp[i + 1] = df[i + 1]; rp[i + 2] = df[i + 2];
+    rp[i + 3] = Math.max(0, Math.min(255, (da[i] - 90) * 2.2));     // más duro que el alfa: sin halo
+  }
+  const capaFoto = document.createElement("canvas"); capaFoto.width = W; capaFoto.height = H;
+  capaFoto.getContext("2d").putImageData(recortada, 0, 0);
+  gl.fillStyle = `rgb(${colorBorde.map(v => v | 0).join(",")})`;
+  gl.fillRect(0, 0, W, H);
+  gl.drawImage(capaFoto, 0, 0);
+  const tFoto = new THREE.CanvasTexture(limpia);
+  tFoto.colorSpace = THREE.SRGBColorSpace; tFoto.anisotropy = 8;
   const mats = {
     foto: new THREE.MeshStandardMaterial({ map: tFoto, bumpMap: relieve, bumpScale: 1.6, roughness: 0.62, metalness: 0, vertexColors: true }),
     corte: new THREE.MeshStandardMaterial({ map: texturaCorte(o.salsa !== false), roughness: 0.85, metalness: 0, side: THREE.DoubleSide }),
@@ -5588,7 +5610,7 @@ export async function crearPizza3D(contenedor, o) {
 
   // Estado: giro (con envión), inclinación, y la porción que se levanta
   let ang = 0.35, vel = 0.35, incl = 0.62, inclMeta = 0.62, dedo = null, xAnt = 0, yAnt = 0, tAnt = 0, mueve = 0, quieto = 0;
-  let sube = null, t0 = 0, vivo = true, ultimo = performance.now();
+  let sube = null, t0 = 0, vivo = true, ultimo = performance.now(), quieta = false;
 
   function medir() {
     const w = contenedor.clientWidth, h = contenedor.clientHeight;
@@ -5642,10 +5664,10 @@ export async function crearPizza3D(contenedor, o) {
     requestAnimationFrame(cuadro);
     const dt = Math.min(0.05, (ahora - ultimo) / 1000); ultimo = ahora;
     if (dedo === null) {
-      vel += (0.32 - vel) * (1 - Math.exp(-dt * 0.6));     // si nadie la toca, sigue girando despacito
+      vel += ((quieta ? 0 : 0.32) - vel) * (1 - Math.exp(-dt * (quieta ? 3 : 0.6)));     // si nadie la toca, sigue girando despacito
       ang += vel * dt;
       quieto += dt;
-      if (quieto > 3) inclMeta += (0.62 - inclMeta) * (1 - Math.exp(-dt * 1.5));
+      if (quieto > 3 || quieta) inclMeta += ((quieta ? 0.8 : 0.62) - inclMeta) * (1 - Math.exp(-dt * 1.5));
     }
     incl += (inclMeta - incl) * (1 - Math.exp(-dt * 10));
     giro.rotation.y = ang;
@@ -5688,7 +5710,9 @@ export async function crearPizza3D(contenedor, o) {
     // Para cuando los toques los maneja la carta
     agarrar() { dedo = "carta"; mueve = 0; },
     arrastrar(dx, dt) { ang += dx * 0.011; vel = vel * 0.5 + ((dx * 0.011) / Math.max(0.008, dt)) * 0.5; quieto = 0; },
-    soltar(quieta) { dedo = null; if (quieta) vel = 0; },
+    soltar(sinEnvion) { dedo = null; if (sinEnvion) vel = 0; },
+    // Quieta (en "¿Qué tiene?"): deja de girar sola y se ve más desde arriba
+    posar(si) { quieta = !!si; quieto = 0; },
     destruir() {
       vivo = false; alCambiar.disconnect();
       Object.values(mats).forEach(m => { if (m.map) m.map.dispose(); m.dispose(); });

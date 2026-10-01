@@ -4,7 +4,7 @@
    ocho porciones separadas por el corte. Gira con el dedo (con envión) y se inclina; con un toque
    se levanta la porción de adelante y el queso se estira hasta que se corta.
 
-   crearPizza3D(contenedor, { foto, alfa, desfase, salsa, gestos }) → { tocar(), agarrar(), arrastrar(dx, dt), soltar(quieta), destruir() }
+   crearPizza3D(contenedor, { foto, alfa, desfase, salsa, gestos }) → { tocar(), agarrar(), arrastrar(dx, dt), soltar(quieta), posar(si), destruir() }
      foto / alfa: la foto desde arriba y su transparencia (en gris)
      desfase: grados para que los cortes de la malla caigan sobre los de la foto ("auto": los busca)
      gestos: false si los toques los maneja otro (en la carta: escena-fotos.js, así el dedo
@@ -155,7 +155,8 @@ export async function crearPizza3D(contenedor, o) {
   const da = gc.getImageData(0, 0, W, H).data;
   let x0 = W, y0 = H, x1 = 0, y1 = 0;
   for (let y = 0; y < H; y += 2) for (let x = 0; x < W; x += 2) if (da[(y * W + x) * 4] > 128) { if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; }
-  const uv0 = [(x0 + x1) / 2 / W, 1 - (y0 + y1) / 2 / H, ((x1 - x0) / 2 / W) * 0.995];
+  // (un poco adentro del contorno: el borde de la foto trae restos del fondo)
+  const uv0 = [(x0 + x1) / 2 / W, 1 - (y0 + y1) / 2 / H, ((x1 - x0) / 2 / W) * 0.975];
   // El relieve: lo claro (queso, burbujas, borde) un poco más alto
   gc.drawImage(foto, 0, 0, W, H);
   const dd = gc.getImageData(0, 0, W, H), px = dd.data;
@@ -184,8 +185,22 @@ export async function crearPizza3D(contenedor, o) {
     }
     if (suma < mejor) { mejor = suma; desfaseAuto = d; }
   }
-  const tFoto = new THREE.Texture(foto);
-  tFoto.colorSpace = THREE.SRGBColorSpace; tFoto.anisotropy = 8; tFoto.needsUpdate = true;
+  // La foto sin su fondo: lo que queda afuera de la pizza (fondo negro, pelusa roja) pasa a ser
+  // del color del borde, así no aparece en el canto de la masa
+  const limpia = document.createElement("canvas"); limpia.width = W; limpia.height = H;
+  const gl = limpia.getContext("2d");
+  const recortada = new ImageData(W, H), rp = recortada.data;
+  for (let i = 0; i < rp.length; i += 4) {
+    rp[i] = df[i]; rp[i + 1] = df[i + 1]; rp[i + 2] = df[i + 2];
+    rp[i + 3] = Math.max(0, Math.min(255, (da[i] - 90) * 2.2));     // más duro que el alfa: sin halo
+  }
+  const capaFoto = document.createElement("canvas"); capaFoto.width = W; capaFoto.height = H;
+  capaFoto.getContext("2d").putImageData(recortada, 0, 0);
+  gl.fillStyle = `rgb(${colorBorde.map(v => v | 0).join(",")})`;
+  gl.fillRect(0, 0, W, H);
+  gl.drawImage(capaFoto, 0, 0);
+  const tFoto = new THREE.CanvasTexture(limpia);
+  tFoto.colorSpace = THREE.SRGBColorSpace; tFoto.anisotropy = 8;
   const mats = {
     foto: new THREE.MeshStandardMaterial({ map: tFoto, bumpMap: relieve, bumpScale: 1.6, roughness: 0.62, metalness: 0, vertexColors: true }),
     corte: new THREE.MeshStandardMaterial({ map: texturaCorte(o.salsa !== false), roughness: 0.85, metalness: 0, side: THREE.DoubleSide }),
@@ -230,7 +245,7 @@ export async function crearPizza3D(contenedor, o) {
 
   // Estado: giro (con envión), inclinación, y la porción que se levanta
   let ang = 0.35, vel = 0.35, incl = 0.62, inclMeta = 0.62, dedo = null, xAnt = 0, yAnt = 0, tAnt = 0, mueve = 0, quieto = 0;
-  let sube = null, t0 = 0, vivo = true, ultimo = performance.now();
+  let sube = null, t0 = 0, vivo = true, ultimo = performance.now(), quieta = false;
 
   function medir() {
     const w = contenedor.clientWidth, h = contenedor.clientHeight;
@@ -284,10 +299,10 @@ export async function crearPizza3D(contenedor, o) {
     requestAnimationFrame(cuadro);
     const dt = Math.min(0.05, (ahora - ultimo) / 1000); ultimo = ahora;
     if (dedo === null) {
-      vel += (0.32 - vel) * (1 - Math.exp(-dt * 0.6));     // si nadie la toca, sigue girando despacito
+      vel += ((quieta ? 0 : 0.32) - vel) * (1 - Math.exp(-dt * (quieta ? 3 : 0.6)));     // si nadie la toca, sigue girando despacito
       ang += vel * dt;
       quieto += dt;
-      if (quieto > 3) inclMeta += (0.62 - inclMeta) * (1 - Math.exp(-dt * 1.5));
+      if (quieto > 3 || quieta) inclMeta += ((quieta ? 0.8 : 0.62) - inclMeta) * (1 - Math.exp(-dt * 1.5));
     }
     incl += (inclMeta - incl) * (1 - Math.exp(-dt * 10));
     giro.rotation.y = ang;
@@ -330,7 +345,9 @@ export async function crearPizza3D(contenedor, o) {
     // Para cuando los toques los maneja la carta
     agarrar() { dedo = "carta"; mueve = 0; },
     arrastrar(dx, dt) { ang += dx * 0.011; vel = vel * 0.5 + ((dx * 0.011) / Math.max(0.008, dt)) * 0.5; quieto = 0; },
-    soltar(quieta) { dedo = null; if (quieta) vel = 0; },
+    soltar(sinEnvion) { dedo = null; if (sinEnvion) vel = 0; },
+    // Quieta (en "¿Qué tiene?"): deja de girar sola y se ve más desde arriba
+    posar(si) { quieta = !!si; quieto = 0; },
     destruir() {
       vivo = false; alCambiar.disconnect();
       Object.values(mats).forEach(m => { if (m.map) m.map.dispose(); m.dispose(); });

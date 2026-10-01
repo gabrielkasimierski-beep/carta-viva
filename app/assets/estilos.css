@@ -347,9 +347,9 @@ svg { flex: none; }
 .sello::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--a); box-shadow: 0 0 10px var(--a); }
 .sello--agotado::before { background: #FF5A4F; box-shadow: none; }
 
-.plato__fila { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-width: 0; min-height: 34px; margin-top: 4px; }
+.plato__fila { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; min-width: 0; min-height: 34px; margin-top: 4px; }
 .plato__fila .plato__cat { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.plato__herramientas { display: flex; gap: 6px; flex: none; }
+.plato__herramientas { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 6px; margin-left: auto; }
 .chip-linea {
   height: 34px; padding: 0 11px; border-radius: var(--radio-chico);
   background: transparent; border: 1px solid color-mix(in srgb, var(--tc) 30%, transparent); color: var(--tc);
@@ -360,13 +360,13 @@ svg { flex: none; }
 .chip-linea:hover { border-color: var(--tc); }
 .chip-linea:disabled { opacity: .4; pointer-events: none; }
 
-.plato__info { display: grid; gap: 8px; align-content: end; max-width: 560px; color: var(--tc); }
+.plato__info { display: grid; gap: 8px; align-content: end; max-width: 560px; color: var(--tc); container-type: inline-size; }
 .plato__cat { margin: 0; font: var(--rotulo-peso) var(--rotulo-tam)/1.2 var(--rotulo); letter-spacing: var(--rotulo-espacio); text-transform: uppercase; color: var(--sc); }
 .plato__nombre {
   margin: 0;
   font-family: var(--display); font-weight: var(--display-peso); font-style: var(--display-estilo);
   font-stretch: var(--display-ancho); text-transform: var(--display-caja);
-  font-size: var(--nombre-tam); line-height: var(--display-alto); letter-spacing: var(--display-espacio);
+  font-size: min(var(--nombre-tam), 22cqi); line-height: var(--display-alto);   /* (cqi: que el nombre entre en su columna) */ letter-spacing: var(--display-espacio);
   text-wrap: balance;
 }
 .plato__desc {
@@ -515,8 +515,9 @@ svg { flex: none; }
 .acciones__textos { display: flex; align-items: baseline; gap: 9px; min-width: 0; }
 .acciones__precio { font-family: var(--precio-fuente); font-weight: var(--precio-peso); font-variant-numeric: tabular-nums; opacity: .78; }
 .acciones__precio:not(:empty)::before { content: "·"; margin-right: 9px; }
-/* Con el pedido al lado, el precio baja a una segunda línea para que entre todo */
-@media (max-width: 520px) {
+/* Con el pedido al lado, el precio baja a una segunda línea para que entre todo (en el celu, y en
+   pantallas anchas pero no tanto, donde la barra va angosta a la derecha) */
+@media (max-width: 520px), (min-width: 900px) and (max-width: 1150px) {
   .acciones.con-pedido .acciones__agregar { padding: 0 16px; gap: 8px; }
   .acciones.con-pedido .acciones__textos { flex-direction: column; align-items: flex-start; gap: 2px; line-height: 1.05; }
   .acciones.con-pedido .acciones__precio { font-size: 13.5px; }

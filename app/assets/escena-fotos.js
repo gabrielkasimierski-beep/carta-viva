@@ -272,7 +272,8 @@
       // Queda entero, más chico, en el medio: alrededor van los ingredientes
       w = Math.min(W * (angosto ? 0.5 : 0.36), (H * (angosto ? 0.42 : 0.5) * a) / bajo, maximo);
     } else {
-      w = Math.min(W * (angosto ? 1.12 : 1), (H * 0.97 * a) / bajo, maximo);
+      // (la pizza 3D se dibuja más grande que su caja: en el celu, más chica para que entre entera)
+      w = Math.min(W * (angosto ? (p.grosor ? 0.92 : 1.12) : 1), (H * 0.97 * a) / bajo, maximo);
     }
     const h = w / a;
     p.w = w;
@@ -300,6 +301,10 @@
     if (!p) { if (cambiar) cambiar(); return; }
     p.modo = si ? "explotando" : null;
     quitarEtiquetas(p);
+    quitarPista(p);
+    // Las pizzas se quedan quietas mientras se mira qué tienen (la de video, de frente)
+    if (p.tres) p.tres.posar(si);
+    if (si && conVuelta(p)) { p.metaVuelta = Math.round(p.vuelta / 360) * 360; p.rigidez = 14; }
     mudarse(p, cambiar);
     if (si) { p.salto = 0.7; ingredientes(p); }
   }
@@ -382,6 +387,7 @@
         p.tres = t;
         p.cajaTres = caja;
         p.fp.classList.add("con-grosor");
+        if (p.modo === "explotando") t.posar(true);
       }).catch(() => caja.remove());
     });
   }

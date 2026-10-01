@@ -12,6 +12,11 @@
    giro:     la vuelta entera de verdad: los cuadros de un video de Higgsfield (el plato girando en
              un fondo azul), recortados y juntos en una imagen (assets/cuadros, ver herramientas/taller).
              sentido: para qué lado gira el video (1: lo de adelante va a la derecha).
+   grosor:   las pizzas, de dos maneras (se elige con el botón de la pizza; ver escena-fotos.js):
+             · "video": la foto en ángulo (foto) y su giro (los cuadros de un video), con su borde y grosor;
+             · "3d":    la foto de arriba (grosor.foto) sobre una pizza armada en 3D (pizza3d.js): masa,
+                        borde inflado, ocho porciones; un toque levanta una porción con el queso estirado.
+             desfase: grados para que los cortes del 3D caigan sobre los de la foto ("auto": los busca).
    juego:    lo que se puede hacer con el dedo en los postres y las bebidas (ver juegos.js):
              "servir" (el vaso se llena o el cheddar cae: cuadros de un video), "flan" (tiembla: también un video), "helado" (las
              bochas se hamacan, la cereza salta), "cuchara" (el cheesecake se come con la cuchara).
@@ -62,13 +67,17 @@ window.FOTOS = {
     ],
   },
   "pepperoni": {
-    foto: "assets/fotos/pepperoni.jpg", alfa: "assets/fotos/pepperoni-alfa.jpg", tam: [1000, 1000], vista: "arriba",
+    foto: "assets/fotos/pepperoni-34.jpg", alfa: "assets/fotos/pepperoni-34-alfa.jpg", tam: [1000, 714], vista: "frente",
     lleva: [["masa", "Masa de fermentación lenta"], ["tomate", "Salsa de tomate"], ["muzzarella", "Muzzarella"], ["pepperoni", "Pepperoni"]],
     color: "#D8432A", color2: "#F2A93B",            // en la carta es verde (por la albahaca del 3D); la foto es roja
+    giro: { src: ["assets/cuadros/pepperoni-giro-1.webp", "assets/cuadros/pepperoni-giro-2.webp"], n: 96, cols: 7, tam: [560, 403], porParte: 70, sentido: -1 },
+    grosor: { foto: "assets/fotos/pepperoni.jpg", alfa: "assets/fotos/pepperoni-alfa.jpg", desfase: 0, salsa: true },
   },
   "fugazzeta": {
-    foto: "assets/fotos/fugazzeta.jpg", alfa: "assets/fotos/fugazzeta-alfa.jpg", tam: [1000, 1000], vista: "arriba",
+    foto: "assets/fotos/fugazzeta-34.jpg", alfa: "assets/fotos/fugazzeta-34-alfa.jpg", tam: [1000, 693], vista: "frente",
     lleva: [["masa", "Masa"], ["cebolla", "Cebolla dulce"], ["muzzarella", "Muzzarella a morir"], ["oregano", "Orégano"]],
+    giro: { src: ["assets/cuadros/fugazzeta-giro-1.webp", "assets/cuadros/fugazzeta-giro-2.webp"], n: 96, cols: 7, tam: [560, 393], porParte: 70, sentido: -1 },
+    grosor: { foto: "assets/fotos/fugazzeta.jpg", alfa: "assets/fotos/fugazzeta-alfa.jpg", desfase: "auto", salsa: false },
   },
   "papas-cheddar": {
     foto: "assets/fotos/papas-cheddar.jpg", alfa: "assets/fotos/papas-cheddar-alfa.jpg", tam: [900, 751], vista: "frente",

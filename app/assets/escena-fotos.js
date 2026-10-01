@@ -5,7 +5,10 @@
    · Las burgers y los aros dan la vuelta entera de verdad: son los cuadros de un video (el plato
      girando), y el dedo elige cuál se ve (un toque: una vuelta completa).
    · Los postres y las bebidas tienen su juego (juegos.js): servir, temblar, hamacarse, comer.
-   · Desde arriba (las pizzas) se acuestan como un plato de verdad y giran.
+   · Las pizzas, de dos maneras (las dos con grosor; se elige con el botón de la pizza):
+     "video" (la pizza en ángulo, girando con los cuadros de un video) o "3d" (la foto de arriba
+     sobre una pizza armada en 3D, pizza3d.js: un toque levanta una porción con el queso).
+   · Lo que se ve desde arriba se acuesta como un plato de verdad y gira.
    · "¿Qué tiene?": el plato queda entero y alrededor aparece cada ingrediente, con su foto.
    · "Armala": la burger se rearma con las franjas de su foto (simple, doble, triple; lo que
      se saca se va; panceta y huevo se suman con su propia foto).
@@ -22,6 +25,7 @@
    EscenaFotos.donde(div) · rect(div)     dónde está el plato en pantalla
    EscenaFotos.colorDe(plato)             el color de la foto, si pide otro que el de la carta
    EscenaFotos.cambiarFoto(plato, src)    "Tu foto": la de ese plato, solo en este navegador
+   EscenaFotos.variantes(plato) · variante() · usarVariante(v)   las pizzas: "video" o "3d"
    ============================================================================= */
 (function () {
   "use strict";
@@ -36,6 +40,13 @@
   const topes = (x, a, b) => Math.max(a, Math.min(b, x));
   const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 
+  // Las pizzas: "video" o "3d" (lo elige el local en local.js: pizzas; en la demo, el botón de la pizza)
+  const VARIANTES = ["video", "3d"];
+  let variante = (() => {
+    const L = window.LOCAL || {};
+    if (L.demo) { try { const g = localStorage.getItem("cartaviva.pizzas"); if (VARIANTES.includes(g)) return g; } catch { /* nada */ } }
+    return VARIANTES.includes(L.pizzas) ? L.pizzas : "video";
+  })();
   const datos = plato => (propias[plato.id] ? { foto: propias[plato.id].src, tam: propias[plato.id].tam, vista: "frente", propia: true, colorPropio: propias[plato.id].colorPropio } : (window.FOTOS || {})[plato.id] || null);
   function pedirRecorte(plato) {
     const d = datos(plato);
@@ -79,7 +90,9 @@
     p.bandas = null;
     p.vista = (d && d.vista) || "frente";
     soltarGiro(p);
-    p.entera = !!(d && d.giro && !d.propia);
+    p.grosor = !!(d && d.grosor && !d.propia && variante === "3d");
+    soltarTres(p);
+    p.entera = !!(d && d.giro && !d.propia && !p.grosor);
     p.juego = d && d.juego && !d.propia && window.Juegos ? Juegos.crear(p, d) : null;
     p.presentado = false;
     if (p.pistaJ) { p.pistaJ.remove(); p.pistaJ = null; }
@@ -334,6 +347,57 @@
       ponerGiro(p);
     });
   }
+  /* ---------- La pizza con grosor (3D con la foto de arriba): se arma cuando está cerca ---------- */
+  let pizza3D = null;
+  // pizza3d.js va dormido en la página (necesita Three.js): se despierta la primera vez
+  function cargarPizza3D() {
+    return (pizza3D ||= new Promise(listo => {
+      if (window.Pizza3D) return listo(window.Pizza3D);
+      document.querySelectorAll("script[data-pizza3d]").forEach(s => {
+        const n = document.createElement("script");
+        n.type = "module";
+        if (s.src) n.src = s.src; else n.textContent = s.textContent;
+        n.onerror = () => listo(null);
+        document.head.appendChild(n);
+      });
+      const desde = Date.now();
+      (function esperar() {
+        if (window.Pizza3D) return listo(window.Pizza3D);
+        if (Date.now() - desde > 15000) return listo(null);
+        setTimeout(esperar, 40);
+      })();
+    }));
+  }
+  function pedirTres(p) {
+    if (!p.grosor || p.tresPedido || !p.r) return;
+    const yo = (p.tresPedido = {});
+    cargarPizza3D().then(m => {
+      if (!m || p.tresPedido !== yo) return;
+      const caja = document.createElement("div");
+      caja.className = "fp__tres";
+      p.mueve.appendChild(caja);
+      const g = p.d.grosor;
+      m.crearPizza3D(caja, { foto: g.foto, alfa: g.alfa, desfase: g.desfase, salsa: g.salsa, gestos: false }).then(t => {
+        if (p.tresPedido !== yo) { t.destruir(); caja.remove(); return; }
+        p.tres = t;
+        p.cajaTres = caja;
+        p.fp.classList.add("con-grosor");
+      }).catch(() => caja.remove());
+    });
+  }
+  function soltarTres(p) {
+    p.tresPedido = null;
+    if (p.tres) { p.tres.destruir(); p.tres = null; }
+    if (p.cajaTres) { p.cajaTres.remove(); p.cajaTres = null; }
+    if (p.fp) p.fp.classList.remove("con-grosor");
+  }
+  function usarVariante(v) {
+    if (!VARIANTES.includes(v) || v === variante) return;
+    variante = v;
+    try { localStorage.setItem("cartaviva.pizzas", v); } catch { /* nada */ }
+    for (const p of puestos.values()) if (p.d && p.d.grosor) { soltarGiro(p); preparar(p); p.presentado = false; }
+  }
+
   function soltarGiro(p) {
     if (p.giroPedido && p.d && p.d.giro) Cuadros.soltar(p.d.giro);
     p.giroPedido = null;
@@ -380,6 +444,7 @@
       recorrido = 0;
       jugando = !!(p.juego && p.juego.abajo(e, ...enPlato(e)));
       if (jugando) { quitarPista(p); if (e.pointerType === "mouse") el.setPointerCapture(dedo); return; }
+      if (p.tres) p.tres.agarrar();
       p.arrastrando = true;
       p.velDedo = 0;
       if (e.pointerType === "mouse") el.setPointerCapture(dedo);
@@ -396,7 +461,8 @@
       x0 = e.clientX;
       t0 = ahora;
       recorrido += Math.abs(dx);
-      if (conVuelta(p)) {
+      if (p.tres) p.tres.arrastrar(dx, dt);
+      else if (conVuelta(p)) {
         p.vuelta += dx * 0.55;
         p.velVuelta += (topes((dx * 0.55) / dt, -1300, 1300) - p.velVuelta) * 0.5;
         p.metaVuelta = null; p.quieto = 0;
@@ -423,6 +489,12 @@
       }
       p.arrastrando = false;
       const quieto = performance.now() - t0 > 120;
+      if (p.tres) {
+        const toque = e.type === "pointerup" && recorrido < 6;
+        p.tres.soltar(quieto);
+        if (toque) { p.tres.tocar(); quitarPista(p); el.dispatchEvent(new CustomEvent("escena:toque", { bubbles: true })); }
+        return;
+      }
       if (conVuelta(p)) { if (quieto) p.velVuelta = 0; }
       else if (p.vista === "arriba") { if (quieto) p.velGiro *= 0.3; }
       else { p.rotObj = 0; p.velRot += topes(p.velDedo * 0.06, -160, 160); }
@@ -458,13 +530,14 @@
         visible: r.bottom > 0 && r.top < alto,
         centrado: Math.abs(r.top + r.height / 2 - alto / 2) < alto * 0.22,
       };
-      if (v.cerca) { pedirGiro(p); p.lejos = false; }
+      if (v.cerca) { pedirGiro(p); pedirTres(p); p.lejos = false; }
       else if (r.bottom < -alto * 1.5 || r.top > alto * 2.5) {           // lejos: se sueltan (ocupan memoria)
         if (p.atlas) soltarGiro(p);
+        if (p.tresPedido) soltarTres(p);
         if (p.juego && !p.lejos) { p.lejos = true; p.juego.lejos(); }
       }
       if (p.juego && p.r) p.juego.cuadro(t, dt, v);
-      if (v.centrado && p.r && !p.presentado && (p.juego || p.atlas) && !p.modo) presentar(p);
+      if (v.centrado && p.r && !p.presentado && (p.juego || p.atlas || p.tres) && !p.modo) presentar(p);
       if (p.h && r.bottom > -alto * 0.2 && r.top < alto * 1.2) mover(p, t, dt);
     }
   }
@@ -472,7 +545,7 @@
   function presentar(p) {
     p.presentado = true;
     if (p.atlas && MOVIMIENTO && !p.eleccion) vueltaEntera(p, 1, 9);
-    const texto = p.juego ? p.juego.pista : "Girala con el dedo · un toque, una vuelta";
+    const texto = p.juego ? p.juego.pista : p.tres ? "Girala con el dedo · tocala y sacá una porción" : "Girala con el dedo · un toque, una vuelta";
     if (!texto || p.el.querySelector(".pista")) return;
     p.pistaJ = document.createElement("div");
     p.pistaJ.className = "pista pista--juego";
@@ -492,8 +565,8 @@
     const s = p.salto > 0 ? Math.sin((1 - p.salto) * Math.PI) : 0;
     const flota = MOVIMIENTO ? Math.sin(t * 1.5 + p.fase) * 0.014 * p.h : 0;
     const y = flota - s * 0.15 * p.h;
-    if (p.juego) {
-      // Los juegos se mueven solos: acá, solo que flote
+    if (p.juego || p.grosor) {
+      // Los juegos y la pizza 3D se mueven solos: acá, solo que flote
       p.mueve.style.transform = `translate3d(0, ${y.toFixed(2)}px, 0)`;
     } else if (conVuelta(p)) {
       // Suelto: sigue con el envión y frena de a poco, como en un plato giratorio; queda donde lo
@@ -610,6 +683,9 @@
     tono() {},                                                    // la luz y la sombra salen del CSS
     estilo() {},
     // El color de la foto, si pide otro que el de la carta (o el de "Tu foto")
+    variantes: plato => { const d = datos(plato); return d && d.grosor && !d.propia ? VARIANTES : null; },
+    variante: () => variante,
+    usarVariante,
     colorDe: plato => { const d = datos(plato) || {}; return { color: d.colorPropio || d.color || null, color2: d.colorPropio ? null : d.color2 || null }; },
     acomodar(el, cambiar) {
       const p = puestos.get(el);

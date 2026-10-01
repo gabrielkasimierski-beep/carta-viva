@@ -83,6 +83,9 @@ window.LOCAL = {
   // las bebidas tienen su juego; ver fotos.js) o "3d" (modelados por código, ver platos3d.js).
   // En la demo se cambia desde la cinta de arriba.
   vista: "fotos",
+  // Las pizzas (con fotos): "video" (filmada en ángulo, gira con el dedo) o "3d" (la foto de arriba
+  // sobre una pizza en 3D, con masa y borde; un toque levanta una porción). En la demo, el botón de la pizza.
+  pizzas: "video",
 
   // Estilo de la carta: "brasa" (oscuro, cada plato con su luz), "jugo" (degradé del color
   // del plato) o "estudio" (fondo de foto de producto, en el tono del plato).

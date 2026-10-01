@@ -178,6 +178,18 @@ la carpeta `laboratorio/` se sacó (queda en el historial del repo).
 transparente, la foto de cada ingrediente, y los videos de los giros de lo que más impacta (burgers,
 tragos). Va en `fotos.js`.
 
+### Las pizzas con grosor, en la app (1-oct-2026)
+
+En `mejoras/pizzas/` se probó cómo sacarles el "se nota que es una foto" (la de arriba, acostada,
+sin borde ni grosor). Gaby pidió sumar a la app las dos versiones nuevas:
+- **Video** (la de entrada): la pizza en ángulo (GPT Image 2.5) girando con un video (Kling 3.0 pro):
+  se ven el borde inflado, el grosor y el brillo del queso.
+- **3D**: la foto de arriba sobre una pizza armada en 3D (masa, borde, costado tostado, ocho
+  porciones); gira con el dedo y un toque levanta una porción con el queso estirado. Three.js se
+  baja solo si alguien la elige.
+En la demo cada pizza tiene su botón "Video / 3D" (vale para las dos y queda guardado); un local
+elige una en `local.js` (`pizzas`). Falta que Gaby elija con cuál se queda.
+
 ## 2. Qué se reutiliza de Fena y qué cambia
 
 | | Fena (turnos) | Carta Viva |

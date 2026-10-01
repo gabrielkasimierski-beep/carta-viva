@@ -204,6 +204,7 @@ function pintarCarta() {
           <p class="plato__cat">${esc(categoria(p.categoria).nombre)}</p>
           <div class="plato__herramientas">
             <button class="chip-linea" type="button" data-accion="explotar"><svg width="15" height="15" aria-hidden="true"><use href="#i-capas"/></svg>¿Qué tiene?</button>
+            ${variantesHtml(p)}
             ${p.armable ? `<button class="chip-linea" type="button" data-accion="armar" aria-label="Armala a tu gusto"><svg width="15" height="15" aria-hidden="true"><use href="#i-lapiz"/></svg>Armala</button>` : ""}
           </div>
         </div>
@@ -219,6 +220,14 @@ function pintarCarta() {
     .join("");
 }
 
+// Las pizzas, en video o en 3D (con grosor): en la demo se elige acá (lo elegido vale para todas)
+function variantesHtml(p) {
+  const vs = L.demo && E.variantes ? E.variantes(p) : null;
+  if (!vs) return "";
+  const nombre = { video: "Video", "3d": "3D" };
+  return `<div class="variantes" role="group" aria-label="Cómo ver la pizza">${vs.map(v =>
+    `<button type="button" data-variante="${v}" aria-pressed="${v === E.variante()}">${nombre[v] || v}</button>`).join("")}</div>`;
+}
 function pintarColores() {
   secciones.forEach((s, i) => {
     const pa = paleta(platos[i]);
@@ -1649,6 +1658,12 @@ function iniciar() {
   feed.addEventListener("scroll", () => { if (!cuadroPedido) { cuadroPedido = true; requestAnimationFrame(alDeslizar); } }, { passive: true });
   addEventListener("resize", () => requestAnimationFrame(alDeslizar));
   feed.addEventListener("click", e => {
+    const v = e.target.closest("[data-variante]");
+    if (v) {
+      E.usarVariante(v.dataset.variante);
+      $$("[data-variante]", feed).forEach(x => x.setAttribute("aria-pressed", x.dataset.variante === E.variante()));
+      return;
+    }
     const b = e.target.closest("[data-accion]");
     if (!b) return;
     alDeslizar();                       // por si el toque llegó antes que el cuadro

@@ -31,7 +31,9 @@ demo, el local queda en pausa (así las horas siguen teniendo sentido al volver)
 
 Arriba, la cinta de la demo cambia el estilo (Brasa, Jugo, Estudio), cómo se ven los platos
 (**Fotos** o **3D**) y, con la cámara, prueba **tu foto** en el plato que estás viendo (sirve para
-mostrarle a un local su propio plato; queda solo en ese celu).
+mostrarle a un local su propio plato; queda solo en ese celu). Las pizzas tienen su botón
+**Video / 3D**: filmadas en ángulo y girando, o en 3D con la foto de arriba (un toque levanta una
+porción con el queso estirado).
 
 En el panel, "Probar como" cambia de persona: Carla (moza) no ve la cocina y le suena cuando
 algo está listo; Diego ve solo la cocina; Rober (dueño) y Sofi (encargada) tienen **Clientes**
@@ -51,6 +53,7 @@ app/assets/fotos.js       las fotos de cada plato y lo marcado en cada una (capa
 app/assets/fotos/         las fotos de los platos (color + alfa); ingredientes/: la de cada ingrediente
 app/assets/cuadros/       los cuadros de los videos (giros de las burgers y aros, bebidas que se sirven, flan)
 app/assets/escena-fotos.js  los platos en fotos: flotan, giran, "¿Qué tiene?" y "Armala" con la foto
+app/assets/pizza3d.js     la pizza con grosor en 3D (con la foto de arriba): se carga solo si se elige
 app/assets/recorte.js     saca el plato de la foto · cuadros.js: carga los cuadros · juegos.js: postres y bebidas
 app/assets/platos3d.js    los platos modelados por código, por capas (solo en 3D)
 app/assets/escena.js      el escenario 3D (Three.js): se carga solo si se eligen los platos en 3D
@@ -65,6 +68,7 @@ supabase/pruebas.mjs      pruebas de la base en un Postgres local
 herramientas/             servidor local y armado de vista-previa.html (sin dependencias)
 herramientas/taller/      pasa un video (el plato girando en fondo azul) a cuadros recortados
 herramientas/recortes.html  revisa lo marcado en cada foto y cómo queda el recorte
+mejoras/                  pruebas de fotos puntuales, aparte (las pizzas ya pasaron a la app)
 vista-previa.html         todo en un solo archivo (se genera, no se edita)
 ```
 

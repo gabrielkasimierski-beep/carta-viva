@@ -5,6 +5,8 @@ que Gaby elige). Cada carpeta es un proyecto chico con su propio link.
 
 ## pizzas/
 
+**Ya están en la app (1-oct):** las versiones Video y 3D, con un botón en cada pizza para elegir.
+
 Se notaba que eran fotos (la de arriba, acostada y girando: sin borde ni grosor). Tres maneras
 de verlas, para comparar:
 

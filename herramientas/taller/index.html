@@ -54,6 +54,9 @@ const FPS = 24, CHICO = 0.25;
 const $ = id => document.getElementById(id);
 const estado = t => ($("estado").textContent = t);
 const q = new URLSearchParams(location.search);
+// ?dest=mejoras/pizzas/assets: dónde guardar (por defecto, en la app)
+const DEST = q.get("dest") || "app/assets";
+if (q.get("v") && !VIDEOS.includes(q.get("v"))) VIDEOS.unshift(q.get("v"));
 VIDEOS.forEach(v => $("video").add(new Option(v, v)));
 if (q.get("v")) $("video").value = q.get("v");
 for (const k of ["desde", "hasta", "n", "ancho", "lo", "hi", "aire", "calidad", "nombre", "caja", "esfumar"]) if (q.has(k)) $(k).value = q.get(k);
@@ -195,7 +198,7 @@ async function atlas() {
     }
     const blob = await comoBlob(c, "image/webp", Number($("calidad").value));
     const nombre = `${$("nombre").value}${partes > 1 ? "-" + (pa + 1) : ""}.webp`;
-    textos.push(await guardar(`app/assets/cuadros/${nombre}`, blob) + ` · ${c.width}×${c.height}`);
+    textos.push(await guardar(`${DEST}/cuadros/${nombre}`, blob) + ` · ${c.width}×${c.height}`);
     nombres.push(`"assets/cuadros/${nombre}"`);
     total += blob.size;
   }
@@ -215,7 +218,7 @@ async function foto() {
   for (let k = 0; k < d.data.length; k += 4) { col.data[k + 3] = 255; const a = d.data[k + 3]; alf.data[k] = alf.data[k + 1] = alf.data[k + 2] = a; alf.data[k + 3] = 255; }
   const a = lienzo(c.width, c.height); a.getContext("2d").putImageData(col, 0, 0);
   const b = lienzo(c.width, c.height); b.getContext("2d").putImageData(alf, 0, 0);
-  const base = `app/assets/fotos/${$("nombre").value}`;
+  const base = `${DEST}/fotos/${$("nombre").value}`;
   const r1 = await guardar(base + ".jpg", await comoBlob(a, "image/jpeg", 0.86));
   const r2 = await guardar(base + "-alfa.jpg", await comoBlob(b, "image/jpeg", 0.92));
   estado(`${r1}\n${r2}\ntam: [${c.width}, ${c.height}] (cuadro ${i})`);

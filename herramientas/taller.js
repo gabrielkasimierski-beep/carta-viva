@@ -1,6 +1,6 @@
 // El taller de las fotos: sirve la carpeta del proyecto (como servidor.js) y además deja guardar
 // lo que arma el navegador (los cuadros de los videos ya recortados, las fotos con su alfa) en
-// app/assets/cuadros/, app/assets/fotos/ y herramientas/taller/. Es solo para trabajar en la
+// app/assets/cuadros/, app/assets/fotos/, herramientas/taller/ y mejoras/ (las pruebas de fotos puntuales). Es solo para trabajar en la
 // compu: escucha en localhost.
 //
 // Uso:  npm run taller   → http://localhost:5186/herramientas/taller/?v=clasica-giro.mp4
@@ -12,7 +12,7 @@ const fs = require("fs");
 const path = require("path");
 
 const raiz = path.resolve(__dirname, "..");
-const permitidos = ["app/assets/cuadros", "app/assets/fotos", "herramientas/taller"].map(c => path.join(raiz, c));
+const permitidos = ["app/assets/cuadros", "app/assets/fotos", "herramientas/taller", "mejoras"].map(c => path.join(raiz, c));
 const puerto = Number(process.argv[2]) || 5186;
 const tipos = {
   ".html": "text/html; charset=utf-8", ".js": "text/javascript; charset=utf-8", ".css": "text/css; charset=utf-8",
@@ -24,7 +24,7 @@ http.createServer((req, res) => {
   const url = new URL(req.url, "http://localhost");
   if (req.method === "POST" && url.pathname === "/guardar") {
     const destino = path.resolve(raiz, url.searchParams.get("ruta") || "");
-    if (!permitidos.some(c => destino.startsWith(c + path.sep))) { res.writeHead(403); res.end("solo en app/assets/cuadros, app/assets/fotos o herramientas/taller"); return; }
+    if (!permitidos.some(c => destino.startsWith(c + path.sep))) { res.writeHead(403); res.end("solo en app/assets/cuadros, app/assets/fotos, herramientas/taller o mejoras"); return; }
     const partes = [];
     req.on("data", d => partes.push(d));
     req.on("end", () => {

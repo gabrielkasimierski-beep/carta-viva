@@ -1,0 +1,293 @@
+<!doctype html>
+<html lang="es-AR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Pizzas con grosor</title>
+<meta name="description" content="Carta Viva · mejoras de fotos: las pizzas, comparando cómo están hoy con dos formas de darles grosor (video y 3D).">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Onest:wght@400;500;600;700&display=swap">
+<script type="importmap">
+{ "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.min.js" } }
+</script>
+<style>
+  /* La carta es oscura (estilo Brasa): los dos modos usan los mismos tonos */
+  :root {
+    --fondo: #120806; --t: #fbefe6; --t2: rgba(251, 239, 230, .62); --vidrio: rgba(255, 244, 234, .08);
+    --borde: rgba(255, 244, 234, .16); --acento: #d8432a; --luz: #d8432a; --radio: 14px;
+  }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --fondo: #120806; --t: #fbefe6; } }
+  :root[data-theme="dark"] { --fondo: #120806; --t: #fbefe6; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; }
+  body {
+    background: var(--fondo); color: var(--t); font: 15px/1.4 Onest, system-ui, sans-serif;
+    display: flex; flex-direction: column; overflow-x: hidden; -webkit-tap-highlight-color: transparent;
+  }
+  header { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 16px 6px; }
+  .marca { font: 400 24px/1 "Instrument Serif", serif; letter-spacing: .01em; }
+  .marca small { display: block; font: 600 11px/1.6 Onest, sans-serif; letter-spacing: .14em; text-transform: uppercase; color: var(--t2); }
+  .grupo { display: inline-flex; padding: 3px; border-radius: 99px; background: var(--vidrio); border: 1px solid var(--borde); }
+  .grupo button {
+    border: 0; background: none; color: var(--t2); font: 600 13px/1 Onest, sans-serif; padding: 9px 13px; border-radius: 99px; cursor: pointer;
+  }
+  .grupo button[aria-pressed="true"] { background: var(--t); color: #1a0d08; }
+  .escena {
+    position: relative; flex: 1; min-height: 360px; margin: 6px 0 0; overflow: hidden;
+    background: radial-gradient(60% 50% at 50% 55%, color-mix(in srgb, var(--luz) 42%, transparent), transparent 75%);
+    transition: background .5s;
+  }
+  .escena > * { position: absolute; inset: 0; }
+  .pie { padding: 4px 16px calc(18px + env(safe-area-inset-bottom)); display: grid; gap: 12px; }
+  .pie h1 { margin: 0; font: 400 clamp(40px, 11vw, 64px)/0.95 "Instrument Serif", serif; }
+  .pie p { margin: 0; color: var(--t2); max-width: 46ch; }
+  .nota { font-size: 13px; padding: 10px 12px; border-radius: var(--radio); background: var(--vidrio); border: 1px solid var(--borde); color: var(--t); }
+  .nota b { font-weight: 600; }
+  .cargando { display: grid; place-items: center; color: var(--t2); font-size: 13px; }
+
+  /* Antes: como está hoy en la carta (la foto de arriba, acostada) */
+  .antes { display: grid; place-items: center; perspective: 1100px; }
+  .antes__plato { position: relative; width: min(86vw, 62vh, 560px); aspect-ratio: 1; transform: rotateX(54deg); transform-style: preserve-3d; }
+  .antes__plato canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+  .antes__canto { filter: brightness(.42) saturate(.8); transform: translateY(2.4%); }
+
+  /* Video: la foto en ángulo y, al girar o sacar una porción, los cuadros del video */
+  .video { display: grid; place-items: center; touch-action: pan-y; cursor: grab; user-select: none; -webkit-user-select: none; }
+  .video__plato { position: relative; width: min(92vw, 88vh, 640px); aspect-ratio: var(--asp, 1.4); }
+  .video__plato > * { position: absolute; }
+  .video__foto { inset: 0; width: 100%; height: 100%; }
+  .video__cuadros { display: block; }
+  .video__sombra { left: 6%; right: 6%; bottom: -6%; height: 22%; border-radius: 50%; background: radial-gradient(closest-side, rgba(0,0,0,.55), transparent); filter: blur(6px); }
+
+  /* 3D */
+  .tres canvas { display: block; }
+
+  .pista {
+    position: absolute; left: 50%; bottom: 14px; translate: -50% 0; inset: auto auto 14px 50%;
+    padding: 9px 14px; border-radius: 99px; background: rgba(18, 8, 6, .6); border: 1px solid var(--borde);
+    -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); font-size: 13px; font-weight: 600; white-space: nowrap;
+    pointer-events: none; transition: opacity .4s;
+  }
+  .pista.fuera { opacity: 0; }
+  @media (min-width: 900px) {
+    body { display: grid; grid-template-columns: 1fr 380px; grid-template-rows: auto 1fr; }
+    header { grid-column: 1 / -1; }
+    .escena { margin: 0; }
+    .pie { align-content: center; padding: 24px 40px; }
+  }
+</style>
+</head>
+<body>
+<header>
+  <div class="marca">Pizzas<small>Mejoras de fotos · prueba</small></div>
+  <div class="grupo" id="pizzas" role="group" aria-label="Pizza">
+    <button type="button" data-p="pepperoni" aria-pressed="true">Pepperoni</button>
+    <button type="button" data-p="fugazzeta" aria-pressed="false">Fugazzeta</button>
+  </div>
+</header>
+<main class="escena" id="escena" aria-label="La pizza"></main>
+<section class="pie">
+  <div class="grupo" id="modos" role="group" aria-label="Cómo se ve">
+    <button type="button" data-m="antes" aria-pressed="false">Hoy</button>
+    <button type="button" data-m="video" aria-pressed="true">Video</button>
+    <button type="button" data-m="tres" aria-pressed="false">3D</button>
+  </div>
+  <h1 id="nombre">Pepperoni</h1>
+  <p class="nota" id="nota"></p>
+</section>
+
+<script src="assets/cuadros.js"></script>
+<script type="module">
+import { crearPizza3D } from "./assets/pizza3d.js";
+
+const PIZZAS = {
+  pepperoni: {
+    nombre: "Pepperoni", color: "#d8432a",
+    arriba: ["assets/fotos/pepperoni.jpg", "assets/fotos/pepperoni-alfa.jpg"],
+    angulo: ["assets/fotos/pepperoni-34.jpg", "assets/fotos/pepperoni-34-alfa.jpg"],
+    giro: { src: ["assets/cuadros/pepperoni-giro-1.webp", "assets/cuadros/pepperoni-giro-2.webp"], n: 96, cols: 7, tam: [560, 403], porParte: 70, sentido: -1 },
+    desfase: 0, salsa: true,
+  },
+  fugazzeta: {
+    nombre: "Fugazzeta", color: "#e2a93a",
+    arriba: ["assets/fotos/fugazzeta.jpg", "assets/fotos/fugazzeta-alfa.jpg"],
+    angulo: ["assets/fotos/fugazzeta-34.jpg", "assets/fotos/fugazzeta-34-alfa.jpg"],
+    giro: { src: ["assets/cuadros/fugazzeta-giro-1.webp", "assets/cuadros/fugazzeta-giro-2.webp"], n: 96, cols: 7, tam: [560, 393], porParte: 70, sentido: -1 },
+    desfase: "auto", salsa: false,
+  },
+};
+const NOTAS = {
+  antes: "<b>Hoy en la carta:</b> la foto de arriba, acostada y girando. Por eso se nota que es una foto: no tiene borde ni grosor.",
+  video: "<b>Video:</b> la pizza filmada en ángulo (Higgsfield): se ven el borde inflado, el grosor y el brillo del queso. Girala con el dedo; un toque, una vuelta.",
+  tres: "<b>3D:</b> la foto de arriba sobre una pizza de verdad, con masa y borde. Girala e inclinala con el dedo; tocala y sacás una porción.",
+};
+const MOVIMIENTO = !matchMedia("(prefers-reduced-motion: reduce)").matches;
+const $ = id => document.getElementById(id);
+const cargar = src => new Promise((ok, mal) => { const i = new Image(); i.onload = () => ok(i); i.onerror = mal; i.src = src; });
+const topes = (x, a, b) => Math.max(a, Math.min(b, x));
+const suave = t => t * t * (3 - 2 * t);
+
+// La foto con su transparencia (color + alfa en gris) en un lienzo; y lo que ocupa (0 a 1)
+const recortes = {};
+function recorte([src, alfa]) {
+  return (recortes[src] ||= Promise.all([cargar(src), cargar(alfa)]).then(([a, b]) => {
+    const w = a.naturalWidth, h = a.naturalHeight, c = document.createElement("canvas");
+    c.width = w; c.height = h;
+    const g = c.getContext("2d", { willReadFrequently: true });
+    g.drawImage(b, 0, 0, w, h);
+    const m = g.getImageData(0, 0, w, h);
+    g.drawImage(a, 0, 0, w, h);
+    const d = g.getImageData(0, 0, w, h);
+    let x0 = w, y0 = h, x1 = 0, y1 = 0;
+    for (let i = 0, p = 0; i < d.data.length; i += 4, p++) {
+      const al = m.data[i]; d.data[i + 3] = al;
+      if (al > 128) { const x = p % w, y = (p / w) | 0; if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; }
+    }
+    g.putImageData(d, 0, 0);
+    return { lienzo: c, w, h, util: [x0 / w, y0 / h, (x1 + 1) / w, (y1 + 1) / h] };
+  }));
+}
+const copia = r => { const c = document.createElement("canvas"); c.width = r.w; c.height = r.h; c.getContext("2d").drawImage(r.lienzo, 0, 0); return c; };
+function calzar(el, u, s) {
+  const [u0, v0, u1, v1] = u, [s0, t0, s1, t1] = s, W = (s1 - s0) / (u1 - u0), H = (t1 - t0) / (v1 - v0);
+  Object.assign(el.style, { left: `${(s0 - u0 * W) * 100}%`, top: `${(t0 - v0 * H) * 100}%`, width: `${W * 100}%`, height: `${H * 100}%` });
+}
+
+let actual = "pepperoni", modo = "video", vista = null, pista = null;
+const escena = $("escena");
+
+function ponerPista(texto) {
+  if (pista) pista.remove();
+  pista = document.createElement("div");
+  pista.className = "pista"; pista.textContent = texto;
+  escena.appendChild(pista);
+  const p = pista;
+  setTimeout(() => p.classList.add("fuera"), 4500);
+}
+const sacarPista = () => pista && pista.classList.add("fuera");
+
+/* ---------- Hoy: la foto de arriba, acostada (como en la carta) ---------- */
+async function verAntes(pz) {
+  const r = await recorte(pz.arriba);
+  const raiz = document.createElement("div"); raiz.className = "antes";
+  const plato = document.createElement("div"); plato.className = "antes__plato";
+  const canto = copia(r); canto.className = "antes__canto";
+  const cara = copia(r);
+  plato.append(canto, cara); raiz.appendChild(plato);
+  let giro = 0, vivo = true, antes = performance.now();
+  (function cuadro(t) {
+    if (!vivo) return;
+    requestAnimationFrame(cuadro);
+    giro += ((t - antes) / 1000) * 9; antes = t;
+    plato.style.transform = `rotateX(54deg) rotateZ(${giro.toFixed(2)}deg)`;
+  })(antes);
+  return { el: raiz, destruir() { vivo = false; } };
+}
+
+/* ---------- Video: gira con los cuadros; un toque saca una porción ---------- */
+async function verVideo(pz) {
+  const r = await recorte(pz.angulo);
+  const raiz = document.createElement("div"); raiz.className = "video";
+  const plato = document.createElement("div"); plato.className = "video__plato";
+  plato.style.setProperty("--asp", (r.w / r.h).toFixed(3));
+  const sombra = document.createElement("div"); sombra.className = "video__sombra";
+  const foto = copia(r); foto.className = "video__foto";
+  const cv = document.createElement("canvas"); cv.className = "video__cuadros"; cv.style.visibility = "hidden";
+  plato.append(sombra, foto, cv); raiz.appendChild(plato);
+  let giroA = null, porcionA = null, vivo = true;
+  const listo = Promise.all([pz.giro ? Cuadros.pedir(pz.giro) : null, pz.porcion ? Cuadros.pedir(pz.porcion) : null]).then(([a, b]) => { giroA = a; porcionA = b; });
+  const g = cv.getContext("2d");
+  const poner = a => { if (cv.width !== a.tam[0]) { cv.width = a.tam[0]; cv.height = a.tam[1]; } calzar(cv, Cuadros.util(a, 0), r.util); };
+  // giro: grados, con envión; vuelve de frente si nadie la toca. porcion: 0 a 1 a 0
+  let ang = 0, vel = 0, meta = null, quieto = 0, dedo = null, x0 = 0, t0 = 0, mueve = 0, saca = null, primera = true;
+  raiz.addEventListener("pointerdown", e => { dedo = e.pointerId; x0 = e.clientX; t0 = performance.now(); mueve = 0; meta = null; if (e.pointerType === "mouse") raiz.setPointerCapture(dedo); });
+  raiz.addEventListener("pointermove", e => {
+    if (e.pointerId !== dedo || saca) return;
+    const dx = e.clientX - x0, ahora = performance.now(), dt = Math.max(8, ahora - t0) / 1000;
+    x0 = e.clientX; t0 = ahora; mueve += Math.abs(dx);
+    ang += dx * 0.5; vel = vel * 0.5 + ((dx * 0.5) / dt) * 0.5; quieto = 0;
+    if (mueve > 10) sacarPista();
+  });
+  const soltar = e => {
+    if (e.pointerId !== dedo) return; dedo = null;
+    if (e.type === "pointerup" && mueve < 6) { sacarPista(); if (porcionA && !saca) saca = { t: 0 }; else if (!porcionA) meta = Math.round(ang / 360) * 360 + 360; }
+    else if (performance.now() - t0 > 120) vel = 0;
+  };
+  raiz.addEventListener("pointerup", soltar); raiz.addEventListener("pointercancel", soltar);
+  let antes = performance.now();
+  (function cuadro(t) {
+    if (!vivo) return;
+    requestAnimationFrame(cuadro);
+    const dt = Math.min(0.05, (t - antes) / 1000); antes = t;
+    if (!giroA) return;
+    // La primera vez, una vuelta sola
+    if (primera && MOVIMIENTO) { primera = false; meta = 360; }
+    if (saca) meta = Math.round(ang / 360) * 360;                       // para sacar la porción, de frente
+    if (dedo === null) {
+      if (meta !== null) {
+        const k = saca ? 18 : 8, c = 2 * Math.sqrt(k) * 0.96;
+        vel += ((meta - ang) * k - vel * c) * dt; ang += vel * dt;
+        if (Math.abs(meta - ang) < 0.3 && Math.abs(vel) < 4) { ang = meta; vel = 0; if (!saca) meta = null; }
+      } else {
+        vel *= Math.exp(-dt * 1.5); ang += vel * dt;
+        const frente = Math.round(ang / 360) * 360;
+        if (Math.abs(vel) < 10 && Math.abs(frente - ang) > 0.3) { quieto += dt; if (quieto > 2.2) meta = frente; } else quieto = 0;
+      }
+    }
+    const lejos = Math.min(((ang % 360) + 360) % 360, 360 - (((ang % 360) + 360) % 360));
+    if (saca && porcionA && lejos < 0.5) {
+      // Sube (cuadros para adelante), espera y baja (para atrás)
+      saca.t += dt;
+      const n = porcionA.n, ida = n / (porcionA.fps || 18), t2 = saca.t;
+      const f = t2 < ida ? (t2 / ida) * (n - 1) : t2 < ida + 0.9 ? n - 1 : Math.max(0, (n - 1) * (1 - (t2 - ida - 0.9) / (ida * 0.8)));
+      poner(porcionA);
+      Cuadros.dibujar(g, porcionA, f, cv.width, cv.height, false);
+      cv.style.visibility = "visible"; cv.style.opacity = 1; foto.style.visibility = "hidden";
+      if (t2 > ida + 0.9 && f <= 0) saca = null;
+      return;
+    }
+    const mezcla = topes(lejos / 7, 0, 1);
+    if (mezcla > 0.001) {
+      poner(giroA);
+      Cuadros.dibujar(g, giroA, ((ang * (pz.giro.sentido || 1)) / 360) * giroA.n, cv.width, cv.height, true);
+      cv.style.visibility = "visible"; cv.style.opacity = mezcla.toFixed(3);
+    } else cv.style.visibility = "hidden";
+    foto.style.visibility = mezcla > 0.995 ? "hidden" : "visible";
+  })(antes);
+  return { el: raiz, listo, destruir() { vivo = false; if (pz.giro) Cuadros.soltar(pz.giro); if (pz.porcion) Cuadros.soltar(pz.porcion); } };
+}
+
+/* ---------- 3D ---------- */
+async function verTres(pz) {
+  const raiz = document.createElement("div"); raiz.className = "tres";
+  escena.appendChild(raiz);
+  const p = await crearPizza3D(raiz, { foto: pz.arriba[0], alfa: pz.arriba[1], desfase: pz.desfase, salsa: pz.salsa });
+  return { el: raiz, destruir() { p.destruir(); } };
+}
+
+async function mostrar() {
+  const pz = PIZZAS[actual];
+  document.documentElement.style.setProperty("--luz", pz.color);
+  $("nombre").textContent = pz.nombre;
+  $("nota").innerHTML = NOTAS[modo];
+  document.querySelectorAll("#pizzas button").forEach(b => b.setAttribute("aria-pressed", b.dataset.p === actual));
+  document.querySelectorAll("#modos button").forEach(b => b.setAttribute("aria-pressed", b.dataset.m === modo));
+  if (vista) { vista.destruir(); vista.el.remove(); vista = null; }
+  escena.innerHTML = `<div class="cargando">Cargando…</div>`;
+  const yo = (mostrar.vez = (mostrar.vez || 0) + 1);
+  const v = await (modo === "antes" ? verAntes(pz) : modo === "video" ? verVideo(pz) : verTres(pz));
+  if (yo !== mostrar.vez) { v.destruir(); v.el.remove(); return; }
+  escena.innerHTML = "";
+  escena.appendChild(v.el);
+  vista = v;
+  if (modo === "video") ponerPista("Girala con el dedo · un toque, una vuelta");
+  if (modo === "tres") ponerPista("Girala e inclinala · tocala y sacá una porción");
+}
+$("pizzas").addEventListener("click", e => { const b = e.target.closest("button"); if (b && b.dataset.p !== actual) { actual = b.dataset.p; mostrar(); } });
+$("modos").addEventListener("click", e => { const b = e.target.closest("button"); if (b && b.dataset.m !== modo) { modo = b.dataset.m; mostrar(); } });
+window.PIZZAS = PIZZAS;
+mostrar();
+</script>
+</body>
+</html>

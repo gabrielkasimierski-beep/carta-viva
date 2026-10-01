@@ -7,7 +7,9 @@
     "vista-previa": "node herramientas/vista-previa.js app/index.html vista-previa.html --afuera=assets/cuadros/",
     "taller": "node herramientas/taller.js 5186",
     "semilla": "node supabase/semilla.js",
-    "test": "node supabase/pruebas.mjs"
+    "test": "node supabase/pruebas.mjs",
+    "pizzas": "node herramientas/servidor.js . 5187",
+    "pizzas:link": "node herramientas/vista-previa.js mejoras/pizzas/index.html mejoras/pizzas/vista-previa.html --afuera=assets/cuadros/"
   },
   "devDependencies": {
     "@electric-sql/pglite": "^0.5.8"

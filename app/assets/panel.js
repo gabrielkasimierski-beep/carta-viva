@@ -18,7 +18,9 @@
    querer se puede deshacer durante unos segundos.
    ============================================================================= */
 
-const L = window.LOCAL, D = window.Datos, E = window.Escena;
+const L = window.LOCAL, D = window.Datos;
+// Los platos se ven como en la carta (fotos o 3D): la carta elige cuál y la deja en window.Escena
+const E = new Proxy({}, { get: (_, k) => (window.Escena || window.EscenaFotos)[k] });
 const $ = (s, r = document) => r.querySelector(s);
 const plata = n => "$" + Math.round(n).toLocaleString("es-AR");
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
@@ -108,7 +110,8 @@ function fotoHtml(id, eleccion, clase) {
   if (!p) return `<span class="${clase}"></span>`;
   const url = E.fotoLista(p, eleccion || null);
   const el = eleccion ? ` data-eleccion="${esc(JSON.stringify(eleccion))}"` : "";
-  return `<span class="${clase}" style="--c:${p.color}"${url ? "" : ` data-foto-plato="${id}"${el}`}>${url ? `<img src="${url}" alt="">` : ""}</span>`;
+  const c = (E.colorDe && E.colorDe(p).color) || p.color;      // con fotos, el de la foto
+  return `<span class="${clase}" style="--c:${c}"${url ? "" : ` data-foto-plato="${id}"${el}`}>${url ? `<img src="${url}" alt="">` : ""}</span>`;
 }
 function llenarFotos(raiz) {
   raiz.querySelectorAll("[data-foto-plato]").forEach(s => {
@@ -555,7 +558,7 @@ function pintarQR() {
         <p class="tarjeta-qr__local">${esc(L.nombre)}</p>
         <div class="tarjeta-qr__codigo">${qrLib ? qrSvg(url) : `<span class="tarjeta-qr__cargando"></span>`}</div>
         <p class="tarjeta-qr__mesa">Mesa <b>${m.n}</b></p>
-        <p class="tarjeta-qr__texto">Escaneá con la cámara, mirá los platos en 3D y pedí desde tu celu.</p>
+        <p class="tarjeta-qr__texto">Escaneá con la cámara, mirá los platos de verdad y pedí desde tu celu.</p>
         ${L.demo ? `<a class="tarjeta-qr__probar" href="${esc(enlaceProbar(m))}" target="_blank" rel="noopener" title="Se abre como si fuera otro celular">Abrir la mesa ${m.n} ${icono("i-flecha", 13)}</a>` : ""}
       </article>`;
     }).join("")}</div>`;

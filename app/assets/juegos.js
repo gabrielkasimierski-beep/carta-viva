@@ -1,5 +1,5 @@
 /* =============================================================================
-   CARTA VIVA · laboratorio — los juegos de los postres y las bebidas
+   CARTA VIVA — los juegos de los postres y las bebidas
    Cada plato con "juego" (fotos.js) se puede tocar y hace algo que sorprende:
    · servir   (bebidas): el vaso se llena con el dedo; la primera vez que aparece se sirve solo,
               y con un toque se vacía y se vuelve a servir. Son los cuadros de un video.

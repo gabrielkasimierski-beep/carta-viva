@@ -1,5 +1,5 @@
 /* =============================================================================
-   CARTA VIVA · laboratorio — sacar el plato de la foto
+   CARTA VIVA — sacar el plato de la foto
    Con el contorno marcado a mano (unos puntos alrededor del plato) deja transparente
    lo de alrededor, para que el plato flote sobre el color de la carta como el 3D.
    Alcanza con marcar "más o menos": cerca del contorno mira de qué color es el plato

@@ -195,7 +195,7 @@ async function atlas() {
     }
     const blob = await comoBlob(c, "image/webp", Number($("calidad").value));
     const nombre = `${$("nombre").value}${partes > 1 ? "-" + (pa + 1) : ""}.webp`;
-    textos.push(await guardar(`laboratorio/assets/cuadros/${nombre}`, blob) + ` · ${c.width}×${c.height}`);
+    textos.push(await guardar(`app/assets/cuadros/${nombre}`, blob) + ` · ${c.width}×${c.height}`);
     nombres.push(`"assets/cuadros/${nombre}"`);
     total += blob.size;
   }
@@ -215,7 +215,7 @@ async function foto() {
   for (let k = 0; k < d.data.length; k += 4) { col.data[k + 3] = 255; const a = d.data[k + 3]; alf.data[k] = alf.data[k + 1] = alf.data[k + 2] = a; alf.data[k + 3] = 255; }
   const a = lienzo(c.width, c.height); a.getContext("2d").putImageData(col, 0, 0);
   const b = lienzo(c.width, c.height); b.getContext("2d").putImageData(alf, 0, 0);
-  const base = `laboratorio/assets/fotos/${$("nombre").value}`;
+  const base = `app/assets/fotos/${$("nombre").value}`;
   const r1 = await guardar(base + ".jpg", await comoBlob(a, "image/jpeg", 0.86));
   const r2 = await guardar(base + "-alfa.jpg", await comoBlob(b, "image/jpeg", 0.92));
   estado(`${r1}\n${r2}\ntam: [${c.width}, ${c.height}] (cuadro ${i})`);
@@ -238,7 +238,7 @@ async function hoja(cols = 12, ancho = 160) {
     g.fillStyle = "#000"; g.fillRect(x, y + alto, ancho, 14);
     g.fillStyle = "#fff"; g.font = "11px sans-serif"; g.fillText(`${i} · ${todos[i].t.toFixed(2)}s`, x + 3, y + alto + 11);
   });
-  return guardar("laboratorio/taller/videos/hoja.jpg", await comoBlob(c, "image/jpeg", 0.85));
+  return guardar("herramientas/taller/videos/hoja.jpg", await comoBlob(c, "image/jpeg", 0.85));
 }
 
 $("ver").onclick =() => ver().catch(e => estado("error: " + e.message));

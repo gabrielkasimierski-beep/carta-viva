@@ -1,5 +1,5 @@
 /* =============================================================================
-   CARTA VIVA · laboratorio — las fotos de cada plato y lo que se marcó en cada una
+   CARTA VIVA — las fotos de cada plato y lo que se marcó en cada una
    Todo en px de la foto (tam). Fotos generadas con Higgsfield (ver CREDITOS.md), ya recortadas:
    el color en un .jpg y lo transparente en otro (alfa). Siguen la receta de la carta.
 
@@ -10,7 +10,7 @@
              extra: más partes que suman (lo que sobresale); huecos: lo que no va.
    lleva:    lo que tiene (según la carta): [foto de ingredientes, nombre]. Es el "¿Qué tiene?".
    giro:     la vuelta entera de verdad: los cuadros de un video de Higgsfield (el plato girando en
-             un fondo azul), recortados y juntos en una imagen (assets/cuadros, ver laboratorio/taller).
+             un fondo azul), recortados y juntos en una imagen (assets/cuadros, ver herramientas/taller).
              sentido: para qué lado gira el video (1: lo de adelante va a la derecha).
    juego:    lo que se puede hacer con el dedo en los postres y las bebidas (ver juegos.js):
              "servir" (el vaso se llena o el cheddar cae: cuadros de un video), "flan" (tiembla: también un video), "helado" (las

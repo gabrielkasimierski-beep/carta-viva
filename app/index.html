@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Carta Viva</title>
-<meta name="description" content="La carta en 3D: escaneá el QR de tu mesa, mirá cada plato de todos lados y pidan juntos desde sus celus.">
+<meta name="description" content="La carta viva: escaneá el QR de tu mesa, girá cada plato con el dedo, mirá qué tiene y pidan juntos desde sus celus.">
 <meta name="theme-color" id="meta-tema" content="#170904">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cdefs%3E%3CradialGradient id='g'%3E%3Cstop offset='0' stop-color='%23FFB35C'/%3E%3Cstop offset='1' stop-color='%23FFB35C' stop-opacity='0'/%3E%3C/radialGradient%3E%3C/defs%3E%3Crect width='64' height='64' rx='16' fill='%23170904'/%3E%3Ccircle cx='32' cy='30' r='26' fill='url(%23g)'/%3E%3Cpath d='M18 32a14 11 0 0 1 28 0z' fill='%23F08A24'/%3E%3Crect x='18' y='34' width='28' height='5' rx='2.5' fill='%235A301F'/%3E%3Cpath d='M18 41h28a3 3 0 0 1-3 4H21a3 3 0 0 1-3-4z' fill='%23E3953D'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -41,6 +41,8 @@
   <symbol id="i-listo" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M8 12.5l2.8 2.8L16.5 9.5"/></symbol>
   <symbol id="i-mas" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></symbol>
   <symbol id="i-deshacer" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14L4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/></symbol>
+  <symbol id="i-dedo" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11V5.5a1.5 1.5 0 0 1 3 0V10"/><path d="M12 9.5a1.5 1.5 0 0 1 3 0v1.5"/><path d="M15 10.5a1.5 1.5 0 0 1 3 0V14c0 3.6-2.4 6-6 6-2.6 0-4.1-1.3-5.4-3.4L5 13.8a1.4 1.4 0 0 1 2.3-1.6L9 14"/></symbol>
+  <symbol id="i-camara" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h3l1.6-2.5h6.8L17 8h3v11H4z"/><circle cx="12" cy="13.2" r="3.4"/></symbol>
   <symbol id="i-regalo" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="8.5" width="17" height="4.5" rx="1.2"/><path d="M5 13v7.5h14V13M12 8.5v12"/><path d="M12 8.5C10.6 5 6.8 4.6 6.8 6.9S10 8.5 12 8.5zM12 8.5c1.4-3.5 5.2-3.9 5.2-1.6S14 8.5 12 8.5z"/></symbol>
   <symbol id="i-estrella" viewBox="0 0 24 24" fill="currentColor"><path d="M12 3.2l2.7 5.5 6 .9-4.35 4.2 1.03 6L12 17l-5.38 2.8 1.03-6L3.3 9.6l6-.9z"/></symbol>
   <symbol id="i-mail" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5.5" width="18" height="13" rx="2.5"/><path d="M3.8 7.2L12 13l8.2-5.8"/></symbol>
@@ -57,7 +59,13 @@
     <button type="button" data-estilo="jugo" aria-pressed="false">Jugo</button>
     <button type="button" data-estilo="estudio" aria-pressed="false">Estudio</button>
   </div>
-  <a class="cinta__link" href="#mesas">Panel del local <svg width="14" height="14" aria-hidden="true"><use href="#i-flecha"/></svg></a>
+  <div class="estilos" id="vistas-plato" role="group" aria-label="Cómo se ven los platos">
+    <button type="button" data-vista-plato="fotos" aria-pressed="true">Fotos</button>
+    <button type="button" data-vista-plato="3d" aria-pressed="false">3D</button>
+  </div>
+  <button class="cinta__foto" id="cinta-foto" type="button" hidden aria-label="Probar con tu foto el plato que estás viendo"><svg width="16" height="16" aria-hidden="true"><use href="#i-camara"/></svg><span>Tu foto</span></button>
+  <input id="cinta-archivo" type="file" accept="image/*" hidden>
+  <a class="cinta__link" href="#mesas"><span class="cinta__largo">Panel del local</span><span class="cinta__corto">Panel</span> <svg width="14" height="14" aria-hidden="true"><use href="#i-flecha"/></svg></a>
 </div>
 
 <header class="barra" id="barra">
@@ -78,7 +86,7 @@
 <div class="etiquetas" id="etiquetas" aria-hidden="true"></div>
 
 <div class="explosion-pie" id="explosion-pie" hidden>
-  <p><span id="explosion-nombre"></span><small>Así viene, capa por capa</small></p>
+  <p><span id="explosion-nombre"></span><small id="explosion-bajada">Lo que lleva</small></p>
   <button class="boton-principal boton-principal--corto" id="explosion-cerrar" type="button">Listo</button>
 </div>
 
@@ -95,7 +103,7 @@
 <div class="velo" id="velo" hidden></div>
 
 <!-- Bienvenida: lo primero que se ve al escanear el QR de la mesa. El plato del medio es
-     el mismo 3D de la carta: se arma solo, se gira con el dedo y después vuelve a su lugar. -->
+     el mismo de la carta (foto o 3D): se luce solo, se gira con el dedo y después vuelve a su lugar. -->
 <section class="bienvenida" id="bienvenida" role="dialog" aria-modal="true" aria-labelledby="bv-titulo" hidden>
   <div class="bv__marco">
     <header class="bv__cabeza">
@@ -259,10 +267,17 @@
 <div class="aviso" id="aviso" role="status" aria-live="polite"></div>
 
 <script src="/assets/local.js"></script>
+<script src="/assets/fotos.js"></script>
 <script src="/assets/datos.js"></script>
 <script src="/assets/simulacion.js"></script>
-<script type="module" src="/assets/platos3d.js"></script>
-<script type="module" src="/assets/escena.js"></script>
+<!-- Los platos en fotos (los de siempre) -->
+<script src="/assets/recorte.js"></script>
+<script src="/assets/cuadros.js"></script>
+<script src="/assets/juegos.js"></script>
+<script src="/assets/escena-fotos.js"></script>
+<!-- Los platos en 3D: dormidos; app.js los despierta solo si se eligió el 3D (así no se baja Three.js) -->
+<script type="text/plain" data-3d src="/assets/platos3d.js"></script>
+<script type="text/plain" data-3d src="/assets/escena.js"></script>
 <script type="module" src="/assets/app.js"></script>
 <script type="module" src="/assets/panel.js"></script>
 </body>

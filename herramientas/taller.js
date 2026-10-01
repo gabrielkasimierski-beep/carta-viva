@@ -1,16 +1,18 @@
-// Taller del laboratorio: sirve la carpeta del proyecto (como servidor.js) y además deja guardar
-// archivos que arma el navegador (los cuadros de los videos, ya recortados) adentro de laboratorio/.
-// Es solo para trabajar en la compu: escucha en localhost.
+// El taller de las fotos: sirve la carpeta del proyecto (como servidor.js) y además deja guardar
+// lo que arma el navegador (los cuadros de los videos ya recortados, las fotos con su alfa) en
+// app/assets/cuadros/, app/assets/fotos/ y herramientas/taller/. Es solo para trabajar en la
+// compu: escucha en localhost.
 //
-// Uso:  node herramientas/taller.js [puerto]      → http://localhost:5186/laboratorio/taller/
-//   POST /guardar?ruta=laboratorio/assets/giros/clasica.webp   (el cuerpo es el archivo)
+// Uso:  npm run taller   → http://localhost:5186/herramientas/taller/?v=clasica-giro.mp4
+//                          http://localhost:5186/herramientas/recortes.html?p=clasica
+//   POST /guardar?ruta=app/assets/cuadros/clasica-giro.webp   (el cuerpo es el archivo)
 
 const http = require("http");
 const fs = require("fs");
 const path = require("path");
 
 const raiz = path.resolve(__dirname, "..");
-const permitido = path.join(raiz, "laboratorio");
+const permitidos = ["app/assets/cuadros", "app/assets/fotos", "herramientas/taller"].map(c => path.join(raiz, c));
 const puerto = Number(process.argv[2]) || 5186;
 const tipos = {
   ".html": "text/html; charset=utf-8", ".js": "text/javascript; charset=utf-8", ".css": "text/css; charset=utf-8",
@@ -22,7 +24,7 @@ http.createServer((req, res) => {
   const url = new URL(req.url, "http://localhost");
   if (req.method === "POST" && url.pathname === "/guardar") {
     const destino = path.resolve(raiz, url.searchParams.get("ruta") || "");
-    if (!destino.startsWith(permitido + path.sep)) { res.writeHead(403); res.end("solo adentro de laboratorio/"); return; }
+    if (!permitidos.some(c => destino.startsWith(c + path.sep))) { res.writeHead(403); res.end("solo en app/assets/cuadros, app/assets/fotos o herramientas/taller"); return; }
     const partes = [];
     req.on("data", d => partes.push(d));
     req.on("end", () => {
@@ -48,4 +50,4 @@ http.createServer((req, res) => {
   }
   res.writeHead(200, { "Content-Type": tipo, "Content-Length": tam, "Accept-Ranges": "bytes", "Cache-Control": "no-store" });
   fs.createReadStream(archivo).pipe(res);
-}).listen(puerto, "127.0.0.1", () => console.log(`Taller en http://localhost:${puerto}/laboratorio/taller/`));
+}).listen(puerto, "127.0.0.1", () => console.log(`Taller en http://localhost:${puerto}/herramientas/taller/`));

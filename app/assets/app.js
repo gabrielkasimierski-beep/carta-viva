@@ -8,7 +8,7 @@
    ronda, se llama al mozo y se pide la cuenta: junta, en partes o cada uno lo suyo.
    ============================================================================= */
 
-const L = window.LOCAL, D = window.Datos, E = window.Escena, P = window.Platos3D;
+const L = window.LOCAL, D = window.Datos;
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
 const raiz = document.documentElement;
@@ -22,6 +22,44 @@ const platos = L.categorias.flatMap(c => L.platos.filter(p => p.categoria === c.
 const porId = id => L.platos.find(p => p.id === id);
 const categoria = id => L.categorias.find(c => c.id === id);
 const estacion = id => (L.estaciones || []).find(e => e.id === id) || { id, nombre: id, donde: id, sale: "¡Sale!" };
+
+/* ---------- Cómo se ven los platos ----------
+   · "fotos": la foto real del plato recortada (escena-fotos.js). Las burgers y los aros giran con
+     el dedo (los cuadros de un video), los postres y las bebidas tienen su juego, "¿Qué tiene?"
+     muestra cada ingrediente con su foto y "Armala" rearma la burger.
+   · "3d": los platos modelados (escena.js). Three.js se baja solo si se eligió el 3D.
+   Lo elige el local (local.js: vista). En la demo se cambia desde la cinta de arriba. */
+const VISTAS = ["fotos", "3d"];
+const hayWebGL = (() => { try { const c = document.createElement("canvas"); return !!(c.getContext("webgl2") || c.getContext("webgl")); } catch { return false; } })();
+function vistaElegida() {
+  const h = location.hash.slice(1);
+  if (L.demo && VISTAS.includes(h)) return h;
+  if (L.demo) { try { const g = localStorage.getItem("cartaviva.vista"); if (VISTAS.includes(g)) return g; } catch { /* nada */ } }
+  return VISTAS.includes(L.vista) ? L.vista : "fotos";
+}
+// Carga el 3D (los scripts están en la página, dormidos: <script type="text/plain" data-3d>)
+function cargar3D() {
+  return new Promise(listo => {
+    document.querySelectorAll("script[data-3d]").forEach(s => {
+      const n = document.createElement("script");
+      n.type = "module";
+      if (s.src) n.src = s.src; else n.textContent = s.textContent;
+      n.onerror = () => listo(null);
+      document.head.appendChild(n);
+    });
+    const desde = Date.now();
+    (function esperar() {
+      if (window.Escena3D && window.Platos3D) return listo(window.Escena3D);
+      if (Date.now() - desde > 15000) return listo(null);
+      setTimeout(esperar, 40);
+    })();
+  });
+}
+let vistaPlatos = vistaElegida();
+if (vistaPlatos === "3d" && !(hayWebGL && (window.Escena = await cargar3D()))) vistaPlatos = "fotos";
+if (vistaPlatos === "fotos") window.Escena = window.EscenaFotos;
+const E = window.Escena;                                     // el panel usa la misma
+raiz.dataset.vista = vistaPlatos;
 
 /* ---------- La mesa: sale del QR ---------- */
 // Demo: ?mesa=7. Con la base real, el QR lleva el código secreto de la mesa: ?m=k7f2…
@@ -122,8 +160,10 @@ const ESTILOS = {
   },
 };
 let estilo = ESTILOS[L.estilo] ? L.estilo : "brasa";
-const paletas = {};
-const paleta = p => ((paletas[estilo] ||= {})[p.id] ||= ESTILOS[estilo](p));
+let paletas = {};
+// Con fotos, el color es el de la foto si pide otro que el de la carta (o el de "Tu foto")
+const conColor = p => { const c = E.colorDe ? E.colorDe(p) : null; return c && c.color ? { ...p, color: c.color, color2: c.color2 } : p; };
+const paleta = p => ((paletas[estilo] ||= {})[p.id] ||= ESTILOS[estilo](conColor(p)));
 
 /* ---------- Estado ---------- */
 const feed = $("#feed"), fondo = $("#fondo"), palabra = $("#palabra"), velo = $("#velo");
@@ -157,6 +197,7 @@ function pintarCarta() {
     <article class="plato" data-i="${i}" aria-label="${esc(p.nombre)}">
       <div class="plato__escenario" data-escenario>
         <div class="plato__sellos">${p.sellos.map(s => `<span class="sello">${esc(s)}</span>`).join("")}</div>
+        <p class="armado" hidden></p>
       </div>
       <div class="plato__info">
         <div class="plato__fila">
@@ -275,6 +316,8 @@ function describir(p, el) {
 }
 // Si lo "armado" quedó igual que el de la carta, es el de la carta.
 const normalizar = (p, el) => (el && describir(p, el) ? el : null);
+// Lo mismo armado igual es una sola línea del pedido (sin importar en qué orden se eligió)
+const claveLinea = (p, el) => p.id + (el ? "|" + describir(p, { ...el, sacale: [...(el.sacale || [])].sort(), sumale: [...(el.sumale || [])].sort() }) : "");
 
 /* ---------- Agregar al pedido de la mesa ---------- */
 function agregar(p, el) {
@@ -282,7 +325,7 @@ function agregar(p, el) {
   if (D.agotado(p.id)) return avisar(`${p.nombre} se terminó por hoy.`);
   if (!miMesa()) return pedirNombre(() => agregar(p, el), p);
   el = normalizar(p, el);
-  const linea = D.sumar(yo, { plato: p.id, eleccion: el, detalle: describir(p, el), precio: precioDe(p, el), clave: P.clave(p, el) + (el?.punto || "") });
+  const linea = D.sumar(yo, { plato: p.id, eleccion: el, detalle: describir(p, el), precio: precioDe(p, el), clave: claveLinea(p, el) });
   if (!linea) return avisar("No se pudo sumar. Probá de nuevo.");
   pintarPastilla();
   volar(p, el, escenario(platos.indexOf(p)));
@@ -402,7 +445,7 @@ function pedirNombre(despues, plato) {
   $("#bv-bajada").textContent = plato
     ? `Para sumar ${plato.nombre}, decinos quién sos: así en la mesa se sabe qué pidió cada uno.`
     : k && k.visitas ? `Es tu ${k.visitas + 1}ª visita a ${L.nombre}. Tu color y tus premios te estaban esperando.`
-    : "Mirá cada plato en 3D, armalo a tu gusto y pidan juntos, cada uno desde su celu.";
+    : "Girá cada plato con el dedo, mirá qué tiene, armalo a tu gusto y pidan juntos, cada uno desde su celu.";
   $("#bv-pista").hidden = !!plato;
   pintarBienvenida();
   bv.hidden = false;
@@ -823,11 +866,13 @@ function explotar(si) {
   if (si && modo) return;
   if (si) ocultarPista();
   modo = si ? "explotando" : null;
-  document.body.classList.toggle("explotando", si);
-  document.body.classList.toggle("bloqueada", si);
-  E.explotar(escenario(actual), si);
+  E.explotar(escenario(actual), si, () => {
+    document.body.classList.toggle("explotando", si);
+    document.body.classList.toggle("bloqueada", si);
+  });
   $("#explosion-pie").hidden = !si;
   $("#explosion-nombre").textContent = platos[actual].nombre;
+  $("#explosion-bajada").textContent = E.tipo === "fotos" ? "Lo que lleva" : "Así viene, capa por capa";
   if (si) setTimeout(() => $("#explosion-cerrar").focus({ preventScroll: true }), 50);
 }
 $("#explosion-cerrar").addEventListener("click", () => explotar(false));
@@ -839,17 +884,26 @@ function abrirArmar() {
   eleccion = porDefecto(p);
   eleccionCambio = false;
   modo = "armando";
-  document.body.classList.add("armando");
   $("#armar-titulo").textContent = p.nombre;
   pintarOpciones(p);
   abrirHoja(hojaArmar, { claro: true });
   raiz.style.setProperty("--hoja", hojaArmar.offsetHeight + "px");
+  E.acomodar(escenario(actual), () => document.body.classList.add("armando"));
+  if (E.tipo === "fotos") E.cambiar(escenario(actual), { ...eleccion });   // la burger en capas, lista para rearmarse
 }
 function salirArmar() {
   if (modo !== "armando") return;
   modo = null;
-  document.body.classList.remove("armando");
-  if (eleccionCambio) E.cambiar(escenario(actual), null);
+  E.acomodar(escenario(actual), () => document.body.classList.remove("armando"));
+  if (eleccionCambio || E.tipo === "fotos") E.cambiar(escenario(actual), null);
+  mostrarArmado(null);
+}
+// Lo que se va eligiendo, en palabras, abajo del plato
+function mostrarArmado(texto) {
+  const t = secciones[actual] && secciones[actual].querySelector(".armado");
+  if (!t) return;
+  t.hidden = !texto;
+  t.textContent = texto || "";
 }
 function elegido(g, it) {
   const v = eleccion[g.id];
@@ -890,6 +944,8 @@ $("#armar-opciones").addEventListener("click", e => {
   $$(".chip", gEl).forEach(c => c.setAttribute("aria-pressed", elegido(g, g.items.find(x => String(x.id) === c.dataset.item))));
   eleccionCambio = true;
   E.cambiar(escenario(actual), { ...eleccion });
+  if (E.tipo === "fotos") E.saltar(escenario(actual), 0.4);
+  mostrarArmado(describir(p, eleccion));
   $("#armar-agregar").textContent = `Agregar · ${plata(precioDe(p, eleccion))}`;
 });
 $("#armar-agregar").addEventListener("click", () => {
@@ -1311,9 +1367,39 @@ $("#btn-carta").addEventListener("click", abrirCarta);
 $("#carta-grilla").addEventListener("click", e => {
   const b = e.target.closest("[data-ir]");
   if (!b) return;
+  const i = +b.dataset.ir;
+  const img = b.querySelector("img");
+  const desde = img && img.getBoundingClientRect();
   cerrarHoja(true);
-  irA(+b.dataset.ir, false);
+  irA(i, false);
+  if (E.tipo === "fotos" && img && MOVIMIENTO) { alDeslizar(); volarALugar(i, img.src, desde); }
 });
+// Con fotos: la de la tarjeta crece hasta el lugar del plato (y si es de los que se ven desde
+// arriba, como las pizzas, se acuesta al llegar)
+function volarALugar(i, src, desde) {
+  const el = escenario(i);
+  requestAnimationFrame(() => {
+    const hasta = E.rect(el);
+    if (!hasta.width) return;
+    const v = document.createElement("figure");
+    v.className = "volando-foto";
+    v.innerHTML = `<img src="${src}" alt="">`;
+    Object.assign(v.style, { left: hasta.left + "px", top: hasta.top + "px", width: hasta.width + "px", height: hasta.height + "px" });
+    document.body.appendChild(v);
+    E.ocultar(el, true);
+    const dx = desde.left + desde.width / 2 - (hasta.left + hasta.width / 2), dy = desde.top + desde.height / 2 - (hasta.top + hasta.height / 2);
+    const s = Math.min(desde.width / hasta.width, desde.height / hasta.height);
+    const acostado = E.acostado(platos[i]);
+    const a = v.animate([
+      { transform: `translate(${dx}px, ${dy}px) scale(${s})` },
+      { transform: acostado ? `perspective(1100px) rotateX(${acostado}deg)` : "none" },
+    ], { duration: 620, easing: "cubic-bezier(.2,.9,.25,1)" });
+    let hecho = false;
+    const fin = () => { if (hecho) return; hecho = true; v.remove(); E.ocultar(el, false); E.saltar(el, 0.5); };
+    a.onfinish = fin;
+    setTimeout(fin, 900);
+  });
+}
 
 /* ---------- Agotados (los marca la cocina o la barra) ---------- */
 function pintarAgotados() {
@@ -1496,7 +1582,41 @@ $("#estilos").addEventListener("click", e => {
   const b = e.target.closest("[data-estilo]");
   if (b) usarEstilo(b.dataset.estilo, true);
 });
-addEventListener("hashchange", () => { const h = location.hash.slice(1); if (ESTILOS[h]) usarEstilo(h, true); });
+addEventListener("hashchange", () => { const h = location.hash.slice(1); if (ESTILOS[h]) usarEstilo(h, true); if (VISTAS.includes(h)) usarVista(h); });
+
+/* ---------- En la demo: fotos o 3D, y "Tu foto" ---------- */
+// Cambiar entre fotos y 3D vuelve a abrir la carta (el pedido y la mesa quedan)
+function usarVista(v) {
+  if (!VISTAS.includes(v)) return;
+  try { localStorage.setItem("cartaviva.vista", v); } catch { /* nada */ }
+  if (v === vistaPlatos) return;
+  history.replaceState(null, "", location.pathname + location.search);
+  location.reload();
+}
+$("#vistas-plato").addEventListener("click", e => {
+  const b = e.target.closest("[data-vista-plato]");
+  if (b) usarVista(b.dataset.vistaPlato);
+});
+// "Tu foto": la del plato que se está viendo, solo en este celu (para mostrarle a un local su plato)
+$("#cinta-foto").addEventListener("click", () => $("#cinta-archivo").click());
+$("#cinta-archivo").addEventListener("change", async e => {
+  const f = e.target.files && e.target.files[0];
+  e.target.value = "";
+  if (!f || !E.cambiarFoto) return;
+  if (modo === "explotando") explotar(false);
+  const p = platos[actual];
+  const r = await E.cambiarFoto(p, URL.createObjectURL(f));
+  if (!r) return avisar("No se pudo abrir esa foto.");
+  paletas = {};
+  pintarColores();
+  const i = actual;
+  actual = -1;
+  activar(i);
+  alDeslizar();
+  $("#pastilla-fotos").dataset.html = "";
+  pintarPastilla();
+  avisar(`Listo: ${p.nombre} con tu foto (solo en este celu, hasta que recargues).`);
+});
 
 /* ---------- Arranque ---------- */
 function iniciar() {
@@ -1505,6 +1625,8 @@ function iniciar() {
   $("#marca-mesa").textContent = mesa ? `Mesa ${mesa}` : "La carta";
   $("#btn-mozo").hidden = !mesa;
   if (L.demo) { $("#cinta").hidden = false; raiz.classList.add("con-cinta"); }
+  $$("#vistas-plato [data-vista-plato]").forEach(b => b.setAttribute("aria-pressed", b.dataset.vistaPlato === vistaPlatos));
+  $("#cinta-foto").hidden = E.tipo !== "fotos";
 
   estilo = estiloInicial();
   raiz.dataset.estilo = estilo;

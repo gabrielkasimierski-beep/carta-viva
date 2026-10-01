@@ -150,6 +150,34 @@ Gaby. La base ya lo hace cumplir: `club_ver`, `club_vincular`, `club_canjear`, `
 panel; los sellos se suman solos al cobrar. Probado (149 pruebas, y una base de la versión
 anterior se actualiza sin perder nada).
 
+### Los platos en fotos reales: el laboratorio, adentro de la app (1-oct-2026)
+
+Del 29 al 30-sep se probó aparte (carpeta `laboratorio/`, sin tocar la app) la carta con fotos
+reales en lugar del 3D. Lo que pasó:
+- Primero cuatro diseños con fotos (Vivo, Plato, Tarjetas, Galería); gustaron Vivo y Galería. Después
+  Gaby pidió la interacción de la app con las fotos reales: la carta de la app tal cual, con el plato
+  recortado de la foto.
+- "¿Qué tiene?": las capas y lupas cortadas de la foto no gustaron; quedó el plato entero y alrededor
+  cada ingrediente con su propia foto ("mejoró muchísimo"). "Armala": la burger se rearma con las
+  franjas de su foto (simple, doble o triple; lo que se saca se va; panceta y huevo se suman).
+- Las fotos se generaron con Higgsfield (GPT Image 2.5, fondo transparente, según la receta de la
+  carta), desde la cuenta de Gaby. Los giros con el dedo, primero fingidos (se veían mal a los
+  costados), ahora son videos de verdad (Kling 3.0 pro, el plato girando en fondo azul) pasados a
+  cuadros con el taller. Postres y bebidas con juego: las bebidas se sirven ("buenísimas"), las papas
+  se bañan en cheddar, el flan tiembla (video), el cucurucho se hamaca, el cheesecake se come con la
+  cuchara de a bocados.
+
+Gaby pidió juntarlo con el proyecto (1-oct). Ahora la app usa las fotos **de entrada** en todo: la
+carta, la bienvenida (el plato se luce y vuelve a su lugar), el pedido, el seguimiento, el club y el
+panel. El 3D sigue como opción (`local.js`: `vista`; en la demo, la cinta de arriba: Fotos / 3D) y
+solo se baja si se elige. "Tu foto" (la cámara de la cinta) prueba la foto de un plato del local en
+el celu, para mostrársela al dueño. Las herramientas quedaron en `herramientas/` (`npm run taller`) y
+la carpeta `laboratorio/` se sacó (queda en el historial del repo).
+
+**Para un local de verdad:** sus platos fotografiados (o generados a partir de sus fotos) con fondo
+transparente, la foto de cada ingrediente, y los videos de los giros de lo que más impacta (burgers,
+tragos). Va en `fotos.js`.
+
 ## 2. Qué se reutiliza de Fena y qué cambia
 
 | | Fena (turnos) | Carta Viva |
@@ -179,7 +207,9 @@ correcta.
 - Los cambios se avisan al instante (Realtime de Supabase) y, si se corta, la app vuelve a
   preguntar cada unos segundos.
 
-**El 3D de los platos reales.** Cada plato es un archivo `.glb`:
+**Los platos de verdad.** Hoy la carta usa **fotos reales recortadas** (ver "Los platos en fotos
+reales", arriba): es lo más rápido de conseguir para un local y gustó mucho. La otra vía, para más
+adelante, es el 3D escaneado. Cada plato es un archivo `.glb`:
 - **Escaneo con el celular** (Polycam, Luma, KIRI Engine o RealityScan): el plato real, con su
   textura real. Una tarde en el local alcanza para toda la carta.
 - Se optimiza a **menos de 2–3 MB** por plato (compresión de malla y texturas) para que cargue

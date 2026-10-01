@@ -1,5 +1,5 @@
 /* =============================================================================
-   CARTA VIVA · laboratorio — el plato de la foto, con el trato del 3D
+   CARTA VIVA — el plato de la foto, con el trato del 3D
    Hace con la foto recortada lo que escena.js hace en la app con el 3D: el plato flota
    en su lugar de la carta, se mueve con el dedo y salta con un toque.
    · Las burgers y los aros dan la vuelta entera de verdad: son los cuadros de un video (el plato
@@ -10,14 +10,17 @@
    · "Armala": la burger se rearma con las franjas de su foto (simple, doble, triple; lo que
      se saca se va; panceta y huevo se suman con su propia foto).
 
+   Tiene lo mismo que Escena3D (escena.js), así la carta usa una u otra (local.js: vista):
    EscenaFotos.iniciar({ etiquetas })
    EscenaFotos.vincular(div, plato)       el plato vive en ese div (su lugar en la carta)
    EscenaFotos.explotar(div, si, cambiar) "¿Qué tiene?" (cambiar: lo que cambia la página)
    EscenaFotos.acomodar(div, cambiar)     el lugar cambia de tamaño (armar, volver)
-   EscenaFotos.componer(div, eleccion)    "Armala": la burger como se eligió (null: la de la foto)
-   EscenaFotos.saltar(div, fuerza)        pega un salto
-   EscenaFotos.foto(plato) · fotoLista(plato)   el recorte (listas, pedido)
+   EscenaFotos.cambiar(div, eleccion)     "Armala": la burger como se eligió (null: la de la foto)
+   EscenaFotos.mudar(div, otroDiv)        el plato se va volando a otro lugar (la bienvenida)
+   EscenaFotos.presentar(div) · saltar(div, fuerza)   se luce al aparecer · pega un salto
+   EscenaFotos.foto(plato) · fotoLista(plato)   el recorte (listas, pedido, panel)
    EscenaFotos.donde(div) · rect(div)     dónde está el plato en pantalla
+   EscenaFotos.colorDe(plato)             el color de la foto, si pide otro que el de la carta
    EscenaFotos.cambiarFoto(plato, src)    "Tu foto": la de ese plato, solo en este navegador
    ============================================================================= */
 (function () {
@@ -33,7 +36,7 @@
   const topes = (x, a, b) => Math.max(a, Math.min(b, x));
   const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 
-  const datos = plato => (propias[plato.id] ? { foto: propias[plato.id].src, tam: propias[plato.id].tam, vista: "frente", propia: true } : window.FOTOS[plato.id] || null);
+  const datos = plato => (propias[plato.id] ? { foto: propias[plato.id].src, tam: propias[plato.id].tam, vista: "frente", propia: true, colorPropio: propias[plato.id].colorPropio } : (window.FOTOS || {})[plato.id] || null);
   function pedirRecorte(plato) {
     const d = datos(plato);
     if (!d) return Promise.resolve(null);
@@ -59,8 +62,14 @@
     };
     puestos.set(el, p);
     gestos(el);
+    medidor.observe(el);
     preparar(p);
   }
+  // Si su lugar cambia de tamaño (se abre una hoja, cambia la bienvenida), se reacomoda
+  const medidor = new ResizeObserver(cambios => cambios.forEach(c => {
+    const p = puestos.get(c.target);
+    if (p && (Math.abs(c.target.clientWidth - p.lugarW) > 1 || Math.abs(c.target.clientHeight - p.lugarH) > 1)) ubicar(p);
+  }));
 
   const enCaja = (p, x, y) => [((x - p.caja[0]) / (p.caja[2] - p.caja[0])) * 100, ((y - p.caja[1]) / (p.caja[3] - p.caja[1])) * 100];
 
@@ -240,6 +249,8 @@
   function ubicar(p) {
     const W = p.el.clientWidth, H = p.el.clientHeight;
     if (!W || !H) return;
+    p.lugarW = W;
+    p.lugarH = H;
     const angosto = innerWidth < 640;
     const a = p.aspecto, bajo = p.vista === "arriba" ? BAJO : 1;
     const maximo = p.r ? p.r.ancho * 1.3 : Infinity;              // que no se agrande más de lo que da la foto
@@ -356,6 +367,8 @@
 
   /* ---------- Con el dedo: vuelta entera, giro o inclinación; un toque, salta ---------- */
   function gestos(el) {
+    if (el._gestos) return;
+    el._gestos = true;
     let x0 = 0, xIni = 0, t0 = 0, recorrido = 0, dedo = null, p = null, jugando = false;
     const enPlato = e => { const r = p.fp.getBoundingClientRect(); return [e.clientX - r.left, e.clientY - r.top]; };
     el.addEventListener("pointerdown", e => {
@@ -556,11 +569,48 @@
     });
   });
 
+  // Pasar el plato de un lugar a otro (la bienvenida lo toma prestado de la carta): va volando
+  function mudar(de, a) {
+    const p = puestos.get(de);
+    if (!p || !a || puestos.has(a)) return false;
+    quitarEtiquetas(p);
+    quitarPista(p);
+    puestos.delete(de);
+    medidor.unobserve(de);
+    p.el = a;
+    puestos.set(a, p);
+    gestos(a);
+    medidor.observe(a);
+    mudarse(p, () => a.appendChild(p.fp));
+    return true;
+  }
+  // Se luce al aparecer (la bienvenida): la burger da una vuelta, el resto pega un salto
+  function lucirse(el) {
+    const p = puestos.get(el);
+    if (!p || !MOVIMIENTO) return;
+    p.salto = 1;
+    if (p.entera && !p.eleccion) {
+      pedirGiro(p);
+      p.presentado = true;
+      vueltaEntera(p, 1, 9);
+    } else if (!p.juego) {
+      if (p.vista === "arriba") p.velGiro += 200; else p.velRot += 160;
+    }
+  }
+
   window.EscenaFotos = {
-    iniciar(o) { capa = o.etiquetas; requestAnimationFrame(cuadro); },
+    tipo: "fotos",
+    iniciar(o) { capa = o.etiquetas; requestAnimationFrame(cuadro); return true; },
     vincular,
     explotar,
     componer,
+    cambiar: componer,
+    mudar,
+    presentar: lucirse,
+    tono() {},                                                    // la luz y la sombra salen del CSS
+    estilo() {},
+    // El color de la foto, si pide otro que el de la carta (o el de "Tu foto")
+    colorDe: plato => { const d = datos(plato) || {}; return { color: d.colorPropio || d.color || null, color2: d.colorPropio ? null : d.color2 || null }; },
     acomodar(el, cambiar) {
       const p = puestos.get(el);
       if (p) mudarse(p, cambiar); else if (cambiar) cambiar();
@@ -590,7 +640,10 @@
           propias[plato.id] = { src, tam: [img.naturalWidth, img.naturalHeight] };
           delete recortes[plato.id];
           for (const p of puestos.values()) if (p.plato === plato) { p.caja = null; preparar(p); }
-          pedirRecorte(plato).then(listo);
+          pedirRecorte(plato).then(r => {
+            if (r && r.color && propias[plato.id]) propias[plato.id].colorPropio = r.color;
+            listo(r);
+          });
         };
         img.onerror = () => listo(null);
         img.src = src;

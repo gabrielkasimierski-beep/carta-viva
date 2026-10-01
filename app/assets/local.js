@@ -1,8 +1,9 @@
 /* =============================================================================
    CARTA VIVA — los datos del local
    Todo lo que es propio de cada restaurante vive acá: nombre, mesas, la carta, los
-   colores de cada plato y cómo se arma cada uno en 3D. Para otro local se cambia
-   este archivo (y más adelante, lo mismo desde el panel).
+   colores de cada plato y cómo se arma cada uno en 3D. Las fotos de los platos (y lo
+   marcado en cada una) están en fotos.js. Para otro local se cambian estos dos archivos
+   (y más adelante, lo mismo desde el panel).
 
    MORDISCO ES UN LOCAL FICTICIO: nombre, platos y precios son de ejemplo.
    ============================================================================= */
@@ -77,6 +78,11 @@ window.LOCAL = {
 
   pagos: ["Efectivo", "Tarjeta", "Mercado Pago"],
   propinas: [0, 10, 15],            // en %
+
+  // Cómo se ven los platos: "fotos" (la foto real recortada: gira con el dedo, los postres y
+  // las bebidas tienen su juego; ver fotos.js) o "3d" (modelados por código, ver platos3d.js).
+  // En la demo se cambia desde la cinta de arriba.
+  vista: "fotos",
 
   // Estilo de la carta: "brasa" (oscuro, cada plato con su luz), "jugo" (degradé del color
   // del plato) o "estudio" (fondo de foto de producto, en el tono del plato).

@@ -1,7 +1,7 @@
 /* =============================================================================
-   CARTA VIVA · laboratorio — los cuadros de un video, para mover con el dedo
+   CARTA VIVA — los cuadros de un video, para mover con el dedo
    Un video de Higgsfield (la burger girando, el vaso llenándose) se pasó a cuadros recortados,
-   juntos en una o más imágenes (assets/cuadros/*.webp, ver laboratorio/taller). Acá se cargan
+   juntos en una o más imágenes (assets/cuadros/*.webp, ver herramientas/taller). Acá se cargan
    cuando el plato está cerca y se sueltan cuando queda lejos (cada una ocupa memoria).
 
    Cuadros.pedir(def) → Promise<atlas>      def: { src: "x.webp" | ["x-1.webp", …], n, cols, tam: [w, h], porParte }

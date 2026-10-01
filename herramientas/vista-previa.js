@@ -6,8 +6,9 @@
 // cada hoja de estilos, cada script y cada imagen.
 //
 // Uso:  node vista-previa.js <sitio/index.html> <salida.html> [--afuera=assets/cuadros/]
-//   --afuera: las imágenes que empiezan así no se meten adentro: quedan como archivos aparte, al
-//   lado del HTML (se publican junto con él). Sirve para lo pesado que se carga cuando hace falta.
+//   --afuera: las imágenes que empiezan así no se meten adentro: quedan como archivos aparte (con
+//   la ruta vista desde el HTML de salida; se publican junto con él). Sirve para lo pesado que se
+//   carga cuando hace falta (los cuadros de los giros y los juegos).
 
 const fs = require("fs");
 const path = require("path");
@@ -21,6 +22,9 @@ if (!entrada || !salida) {
 }
 
 const dir = path.dirname(entrada);
+// Lo que queda aparte se nombra desde donde está la salida (app/assets/... si la salida está afuera de app/)
+const prefijo = path.relative(path.dirname(path.resolve(salida)), path.resolve(dir)).split(path.sep).join("/");
+const desdeSalida = r => (prefijo ? prefijo + "/" : "") + r;
 const mime = { ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".png": "image/png", ".webp": "image/webp", ".svg": "image/svg+xml" };
 const faltan = [];
 const leer = ruta => {
@@ -46,15 +50,16 @@ html = html.replace(/[ \t]*<script[^>]+src="((?!https?:|\/\/)[^"]+\.js)"[^>]*><\
   if (!abs) return todo;
   scripts++;
   const codigo = fs.readFileSync(abs, "utf8").replace(/<\/script>/gi, "<\\/script>");
-  const tipo = /type=["']module["']/i.test(todo) ? ' type="module"' : "";   // los módulos siguen siendo módulos
-  return `<script${tipo}>\n/* ${ruta} */\n${codigo}\n</script>\n`;
+  // Se conservan los atributos (type="module", o los dormidos: type="text/plain" data-3d)
+  const atributos = todo.trim().replace(/^<script/i, "").replace(/><\/script>$/i, "").replace(/\s+src="[^"]*"/i, "");
+  return `<script${atributos}>\n/* ${ruta} */\n${codigo}\n</script>\n`;
 });
 
 // 3. Imágenes, como data URI
 const hechas = {};
 html = html.replace(/\/?assets\/[\w\/.-]+\.(jpe?g|png|webp|svg)/gi, ruta => {
   const limpia = ruta.replace(/^\//, "");
-  if (afuera.some(a => limpia.startsWith(a))) { if (leer(ruta)) aparte.add(limpia); return limpia; }
+  if (afuera.some(a => limpia.startsWith(a))) { if (leer(ruta)) aparte.add(desdeSalida(limpia)); return desdeSalida(limpia); }
   if (!hechas[ruta]) {
     const abs = leer(ruta);
     if (!abs) return ruta;

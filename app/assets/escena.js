@@ -1,13 +1,15 @@
 /* =============================================================================
-   CARTA VIVA — el escenario 3D
+   CARTA VIVA — el escenario 3D (los platos modelados; la otra forma es escena-fotos.js)
    Un solo lienzo WebGL, fijo detrás de la carta. Cada plato de la carta tiene un
    "escenario" (un div vacío en su pantalla): el plato 3D se dibuja justo ahí, lo sigue
    cuando la carta se desliza y se achica o se agranda si ese lugar cambia.
 
-   Escena.iniciar({ lienzo, etiquetas })   → false si el celular no tiene 3D
+   Escena3D.iniciar({ lienzo, etiquetas }) → false si el celular no tiene 3D
+   (la carta la usa como "Escena", igual que a EscenaFotos: ver app.js)
    Escena.vincular(div, plato)             el plato vive en ese div
    Escena.cambiar(div, eleccion)           lo arma a gusto del comensal (con un saltito)
-   Escena.explotar(div, si)                separa las capas y las nombra
+   Escena.explotar(div, si, cambiar)       separa las capas y las nombra (cambiar: lo que cambia la página)
+   Escena.acomodar(div, cambiar)           el lugar cambia de tamaño (el 3D lo sigue solo)
    Escena.mudar(div, otroDiv)              el plato se va volando a otro lugar (la bienvenida)
    Escena.presentar(div) · saltar(div)     se arma solo al aparecer · pega un salto
    Escena.tono(luz, sombra)                la luz de atrás y la sombra toman el color del plato
@@ -443,7 +445,8 @@ function foto(plato, eleccion) {
 /* ---------------------------------------------------------------------------
    Lo que usa la carta
    --------------------------------------------------------------------------- */
-window.Escena = {
+window.Escena3D = {
+  tipo: "3d",
   iniciar,
   vincular,
   cambiar(el, eleccion) {
@@ -452,10 +455,12 @@ window.Escena = {
     p.eleccion = eleccion;
     p.sucio = true;
   },
-  explotar(el, si) {
+  explotar(el, si, cambiar) {
+    if (cambiar) cambiar();
     const p = puestos.get(el);
     if (p) { p.expObj = si ? 1 : 0; p.presentando = false; }
   },
+  acomodar(el, cambiar) { if (cambiar) cambiar(); },
   // Pasar el plato de un lugar a otro (la bienvenida lo toma prestado de la carta): va volando
   mudar(de, a) {
     const p = puestos.get(de);

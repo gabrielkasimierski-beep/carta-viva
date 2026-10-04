@@ -63,6 +63,11 @@
     <button type="button" data-vista-plato="fotos" aria-pressed="true">Fotos</button>
     <button type="button" data-vista-plato="3d" aria-pressed="false">3D</button>
   </div>
+  <div class="estilos estilos--plan" id="planes" role="group" aria-label="Plan del local">
+    <button type="button" data-plan="basico">Básico</button>
+    <button type="button" data-plan="medio">Medio</button>
+    <button type="button" data-plan="premium">Premium</button>
+  </div>
   <button class="cinta__foto" id="cinta-foto" type="button" hidden aria-label="Probar con tu foto el plato que estás viendo"><svg width="16" height="16" aria-hidden="true"><use href="#i-camara"/></svg><span>Tu foto</span></button>
   <input id="cinta-archivo" type="file" accept="image/*" hidden>
   <a class="cinta__link" href="#mesas"><span class="cinta__largo">Panel del local</span><span class="cinta__corto">Panel</span> <svg width="14" height="14" aria-hidden="true"><use href="#i-flecha"/></svg></a>
@@ -243,12 +248,16 @@
 </section>
 
 <section class="panel" id="panel" aria-labelledby="panel-titulo" hidden>
+  <div class="demo-plan" id="panel-plan" role="group" aria-label="Plan del local (demo)" hidden></div>
   <div class="entrada-equipo" id="entrada-equipo" hidden></div>
   <div class="panel__adentro" id="panel-adentro" hidden>
     <header class="panel__cabeza">
       <div class="panel__marca">
-        <p class="panel__sobre">Panel del local</p>
-        <h2 class="panel__titulo" id="panel-titulo"></h2>
+        <img class="panel__logo" id="panel-logo" alt="" hidden>
+        <div class="panel__marca-txt">
+          <p class="panel__sobre">Panel del local</p>
+          <h2 class="panel__titulo" id="panel-titulo"></h2>
+        </div>
       </div>
       <div class="panel__tabs" role="tablist" aria-label="Secciones del panel" id="panel-tabs"></div>
       <a class="panel__salir" href="#carta">Ver la carta <svg width="14" height="14" aria-hidden="true"><use href="#i-flecha"/></svg></a>

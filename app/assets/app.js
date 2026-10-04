@@ -600,7 +600,18 @@ $("#bv-entrar").addEventListener("click", entrar);
    pide desde acá y sale gratis. Cuando vuelve, la carta lo saluda con su nombre, su color,
    lo que siempre pide y sus premios. */
 const hojaClub = $("#hoja-club");
-const cfgClub = () => (D.club ? D.club() : { activo: false });
+// Plan del local (básico / medio / premium). El club es de medio en adelante.
+const planDeLocal = () => { try { return localStorage.getItem("cartaviva.plan") || L.plan || "premium"; } catch { return L.plan || "premium"; } };
+const tieneClub = () => planDeLocal() !== "basico";
+const cfgClub = () => (tieneClub() && D.club ? D.club() : { activo: false });
+// Selector de plan de la demo (en la cinta y en el panel): cambia y recarga para re-gatear todo
+document.addEventListener("click", e => {
+  const b = e.target.closest("[data-plan]");
+  if (!b) return;
+  try { localStorage.setItem("cartaviva.plan", b.dataset.plan); } catch { /* sin almacenamiento */ }
+  location.reload();
+});
+function marcarPlan() { try { const a = planDeLocal(); document.querySelectorAll("#planes [data-plan]").forEach(b => b.setAttribute("aria-pressed", b.dataset.plan === a)); } catch { /* nada */ } }
 const miCliente = () => (D.miCliente ? D.miCliente() : null);
 const premioClub = () => porId(cfgClub().premio);
 const MOTIVOS_CLUB = {
@@ -610,9 +621,10 @@ const MOTIVOS_CLUB = {
   ya_en_la_mesa: "Tu cuenta ya está en esta mesa desde otro celu.", otra_cuenta: "En esta mesa ya entraste con otra cuenta del club.",
   mesa_cerrada: "Esa mesa se cobró hace rato: lo de ese día ya no suma. Desde la próxima, sí.",
   club_apagado: "El club no está funcionando ahora.", sin_cuenta: "Primero entrá con tu mail.",
+  privacidad: "Para sumarte, leé y aceptá la política de privacidad.",
 };
 let clubPaso = "mail", clubMail = "", clubDemo = "", clubError = "", clubNombre = "", clubNovedades = false;
-let clubRecien = false, clubBorrar = false, clubAlta = null, clubOcupado = false;
+let clubRecien = false, clubBorrar = false, clubAlta = null, clubOcupado = false, clubAcepta = false;
 const cuando = t => {
   if (!t) return "";
   const dias = Math.round((new Date().setHours(0, 0, 0, 0) - new Date(t).setHours(0, 0, 0, 0)) / 864e5);
@@ -688,6 +700,7 @@ function abrirClub() {
   clubError = "";
   clubBorrar = false;
   clubRecien = false;
+  clubAcepta = false;
   clubPaso = miCliente() ? "yo" : "mail";
   if (clubPaso === "mail" && !clubNombre) clubNombre = (miComensal() || {}).nombre || bvNombre.value.trim();
   pintarClub();
@@ -712,6 +725,7 @@ function pintarClub() {
       ${pideNombre ? `<div class="campo"><label for="club-nombre">Tu nombre</label><input id="club-nombre" type="text" autocomplete="given-name" autocapitalize="words" maxlength="20" value="${esc(clubNombre)}" placeholder="Como te dicen"></div>` : ""}
       <div class="campo"><label for="club-mail">Tu mail</label><input id="club-mail" type="email" inputmode="email" autocomplete="email" autocapitalize="off" spellcheck="false" maxlength="120" value="${esc(clubMail)}" placeholder="nombre@mail.com" enterkeyhint="send"></div>
       <label class="club-check"><input type="checkbox" id="club-novedades"${clubNovedades ? " checked" : ""}><span>Quiero que ${esc(L.nombre)} me mande novedades y promos</span></label>
+      <label class="club-check club-check--priv"><input type="checkbox" id="club-acepta"${clubAcepta ? " checked" : ""}><span>Leí y acepto la <button type="button" class="club-link club-link--inline" data-club-privacidad>política de privacidad</button></span></label>
       ${error}
       <p class="club-letra">${esc(L.nombre)} guarda tu nombre, tu mail y lo que pedís solo para el club. Lo borrás cuando quieras desde acá.</p>`;
     pie.innerHTML = `<button class="boton-principal" type="button" data-club-codigo>${icono("i-mail", 18)} Mandame el código</button>`;
@@ -724,6 +738,10 @@ function pintarClub() {
       ${error}
       <p class="club-otros"><button type="button" data-club-reenviar>Mandarlo de nuevo</button><button type="button" data-club-cambiar>Cambiar el mail</button></p>`;
     pie.innerHTML = `<button class="boton-principal" type="button" data-club-verificar>Entrar al club</button>`;
+  } else if (clubPaso === "privacidad") {
+    $("#club-titulo").textContent = "Política de privacidad";
+    cuerpo.innerHTML = politicaPrivacidadHtml();
+    pie.innerHTML = `<button class="boton-principal" type="button" data-club-volver-priv>${icono("i-volver", 16)} Volver</button>`;
   } else {
     $("#club-titulo").textContent = clubRecien ? `¡Listo, ${k.nombre}!` : `Hola, ${k.nombre}`;
     const favs = k.favoritos.map(f => ({ ...f, p: porId(f.plato) })).filter(f => f.p);
@@ -741,13 +759,41 @@ function pintarClub() {
   }
   llenarFotos(cuerpo);
 }
-async function clubPedirCodigo() {
+// Guarda lo escrito antes de cambiar de paso (así no se pierde al ir a la política y volver)
+function capturarClub() {
   const nombre = $("#club-nombre");
   if (nombre) clubNombre = nombre.value.trim();
-  clubMail = ($("#club-mail") || {}).value?.trim() || clubMail;
+  const mail = $("#club-mail");
+  if (mail) clubMail = mail.value.trim();
   clubNovedades = !!($("#club-novedades") || {}).checked;
+  clubAcepta = !!($("#club-acepta") || {}).checked;
+}
+// La política de privacidad del club: qué se guarda, para qué y cómo lo borra uno
+function politicaPrivacidadHtml() {
+  const n = esc(L.nombre);
+  return `<div class="club-politica">
+    <p class="club-texto">Así cuida ${n} lo que nos dejás al sumarte al club. En criollo: te pedimos lo justo, lo usamos solo para el club y lo borrás cuando quieras.</p>
+    <h4 class="club-politica__tit">Qué guardamos</h4>
+    <p class="club-texto">Tu nombre, tu mail y lo que pedís en ${n} (tus consumos, sellos y premios). Nada más. No te pedimos contraseña ni datos de la tarjeta.</p>
+    <h4 class="club-politica__tit">Para qué</h4>
+    <p class="club-texto">Para el club: sumarte sellos, reconocerte cuando volvés, darte tus premios y mostrarte lo que solés pedir. Si tildás la otra casilla, también para mandarte novedades y promos: eso es aparte y lo cortás cuando quieras.</p>
+    <h4 class="club-politica__tit">Con quién lo compartimos</h4>
+    <p class="club-texto">Con nadie. No vendemos ni cedemos tus datos. Solo los ve el equipo de ${n} para atenderte.</p>
+    <h4 class="club-politica__tit">Cómo entrás</h4>
+    <p class="club-texto">Sin contraseña: te mandamos un código de un solo uso a tu mail para confirmar que sos vos.</p>
+    <h4 class="club-politica__tit">Tus derechos</h4>
+    <p class="club-texto">Podés ver, corregir o borrar tus datos cuando quieras. Borrar es con un toque desde tu cuenta del club ("Borrar mi cuenta del club") y se va todo. También podés escribirle a ${n}.</p>
+    <h4 class="club-politica__tit">Cuánto los guardamos</h4>
+    <p class="club-texto">Mientras seas del club. Si borrás tu cuenta, los eliminamos.</p>
+    <p class="club-letra">Tratamos tus datos según la Ley 25.326 de Protección de Datos Personales (Argentina). Dudas o reclamos: hablá con ${n}. Última actualización: octubre 2026.</p>
+  </div>`;
+}
+async function clubPedirCodigo() {
+  const nombre = $("#club-nombre");
+  capturarClub();
   clubError = "";
   if (nombre && !clubNombre) { clubError = MOTIVOS_CLUB.nombre; return pintarClub(); }
+  if (!clubAcepta) { clubError = MOTIVOS_CLUB.privacidad; return pintarClub(); }
   const r = await D.pedirCodigo(clubMail);
   if (!r || !r.ok) { clubError = MOTIVOS_CLUB[r && r.motivo] || "No se pudo mandar el código. Probá de nuevo."; return pintarClub(); }
   clubMail = r.email || clubMail;
@@ -797,6 +843,8 @@ async function clubVerificar(codigo) {
 }
 hojaClub.addEventListener("click", async e => {
   const b = s => e.target.closest(s);
+  if (b("[data-club-privacidad]")) { capturarClub(); clubError = ""; clubPaso = "privacidad"; return pintarClub(); }
+  if (b("[data-club-volver-priv]")) { clubPaso = "mail"; clubError = ""; pintarClub(); return $("#club-mail")?.focus({ preventScroll: true }); }
   if (b("[data-club-codigo]") || b("[data-club-reenviar]")) return clubPedirCodigo();
   if (b("[data-club-verificar]")) return clubVerificar();
   if (b("[data-club-demo]")) { const i = $("#club-codigo"); if (i) i.value = clubDemo; return clubVerificar(clubDemo); }
@@ -1633,7 +1681,7 @@ function iniciar() {
   $("#marca-nombre").textContent = L.nombre;
   $("#marca-mesa").textContent = mesa ? `Mesa ${mesa}` : "La carta";
   $("#btn-mozo").hidden = !mesa;
-  if (L.demo) { $("#cinta").hidden = false; raiz.classList.add("con-cinta"); }
+  if (L.demo) { $("#cinta").hidden = false; raiz.classList.add("con-cinta"); marcarPlan(); }
   $$("#vistas-plato [data-vista-plato]").forEach(b => b.setAttribute("aria-pressed", b.dataset.vistaPlato === vistaPlatos));
   $("#cinta-foto").hidden = E.tipo !== "fotos";
 

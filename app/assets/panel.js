@@ -48,6 +48,12 @@ const ESTACIONES = L.estaciones && L.estaciones.length ? L.estaciones : [{ id: "
 const EST = ESTACIONES.map(e => e.id);
 const PERMISOS = D.PERMISOS, ROLES = D.ROLES;
 const SALON = ["mesas", "atender", "llevar", "cobrar"];
+// Plan del local: básico (ver pedidos) · medio (+ reportes y club) · premium (gestión completa)
+const planDeLocal = () => { try { return localStorage.getItem("cartaviva.plan") || L.plan || "premium"; } catch { return L.plan || "premium"; } };
+const NIVEL_PLAN = { basico: 0, medio: 1, premium: 2 };
+const planNivel = () => NIVEL_PLAN[planDeLocal()] ?? 2;
+const tieneGestion = () => planNivel() >= 2;     // cocina/barra, estados, PIN y permisos, equipo
+const dueñoId = () => (equipo().find(e => e.rol === "dueno") || equipo()[0] || {}).id || null;
 const persona = id => (id && D.persona(id)) || null;
 const nombreEst = id => (ESTACIONES.find(e => e.id === id) || { nombre: id }).nombre;
 const puestoDe = p => p.puesto || (ROLES.find(r => r.id === p.rol) || {}).nombre || "";
@@ -60,13 +66,16 @@ const puedeMover = (est, a, p = persona(yo)) => (a === "entregado" ? puede("llev
 const puedeRechazar = (ped, p = persona(yo)) => puede("mesas", p) || Object.keys(ped.partes).some(e => puede(e, p));
 const puedeEditarA = (e, p = persona(yo)) => puede("equipo", p) && (e.rol !== "dueno" || p.rol === "dueno");
 
-const VISTAS = { mesas: "Mesas", ...Object.fromEntries(ESTACIONES.map(e => [e.id, e.nombre])), carta: "Carta", qr: "QR", clientes: "Clientes", equipo: "Equipo" };
+const VISTAS = { pedidos: "Pedidos", mesas: "Mesas", ...Object.fromEntries(ESTACIONES.map(e => [e.id, e.nombre])), movimientos: "Movimientos", carta: "Carta", qr: "QR", clientes: "Clientes", equipo: "Equipo" };
 function vistasDe(p) {
+  // Básico y medio no tienen gestión: básico ve los pedidos; medio suma reportes y club
+  const niv = planNivel();
+  if (niv < 2) return niv === 0 ? ["pedidos"] : ["pedidos", "movimientos", "clientes"];
   if (!p) return [];
   const v = [];
   if (deSalon(p)) v.push("mesas");
   EST.forEach(e => { if (puede(e, p)) v.push(e); });
-  ["carta", "qr", "clientes", "equipo"].forEach(x => { if (puede(x, p)) v.push(x); });
+  ["movimientos", "carta", "qr", "clientes", "equipo"].forEach(x => { if (puede(x, p)) v.push(x); });
   return v;
 }
 // Quien lleva o atiende pero no ve el plano, tiene su lista de tareas
@@ -100,6 +109,7 @@ let liberando = null, rechazando = null, dobleT;
 let historiaAbierta = false, verTodo = false;
 let eligiendo = null, pin = "", pinMal = false;
 let clienteAbierto = null, buscarCliente = "", borrandoCliente = false;     // Clientes
+let rangoMov = "dia";                                                       // Movimientos: dia · semana · mes
 
 const datosMesa = n => mesasDelLocal().find(m => m.n === n) || { n, zona: "", lugares: 4 };
 const platoDe = id => L.platos.find(p => p.id === id);
@@ -291,6 +301,27 @@ function pintarMesas(d) {
       <li class="ref ref--banda">Llama al mozo</li>
       <li class="ref ref--banda ref--cuenta">Pide la cuenta</li>
     </ul>`;
+}
+
+/* ---------- Pedidos (plan básico): lo que pidió cada mesa, solo lectura ---------- */
+function pedidosMesaHtml(m, d) {
+  const items = m.validos.flatMap(p => p.items);
+  const n = m.comensales.length;
+  const sub = [n ? `${n} ${n === 1 ? "persona" : "personas"}` : "", m.s && m.desde ? hace(Date.now() - m.desde) : ""].filter(Boolean).join(" · ");
+  return `<article class="pedidos-mesa">
+    <header class="pedidos-mesa__cab">
+      <span class="pedidos-mesa__num">${m.n}</span>
+      <span class="pedidos-mesa__meta"><b>${ESTADO_MESA[m.estado]}</b>${sub ? `<small>${esc(sub)}</small>` : ""}</span>
+      ${m.total ? `<span class="pedidos-mesa__total">${plata(m.total)}</span>` : ""}
+    </header>
+    ${items.length ? `<ul class="lista-items">${itemsHtml(items, d)}</ul>` : `<p class="pedidos-mesa__vacia">Todavía están eligiendo.</p>`}
+  </article>`;
+}
+function pintarPedidos(d) {
+  const ocupadas = mesasDelLocal().map(m => mesaInfo(m, d)).filter(m => m.estado !== "libre");
+  if (!ocupadas.length) return `<p class="panel__ayuda">Cuando una mesa pide desde su celular, su pedido aparece acá al instante.</p>`;
+  return `<p class="panel__ayuda">Lo que pidió cada mesa, en vivo. Se actualiza solo cuando piden desde la mesa.</p>
+    <div class="pedidos-grilla">${ocupadas.map(m => pedidosMesaHtml(m, d)).join("")}</div>`;
 }
 
 /* ---------- Detalle de una mesa ---------- */
@@ -501,6 +532,163 @@ function pintarEstacion(d, est) {
       </section>`;
     }).join("")}</div>
     <p class="entregados">${esc(nombreEst(est))}: ${hechas} ${hechas === 1 ? "comanda entregada" : "comandas entregadas"} hoy.</p>`;
+}
+
+/* ---------- Movimientos: el resumen del día, la semana y el mes (lo ve el dueño) ---------- */
+const RANGOS = [{ id: "dia", nombre: "Hoy" }, { id: "semana", nombre: "Semana" }, { id: "mes", nombre: "Mes" }];
+const horaDe = t => new Date(t).toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" });
+const fechaCorta = t => new Date(t).toLocaleDateString("es-AR", { weekday: "short", day: "numeric", month: "short" });
+
+// El flujo de la mesa hoy, de los datos reales: cuánta gente, cuánto se quedó y los tiempos
+function flujoHoy(d) {
+  const cerradas = d.sesiones.filter(s => s.cerrada && s.abierta);
+  let personas = 0, sumEstadia = 0, sumPedir = 0, nPedir = 0, sumLlega = 0, nLlega = 0;
+  cerradas.forEach(s => {
+    personas += d.comensales.filter(c => c.sesion === s.id).length;
+    sumEstadia += s.cerrada - s.abierta;
+    const peds = d.pedidos.filter(p => p.sesion === s.id && !p.rechazado);
+    if (peds.length) { sumPedir += Math.min(...peds.map(p => p.creado)) - s.abierta; nPedir += 1; }
+    peds.forEach(p => Object.values(p.partes).forEach(pa => {
+      if (pa.estado === "entregado" && pa.cambio) { sumLlega += pa.cambio - p.creado; nLlega += 1; }
+    }));
+  });
+  const aMin = ms => ms / 60000;
+  const n = cerradas.length;
+  return {
+    mesas: n, personas,
+    estadia: n ? aMin(sumEstadia / n) : 0,
+    pedir: nPedir ? aMin(sumPedir / nPedir) : 0,
+    llega: nLlega ? aMin(sumLlega / nLlega) : 0,
+  };
+}
+
+// Lo de hoy, de los datos reales: lo cobrado, lo entregado por estación y el flujo de la mesa
+function movimientosHoy(d) {
+  const cobros = d.sesiones.filter(s => s.cerrada)
+    .map(s => ({ mesa: s.mesa, total: s.total || 0, quien: s.cerradaPor, t: s.cerrada }))
+    .sort((a, b) => b.t - a.t);
+  const estaciones = {};
+  EST.forEach(e => (estaciones[e] = { n: 0, platos: {} }));
+  d.pedidos.filter(p => !p.rechazado).forEach(p => {
+    Object.entries(p.partes).forEach(([e, pa]) => {
+      if (pa.estado === "entregado" && estaciones[e]) {
+        estaciones[e].n += 1;
+        p.items.filter(i => i.estacion === e).forEach(i => { estaciones[e].platos[i.plato] = (estaciones[e].platos[i.plato] || 0) + i.cant; });
+      }
+    });
+  });
+  const abiertas = new Set(d.sesiones.filter(s => !s.cerrada).map(s => s.id));
+  const abierto = d.pedidos.filter(p => !p.rechazado && abiertas.has(p.sesion)).reduce((t, p) => t + p.total, 0);
+  const sentados = d.comensales.filter(c => abiertas.has(c.sesion)).length;
+  return { vendido: cobros.reduce((t, c) => t + c.total, 0), cobros, estaciones, abierto, sentados, flujo: flujoHoy(d) };
+}
+
+// Junta lo de hoy (real) con el historial sembrado, según el rango elegido
+function resumenRango(d, id) {
+  const ahora = Date.now();
+  const hoy0 = new Date(ahora); hoy0.setHours(0, 0, 0, 0);
+  const hoy = movimientosHoy(d);
+  const nMesas = mesasDelLocal().length || 1;
+  // promedios ponderados por cantidad de mesas (para que semana/mes no distorsionen)
+  const w = { estadia: hoy.flujo.estadia * hoy.flujo.mesas, pedir: hoy.flujo.pedir * hoy.flujo.mesas, llega: hoy.flujo.llega * hoy.flujo.mesas, mesas: hoy.flujo.mesas };
+  const r = {
+    vendido: hoy.vendido, cobros: hoy.cobros.length, personas: hoy.flujo.personas,
+    abierto: hoy.abierto, sentados: hoy.sentados, cobrosHoy: hoy.cobros, dias: 1, porDia: null, est: {},
+  };
+  EST.forEach(e => { const h = hoy.estaciones[e] || { n: 0, platos: {} }; r.est[e] = { n: h.n, platos: { ...h.platos } }; });
+  r.nMesas = nMesas;
+  if (id === "dia") {
+    r.estadia = hoy.flujo.estadia; r.pedir = hoy.flujo.pedir; r.llega = hoy.flujo.llega;
+    r.rotacion = r.cobros / nMesas;
+    r.ocupadas = d.sesiones.filter(s => !s.cerrada).length;
+    r.ocup = r.ocupadas / nMesas;                 // fracción de mesas ocupadas ahora
+    r.ocupModo = "ahora";
+    return r;
+  }
+  const desde = id === "semana" ? hoy0.getTime() - 6 * 864e5 : hoy0.getTime() - 29 * 864e5;
+  const hist = (d.historial || []).filter(x => x.t >= desde && x.t < hoy0.getTime()).sort((a, b) => b.t - a.t);
+  hist.forEach(x => {
+    r.vendido += x.vendido; r.cobros += x.cobros; r.personas += (x.personas || 0);
+    w.estadia += (x.estadia || 0) * x.cobros; w.pedir += (x.pedir || 0) * x.cobros; w.llega += (x.llega || 0) * x.cobros; w.mesas += x.cobros;
+    EST.forEach(e => {
+      r.est[e].n += (x[e] || 0);
+      Object.entries((x.platos && x.platos[e]) || {}).forEach(([k, q]) => { r.est[e].platos[k] = (r.est[e].platos[k] || 0) + q; });
+    });
+  });
+  r.estadia = w.mesas ? w.estadia / w.mesas : 0;
+  r.pedir = w.mesas ? w.pedir / w.mesas : 0;
+  r.llega = w.mesas ? w.llega / w.mesas : 0;
+  r.rotacion = r.cobros / (nMesas * (hist.length + 1));     // vueltas por mesa por día, en promedio
+  r.ocup = hist.length ? (hist.reduce((t, x) => t + (x.ocupacion || 0), 0) / hist.length) / 100 : 0;   // promedio del período
+  r.ocupModo = "promedio";
+  r.dias = hist.length + 1;
+  r.porDia = [{ t: hoy0.getTime(), vendido: hoy.vendido, cobros: hoy.cobros.length, personas: hoy.flujo.personas, hoy: true },
+    ...hist.map(x => ({ t: x.t, vendido: x.vendido, cobros: x.cobros, personas: x.personas || 0 }))];
+  return r;
+}
+
+function topPlatosHtml(mapa) {
+  const top = Object.entries(mapa).sort((a, b) => b[1] - a[1]).slice(0, 6);
+  if (!top.length) return `<p class="columna__vacia">Nada todavía</p>`;
+  return `<ul class="mov-top">${top.map(([id, q]) => `<li>${fotoHtml(id, null, "mov-top__foto")}<b>${q}</b><span>${esc((platoDe(id) || {}).nombre || id)}</span></li>`).join("")}</ul>`;
+}
+
+const durMin = m => { m = Math.round(m); return m >= 60 ? `${Math.floor(m / 60)} h ${String(m % 60).padStart(2, "0")} min` : `${m} min`; };
+
+function pintarMovimientos(d) {
+  const r = resumenRango(d, rangoMov);
+  const ticket = r.cobros ? Math.round(r.vendido / r.cobros) : 0;
+  const porPersona = r.personas ? Math.round(r.vendido / r.personas) : 0;
+  const resto = Math.max(0, r.estadia - r.pedir - r.llega);
+  const tabs = `<div class="mov-tabs" role="tablist" aria-label="Período">${RANGOS.map(x =>
+    `<button type="button" class="mov-tab" role="tab" aria-selected="${x.id === rangoMov}" data-rango="${x.id}">${x.nombre}</button>`).join("")}</div>`;
+
+  // 1) La plata
+  const dinero = `<h3 class="zona__titulo">La plata</h3>
+    <div class="mov-cifras">
+      <div class="mov-cifra mov-cifra--plata"><b>${plata(r.vendido)}</b><small>${rangoMov === "dia" ? "cobrado hoy" : `cobrado · ${r.dias} días`}</small></div>
+      <div class="mov-cifra"><b>${plata(ticket)}</b><small>por mesa</small></div>
+      <div class="mov-cifra"><b>${plata(porPersona)}</b><small>por persona</small></div>
+    </div>
+    ${rangoMov === "dia" && r.abierto ? `<p class="mov-abierto">${icono("i-reloj", 14)} ${plata(r.abierto)} en mesas abiertas, todavía sin cobrar</p>` : ""}`;
+
+  // 2) La mesa: de que se sientan a que se van
+  const flujo = `<h3 class="zona__titulo mov-sub">La mesa · de que se sientan a que se van</h3>
+    <div class="mov-cifras">
+      <div class="mov-cifra"><b>${Math.round(r.ocup * 100)}%</b><small>ocupación${r.ocupModo === "ahora" ? ` · ${r.ocupadas} de ${r.nMesas} ahora` : " (prom.)"}</small></div>
+      <div class="mov-cifra"><b>${r.personas}</b><small>${r.personas === 1 ? "persona atendida" : "personas atendidas"}</small></div>
+      <div class="mov-cifra"><b>${durMin(r.estadia)}</b><small>se quedaron (prom.)</small></div>
+      <div class="mov-cifra"><b>${r.cobros}</b><small>${r.cobros === 1 ? "mesa" : "mesas"}${rangoMov !== "dia" ? ` · ${r.rotacion.toFixed(1)}/mesa al día` : ""}</small></div>
+    </div>
+    ${r.estadia ? `<div class="mov-flujo">
+      <div class="mov-nodo"><i></i><b>Se sientan</b></div>
+      <div class="mov-tramo">${durMin(r.pedir)}<small>miran la carta y piden</small></div>
+      <div class="mov-nodo"><i></i><b>Piden</b></div>
+      <div class="mov-tramo">${durMin(r.llega)}<small>cocina y barra lo preparan</small></div>
+      <div class="mov-nodo"><i></i><b>Les llega</b></div>
+      <div class="mov-tramo">${durMin(resto)}<small>comen, piden la cuenta y pagan</small></div>
+      <div class="mov-nodo mov-nodo--fin"><i></i><b>Se van</b><span>${durMin(r.estadia)} en total</span></div>
+    </div>` : `<p class="columna__vacia">Todavía no se fue ninguna mesa ${rangoMov === "dia" ? "hoy" : "en el período"}.</p>`}
+    ${rangoMov === "dia" && r.sentados ? `<p class="mov-abierto">${icono("i-reloj", 14)} ${r.sentados} ${r.sentados === 1 ? "persona sentada ahora" : "personas sentadas ahora"}</p>` : ""}`;
+
+  // 3) Lo que se cocinó
+  const estaciones = `<h3 class="zona__titulo mov-sub">Lo que se cocinó</h3>
+    <div class="mov-estaciones">${EST.map(e =>
+      `<section><h4 class="mov-est__tit">${esc(nombreEst(e))} <span class="columna__cuenta">${r.est[e].n}</span></h4>${topPlatosHtml(r.est[e].platos)}</section>`).join("")}</div>`;
+
+  const detalle = rangoMov === "dia"
+    ? `<h3 class="zona__titulo mov-sub">Mesas cobradas hoy</h3>${r.cobrosHoy.length
+        ? `<ul class="mov-lista">${r.cobrosHoy.map(c => `<li><b>Mesa ${c.mesa}</b><span>${horaDe(c.t)}${c.quien ? ` · ${esc(D.nombreEquipo(c.quien))}` : ""}</span><b class="mov-lista__plata">${plata(c.total)}</b></li>`).join("")}</ul>`
+        : `<p class="columna__vacia">Todavía no se cobró ninguna mesa hoy.</p>`}`
+    : `<h3 class="zona__titulo mov-sub">Día por día</h3><ul class="mov-lista">${r.porDia.map(x =>
+        `<li><b>${x.hoy ? "Hoy" : esc(fechaCorta(x.t))}</b><span>${x.cobros} ${x.cobros === 1 ? "mesa" : "mesas"} · ${x.personas} pers.</span><b class="mov-lista__plata">${plata(x.vendido)}</b></li>`).join("")}</ul>`;
+
+  return `<p class="panel__ayuda">El día del local de un vistazo: la plata, cómo fue la mesa de que se sientan a que se van, y lo que se cocinó. Lo ves solo vos; podés dárselo a alguien del equipo (barra o cocina) desde Equipo.</p>
+    ${tabs}
+    ${dinero}
+    ${flujo}
+    ${estaciones}
+    ${detalle}`;
 }
 
 /* ---------- Carta: lo que hay y lo que se terminó ---------- */
@@ -884,7 +1072,7 @@ function pintarEntrada() {
   entrada.innerHTML = !p ? `
     <div class="entrada-equipo__marco">
       <p class="panel__sobre">Panel del local</p>
-      <h2 class="entrada-equipo__titulo">${esc(L.nombre)}</h2>
+      ${L.logo ? `<img class="entrada-equipo__logo" src="${esc(L.logo)}" alt="${esc(L.nombre)}">` : `<h2 class="entrada-equipo__titulo">${esc(L.nombre)}</h2>`}
       <p class="entrada-equipo__pregunta">¿Quién sos?</p>
       <div class="gente-equipo">${equipo().map(e => `
         <button type="button" class="persona-equipo" data-elegir="${e.id}">
@@ -1128,6 +1316,7 @@ async function pantallaPrendida(si) {
 /* ---------- Armado general ---------- */
 function mostrar() {
   if (panel.hidden) return;
+  if (!tieneGestion()) yo = dueñoId();        // básico/medio: el local entra directo, sin PIN ni roles
   yo = yo && persona(yo) && persona(yo).activo !== false ? yo : null;
   entrada.hidden = !!yo;
   adentro.hidden = !yo;
@@ -1149,13 +1338,20 @@ function pintar() {
   const d = D.todo();
   const vs = vistasDe(p);
   if (vs.length && !vs.includes(vista)) { vista = vs[0]; mesaAbierta = null; }
-  $("#panel-titulo").textContent = L.nombre;
+  const logoEl = $("#panel-logo");
+  if (L.logo && logoEl) { if (logoEl.getAttribute("src") !== L.logo) logoEl.src = L.logo; logoEl.alt = L.nombre; logoEl.hidden = false; $("#panel-titulo").hidden = true; }
+  else $("#panel-titulo").textContent = L.nombre;
+  pintarPlanDemo();
   poner($("#panel-tabs"), pintarTabs(d));
-  poner($("#turno"), pintarTurno());
-  poner(ahoraEl, vs.length ? pintarAhora(d) : "");
+  const turnoEl = $("#turno");
+  turnoEl.hidden = !tieneGestion();                               // "Probar como" / Salir es de la gestión (premium)
+  poner(turnoEl, tieneGestion() ? pintarTurno() : "");
+  poner(ahoraEl, tieneGestion() && vs.length ? pintarAhora(d) : "");   // "Para hacer ahora" es workflow de cocina/mozo
   const cont = $("#vistas");
   const html = !vs.length ? `<p class="todo-tranqui">${icono("i-listo", 16)} Todavía no tenés nada asignado. Pedile a quien maneja el equipo que te dé permisos.</p>`
+    : vista === "pedidos" ? pintarPedidos(d)
     : vista === "mesas" ? pintarMesas(d)
+    : vista === "movimientos" ? pintarMovimientos(d)
     : vista === "carta" ? pintarStock(d)
     : vista === "qr" ? pintarQR()
     : vista === "clientes" ? pintarClientes()
@@ -1165,9 +1361,21 @@ function pintar() {
   if (cont._vista !== vista) { cont._html = null; cont._vista = vista; }
   poner(cont, html);
   pintarDetalle(d);
-  $("#panel-pie").hidden = !L.demo;
-  novedades(d);
+  $("#panel-pie").hidden = !L.demo || !tieneGestion();
+  if (tieneGestion()) novedades(d);
   pantallaPrendida(EST.includes(vista));
+}
+// Selector de plan de la demo, arriba del panel (cambia y recarga para re-gatear todo)
+function pintarPlanDemo() {
+  const el = $("#panel-plan");
+  if (!el) return;
+  if (!L.demo) { el.hidden = true; return; }
+  const actual = planDeLocal();
+  const nombres = { basico: "Básico", medio: "Medio", premium: "Premium" };
+  const html = `<span class="demo-plan__rotulo">Plan</span>${["basico", "medio", "premium"].map(id =>
+    `<button type="button" data-plan="${id}" aria-pressed="${id === actual}">${nombres[id]}</button>`).join("")}`;
+  if (el._html !== html) { el.innerHTML = html; el._html = html; }
+  el.hidden = false;
 }
 function elegirVista(v) {
   if (!vistasDe(persona(yo)).includes(v)) return;
@@ -1179,7 +1387,7 @@ function elegirVista(v) {
   panel.scrollTop = 0;
 }
 
-const RUTAS = ["panel", "mesas", "qr", "clientes", "equipo", ...EST];
+const RUTAS = ["panel", "pedidos", "mesas", "movimientos", "qr", "clientes", "equipo", ...EST];
 function segunDireccion() {
   const h = location.hash.slice(1);
   const ver = RUTAS.includes(h);
@@ -1220,7 +1428,11 @@ panel.addEventListener("click", async e => {
     if (!r) avisoPanel("Ya no se puede deshacer: pasó el tiempo o alguien lo cambió.");
     return;
   }
-  if (b("[data-vista]")) { ocultarAlerta(); return elegirVista(b("[data-vista]").dataset.vista); }
+  // Ojo: la carta deja data-vista ("fotos"/"3d") en <html> para cómo se ven los platos. Ese
+  // no es una pestaña: solo vale el data-vista que está adentro del panel (no el de <html>).
+  const tab = b("[data-vista]");
+  if (tab && panel.contains(tab)) { ocultarAlerta(); return elegirVista(tab.dataset.vista); }
+  if (b("[data-rango]")) { rangoMov = b("[data-rango]").dataset.rango; return pintar(); }
   if (b("[data-salir]")) return salir();
   if (b("[data-cambiar]")) return salir(b("[data-cambiar]").dataset.cambiar);
   if (b("[data-carteles]")) {

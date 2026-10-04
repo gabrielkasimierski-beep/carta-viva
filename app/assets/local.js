@@ -9,8 +9,12 @@
    ============================================================================= */
 
 window.LOCAL = {
-  nombre: "Mordisco",
-  bajada: "Burgers, pizzas y birra",
+  nombre: "La Panera Rosa",
+  bajada: "Cocina casera non stop",
+  logo: "/assets/logo-local.png",   // marca del local: se muestra en el panel y el login
+  // Plan contratado: "basico" (carta QR + ver pedidos), "medio" (+ reportes y club) o
+  // "premium" (gestión completa: cocina/barra, estados, PIN y permisos, equipo).
+  plan: "premium",
   demo: true,                       // muestra la cinta "demo" y simula al resto del local
   mesaDemo: 7,                      // la mesa que se abre si el link no dice cuál
 
@@ -42,7 +46,7 @@ window.LOCAL = {
   //   las mesas · clientes: los del club (con sus mails) y su premio · equipo: sumar
   //   personas, PIN y permisos.
   roles: [
-    { id: "dueno",     nombre: "Dueño/a",     permisos: ["mesas", "atender", "llevar", "cobrar", "cocina", "barra", "carta", "qr", "clientes", "equipo"] },
+    { id: "dueno",     nombre: "Dueño/a",     permisos: ["mesas", "atender", "llevar", "cobrar", "cocina", "barra", "carta", "qr", "clientes", "equipo", "movimientos"] },
     { id: "encargado", nombre: "Encargado/a", permisos: ["mesas", "atender", "llevar", "cobrar", "cocina", "barra", "carta", "qr", "clientes", "equipo"] },
     { id: "mozo",      nombre: "Mozo/a",      permisos: ["mesas", "atender", "llevar", "cobrar"] },
     { id: "cocina",    nombre: "Cocina",      permisos: ["cocina", "carta"] },
@@ -54,12 +58,12 @@ window.LOCAL = {
   // zona: la de sus mesas (le aparecen primero). permisos: si no se dicen, los de su puesto.
   // En la demo el PIN de todos es 1234. En la versión real, los PIN viven en la base.
   equipo: [
-    { id: "rober",  nombre: "Rober",  rol: "dueno",     puesto: "Dueño",     color: "#F28FB0", pin: "1234" },
-    { id: "sofi",   nombre: "Sofi",   rol: "encargado", puesto: "Encargada", color: "#C4A4FF", pin: "1234" },
-    { id: "carla",  nombre: "Carla",  rol: "mozo",      puesto: "Moza",      color: "#7FD6FF", pin: "1234", zona: "Salón" },
-    { id: "nico",   nombre: "Nico",   rol: "mozo",      puesto: "Mozo",      color: "#8BE3B4", pin: "1234", zona: "Vereda" },
-    { id: "diego",  nombre: "Diego",  rol: "cocina",    puesto: "Cocina",    color: "#FFB27A", pin: "1234" },
-    { id: "martin", nombre: "Martín", rol: "barra",     puesto: "Barra",     color: "#FFD86B", pin: "1234" },
+    { id: "rober",  nombre: "Rober",  rol: "dueno",     puesto: "Dueño",     color: "#E4879E", pin: "1234" },
+    { id: "sofi",   nombre: "Sofi",   rol: "encargado", puesto: "Encargada", color: "#B98BC0", pin: "1234" },
+    { id: "carla",  nombre: "Carla",  rol: "mozo",      puesto: "Moza",      color: "#8FB0CE", pin: "1234", zona: "Salón" },
+    { id: "nico",   nombre: "Nico",   rol: "mozo",      puesto: "Mozo",      color: "#8FB59B", pin: "1234", zona: "Vereda" },
+    { id: "diego",  nombre: "Diego",  rol: "cocina",    puesto: "Cocina",    color: "#E0A36A", pin: "1234" },
+    { id: "martin", nombre: "Martín", rol: "barra",     puesto: "Barra",     color: "#E3C06A", pin: "1234" },
   ],
 
   // Adónde va cada cosa que se pide: la cocina hace la comida y la barra las bebidas.

@@ -26,12 +26,13 @@
   "use strict";
 
   const L = window.LOCAL;
-  const CLAVE = "cartaviva.demo.v5";
-  const VIEJA = "cartaviva.demo.v4";      // de la versión anterior de la demo se hereda el equipo
-  const VERSION = 5;
+  const CLAVE = "cartaviva.demo.v9";
+  const VIEJA = "cartaviva.demo.v8";      // de la versión anterior de la demo se hereda el equipo
+  const VERSION = 9;
   const ESTADOS = ["nuevo", "preparando", "listo", "entregado"];
-  const COLORES = ["#FF7A59", "#3DB2FF", "#FFC43D", "#A57BFF", "#2BC48A", "#FF6FB5"];
-  const COLORES_EQUIPO = ["#C4A4FF", "#7FD6FF", "#8BE3B4", "#FFB27A", "#FFD86B", "#F28FB0", "#9FB4FF", "#E6C79C"];
+  // Paleta cálida y apagada, armonizada con la marca (rosa / crema): nada de candy neón
+  const COLORES = ["#E08A6E", "#8FB59B", "#E0B25C", "#C77FA6", "#8FB0CE", "#E0929F"];
+  const COLORES_EQUIPO = ["#E4879E", "#B98BC0", "#8FB59B", "#E0A36A", "#E3C06A", "#8FB0CE", "#C98F86", "#A9B98C"];
   const VENTANA = 20e3;           // cuánto tiempo hay para deshacer algo tocado sin querer
   const SIN = {};                 // "no cambió nada": no se guarda ni se avisa
   let memoria = null, cache = null;
@@ -82,6 +83,7 @@
     { id: "qr",      grupo: "El local", corto: "QR",       nombre: "Los QR de las mesas",  ayuda: "Verlos e imprimirlos para pegar en cada mesa." },
     { id: "clientes", grupo: "El local", corto: "Clientes", nombre: "Ver los clientes",    ayuda: "Los del club: quiénes vuelven, sus mails, lo que piden y sus premios. Y qué premio da el club." },
     { id: "equipo",  grupo: "El local", corto: "Equipo",   nombre: "Manejar el equipo",    ayuda: "Sumar personas, darles un PIN y elegir qué puede hacer cada una." },
+    { id: "movimientos", grupo: "El local", corto: "Movimientos", nombre: "Ver los movimientos", ayuda: "El resumen del día, la semana y el mes: lo vendido, las mesas cobradas y las comandas de cocina y barra, con el detalle de cada una." },
   ];
   const TODOS = PERMISOS.map(p => p.id);
   const ROLES = (L.roles && L.roles.length ? L.roles : [
@@ -183,14 +185,14 @@
       return { id, nombre, email, color, alta: dia(alta), ultima: dia(ultima), visitas, cosas, sellos: cosas % 10, platos, novedades };
     };
     return [
-      k("k-vale",  "Vale",  "vale.gomez@ejemplo.com",    "#A57BFF", 62, 9,  4, { "doble-bacon": 5, ipa: 6, aros: 3, flan: 3 }, true),
-      k("k-caro",  "Caro",  "carolina.paz@ejemplo.com",  "#FF6FB5", 120, 6, 7, { clasica: 6, fernet: 7, "papas-cheddar": 5, cheesecake: 4 }, true),
-      k("k-lucia", "Lucía", "lucia.ferrari@ejemplo.com", "#2BC48A", 150, 3, 9, { remolacha: 9, limonada: 12, flan: 6, "papas-cheddar": 4 }, true),
-      k("k-fede",  "Fede",  "fede.rios@ejemplo.com",     "#3DB2FF", 30, 14, 2, { fugazzeta: 2, fernet: 3 }, false),
-      k("k-pau",   "Pau",   "pau.sosa@ejemplo.com",      "#FFC43D", 45, 20, 2, { clasica: 2, ipa: 3 }, false),
-      k("k-rocio", "Rocío", "rocio.luna@ejemplo.com",    "#FF7A59", 80, 11, 4, { pepperoni: 4, limonada: 3, helado: 2 }, true),
-      k("k-tomas", "Tomás", "tomas.vidal@ejemplo.com",   "#2BC48A", 21, 21, 1, { pepperoni: 1, ipa: 2 }, false),
-      k("k-meli",  "Meli",  "meli.acosta@ejemplo.com",   "#FF6FB5", 40, 40, 2, { cheesecake: 2, clasica: 2, limonada: 2 }, true),
+      k("k-vale",  "Vale",  "vale.gomez@ejemplo.com",    "#B98BC0", 62, 9,  4, { "doble-bacon": 5, ipa: 6, aros: 3, flan: 3 }, true),
+      k("k-caro",  "Caro",  "carolina.paz@ejemplo.com",  "#E4879E", 120, 6, 7, { clasica: 6, fernet: 7, "papas-cheddar": 5, cheesecake: 4 }, true),
+      k("k-lucia", "Lucía", "lucia.ferrari@ejemplo.com", "#8FB59B", 150, 3, 9, { remolacha: 9, limonada: 12, flan: 6, "papas-cheddar": 4 }, true),
+      k("k-fede",  "Fede",  "fede.rios@ejemplo.com",     "#8FB0CE", 30, 14, 2, { fugazzeta: 2, fernet: 3 }, false),
+      k("k-pau",   "Pau",   "pau.sosa@ejemplo.com",      "#E3C06A", 45, 20, 2, { clasica: 2, ipa: 3 }, false),
+      k("k-rocio", "Rocío", "rocio.luna@ejemplo.com",    "#E0A36A", 80, 11, 4, { pepperoni: 4, limonada: 3, helado: 2 }, true),
+      k("k-tomas", "Tomás", "tomas.vidal@ejemplo.com",   "#A9B98C", 21, 21, 1, { pepperoni: 1, ipa: 2 }, false),
+      k("k-meli",  "Meli",  "meli.acosta@ejemplo.com",   "#C77FA6", 40, 40, 2, { cheesecake: 2, clasica: 2, limonada: 2 }, true),
     ];
   }
   // Los premios que ya ganaron (y los que ya usaron)
@@ -330,7 +332,42 @@
     );
     anotar(m5.s, "Vale llamó al mozo", ahora - 35e3);
     anotar(m2.s, "Caro pidió la cuenta: Mercado Pago, 10 % de propina, en partes iguales", ahora - 110e3);
+    // Movimientos de días anteriores (solo la demo, para que Semana y Mes muestren algo)
+    d.historial = L.demo ? sembrarHistorial(ahora) : [];
     return d;
+  }
+
+  // Treinta días de ventas y comandas de mentira, con más movimiento los findes (solo demo)
+  function sembrarHistorial(ahora) {
+    const base = new Date(ahora); base.setHours(12, 0, 0, 0);
+    const az = (min, max) => min + Math.floor(Math.random() * (max - min + 1));
+    const cocinaIds = L.platos.filter(p => estacionDe(p.id) === "cocina").map(p => p.id);
+    const barraIds = L.platos.filter(p => estacionDe(p.id) === "barra").map(p => p.id);
+    const reparto = (ids, total) => {
+      const m = {};
+      if (!ids.length) return m;
+      let resto = total;
+      [...ids].sort(() => Math.random() - 0.5).forEach((id, i, arr) => {
+        const q = i === arr.length - 1 ? resto : az(0, Math.ceil(resto / 2));
+        if (q > 0) m[id] = (m[id] || 0) + q;
+        resto = Math.max(0, resto - q);
+      });
+      return m;
+    };
+    const dias = [];
+    for (let i = 1; i <= 30; i++) {
+      const f = new Date(base); f.setDate(f.getDate() - i);
+      const finde = [0, 5, 6].includes(f.getDay());
+      const cobros = az(finde ? 12 : 6, finde ? 20 : 12);
+      const vendido = cobros * az(9000, 14000);
+      const cocina = cobros * az(2, 4), barra = cobros * az(1, 3);
+      // El flujo de la mesa: cuánta gente, cuánto se quedó, los tiempos (min) y la ocupación (%)
+      const personas = Math.round(cobros * (az(25, 40) / 10));
+      dias.push({ t: f.getTime(), vendido, cobros, personas, cocina, barra,
+        estadia: az(45, 85), pedir: az(4, 9), llega: az(8, 16), ocupacion: az(finde ? 70 : 42, finde ? 95 : 78),
+        platos: { cocina: reparto(cocinaIds, cocina), barra: reparto(barraIds, barra) } });
+    }
+    return dias;
   }
 
   /* ---------------------------------------------------------------------------
@@ -342,7 +379,13 @@
       const v = JSON.parse(localStorage.getItem(VIEJA));
       localStorage.removeItem(VIEJA);
       if (v && Array.isArray(v.equipo) && v.equipo.length) {
-        return { equipo: v.equipo.map(e => ({ ...e, permisos: (e.permisos || []).includes("equipo") && !(e.permisos || []).includes("clientes") ? [...e.permisos, "clientes"] : e.permisos })) };
+        return { equipo: v.equipo.map(e => {
+          let permisos = e.permisos || [];
+          if (permisos.includes("equipo") && !permisos.includes("clientes")) permisos = [...permisos, "clientes"];
+          if (e.rol === "dueno" && !permisos.includes("movimientos")) permisos = [...permisos, "movimientos"];   // permiso nuevo: lo tiene el dueño
+          const base = (L.equipo || []).find(x => x.id === e.id);   // colores nuevos de la marca para los de siempre
+          return { ...e, permisos, color: (base && base.color) || e.color };
+        }) };
       }
     } catch { /* sin almacenamiento */ }
     return {};

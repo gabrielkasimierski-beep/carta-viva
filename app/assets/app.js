@@ -601,7 +601,7 @@ $("#bv-entrar").addEventListener("click", entrar);
    lo que siempre pide y sus premios. */
 const hojaClub = $("#hoja-club");
 // Plan del local (básico / medio / premium). El club es de medio en adelante.
-const planDeLocal = () => { try { return localStorage.getItem("cartaviva.plan") || L.plan || "premium"; } catch { return L.plan || "premium"; } };
+const planDeLocal = () => { try { return new URLSearchParams(location.search).get("plan") || localStorage.getItem("cartaviva.plan") || L.plan || "premium"; } catch { return L.plan || "premium"; } };
 const tieneClub = () => planDeLocal() !== "basico";
 const cfgClub = () => (tieneClub() && D.club ? D.club() : { activo: false });
 // Selector de plan de la demo (en la cinta y en el panel): cambia y recarga para re-gatear todo
@@ -1682,6 +1682,7 @@ function iniciar() {
   $("#marca-mesa").textContent = mesa ? `Mesa ${mesa}` : "La carta";
   $("#btn-mozo").hidden = !mesa;
   if (L.demo) { $("#cinta").hidden = false; raiz.classList.add("con-cinta"); marcarPlan(); }
+  if (L.demoCliente) { const p = $("#planes"); if (p) p.hidden = true; const d = document.querySelector(".cinta__demo"); if (d) d.hidden = true; }
   $$("#vistas-plato [data-vista-plato]").forEach(b => b.setAttribute("aria-pressed", b.dataset.vistaPlato === vistaPlatos));
   $("#cinta-foto").hidden = E.tipo !== "fotos";
 

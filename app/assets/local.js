@@ -9,13 +9,14 @@
    ============================================================================= */
 
 window.LOCAL = {
-  nombre: "La Panera Rosa",
-  bajada: "Cocina casera non stop",
-  logo: "/assets/logo-local.png",   // marca del local: se muestra en el panel y el login
+  nombre: "Comilona",
+  bajada: "La cocina de siempre, a un escaneo",
+  logo: "",   // marca del local: se muestra en el panel y el login
   // Plan contratado: "basico" (carta QR + ver pedidos), "medio" (+ reportes y club) o
   // "premium" (gestión completa: cocina/barra, estados, PIN y permisos, equipo).
-  plan: "premium",
+  plan: "basico",
   demo: true,                       // muestra la cinta "demo" y simula al resto del local
+  demoCliente: true,                // demo para mostrarle a un cliente: simula el local pero esconde el botón de plan y el cartel "Demo"
   mesaDemo: 7,                      // la mesa que se abre si el link no dice cuál
 
   // La dirección de la carta cuando esté en internet. Es lo que llevan los QR de las mesas

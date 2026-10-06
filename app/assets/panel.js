@@ -49,7 +49,7 @@ const EST = ESTACIONES.map(e => e.id);
 const PERMISOS = D.PERMISOS, ROLES = D.ROLES;
 const SALON = ["mesas", "atender", "llevar", "cobrar"];
 // Plan del local: básico (ver pedidos) · medio (+ reportes y club) · premium (gestión completa)
-const planDeLocal = () => { try { return localStorage.getItem("cartaviva.plan") || L.plan || "premium"; } catch { return L.plan || "premium"; } };
+const planDeLocal = () => { try { return new URLSearchParams(location.search).get("plan") || localStorage.getItem("cartaviva.plan") || L.plan || "premium"; } catch { return L.plan || "premium"; } };
 const NIVEL_PLAN = { basico: 0, medio: 1, premium: 2 };
 const planNivel = () => NIVEL_PLAN[planDeLocal()] ?? 2;
 const tieneGestion = () => planNivel() >= 2;     // cocina/barra, estados, PIN y permisos, equipo
@@ -1367,6 +1367,7 @@ function pintar() {
 }
 // Selector de plan de la demo, arriba del panel (cambia y recarga para re-gatear todo)
 function pintarPlanDemo() {
+  if (L.demoCliente) { const el = $("#panel-plan"); if (el) el.hidden = true; return; }
   const el = $("#panel-plan");
   if (!el) return;
   if (!L.demo) { el.hidden = true; return; }

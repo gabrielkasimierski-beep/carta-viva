@@ -2021,6 +2021,123 @@ svg { flex: none; }
 @keyframes vaiven { 50% { transform: translateX(4px); } }
 @keyframes onda { 0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--color) 60%, transparent); } 100% { box-shadow: 0 0 0 14px transparent; } }
 
+/* ---------- La página en capas (profundidad.js) ----------
+   Dentro de #fondo, de atrás para adelante: escena (foto) · video · partículas de atrás · viñeta.
+   Los que se funden con el color del plato (escena, video) van directo adentro de #fondo: así se
+   mezclan con su degradé y no con una caja aparte. Las capas son más grandes que la pantalla
+   para que, al moverse la cámara, no se vean los bordes. */
+.prof, .prof__atras, .prof__vineta { position: absolute; pointer-events: none; display: none; }
+html[data-profundidad="1"] .prof, html[data-profundidad="1"] .prof__atras, html[data-profundidad="1"] .prof__vineta { display: block; }
+.prof { inset: -9% -14%; will-change: transform; }
+.prof img, .prof video {
+  position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block;
+  opacity: 0; transition: opacity 1.1s ease; -webkit-user-drag: none; user-select: none;
+}
+.prof img.on, .prof video.on { opacity: 1; }
+/* La foto del ambiente toma el tono del plato (su luminosidad, con el color del fondo) */
+.prof__escena { mix-blend-mode: luminosity; }
+.prof__escena img.on { opacity: var(--prof-escena, .62); }
+/* "luminosity" deja la foto pero le saca el color al fondo: esta luz le devuelve el glow del plato */
+.prof__luz {
+  position: absolute; inset: 0; display: none; pointer-events: none; mix-blend-mode: screen; opacity: .9;
+  background:
+    radial-gradient(46vmax 38vmax at var(--foco-x) var(--foco-y), color-mix(in srgb, var(--f1) 62%, transparent) 0%, color-mix(in srgb, var(--f1) 22%, transparent) 46%, transparent 74%),
+    radial-gradient(90vmax 32vmax at 50% 108%, color-mix(in srgb, var(--f3) 40%, transparent), transparent 70%);
+}
+html[data-profundidad="1"][data-estilo="brasa"] .prof__luz { display: block; }
+/* El video es humo y brasas sobre negro: con "screen" el negro desaparece */
+.prof__video {
+  mix-blend-mode: screen;
+  /* Abajo, donde va el texto del plato, el humo se esfuma para no taparlo */
+  -webkit-mask-image: linear-gradient(to bottom, #000 0%, #000 50%, transparent 80%);
+  mask-image: linear-gradient(to bottom, #000 0%, #000 50%, transparent 80%);
+}
+.prof__video video { transition-duration: .9s; }
+.prof__video video.on { opacity: var(--prof-video, .85); }
+/* Si el celu no da abasto, afuera lo más caro: las capas con mezcla */
+:root[data-prof-calidad="0"] .prof__luz, :root[data-prof-calidad="0"] .prof__video { display: none !important; }
+:root[data-prof-calidad="0"] .prof__escena { mix-blend-mode: normal; }
+:root[data-prof-calidad="0"] .prof__escena img.on { opacity: .34; }
+/* La escena y el video son para la oscuridad de Brasa; en Jugo y Estudio (colores vivos o claros) no van */
+:root:not([data-estilo="brasa"]) .prof__escena, :root:not([data-estilo="brasa"]) .prof__video { display: none !important; }
+.prof__atras { inset: 0; width: 100%; height: 100%; }
+/* Un borde más oscuro, como el de una lente: manda la mirada al plato */
+.prof__vineta { inset: 0; background: radial-gradient(130% 82% at 50% 42%, transparent 52%, rgba(0, 0, 0, .5) 100%); }
+:root[data-estilo="estudio"] .prof__vineta { background: radial-gradient(130% 82% at 50% 42%, transparent 60%, rgba(40, 20, 10, .16) 100%); }
+/* Las partículas de adelante: arriba de las fotos y debajo de la barra y los botones */
+.prof__delante { position: fixed; inset: 0; z-index: 3; width: 100%; height: 100%; pointer-events: none; display: none; }
+html[data-profundidad="1"] .prof__delante { display: block; }
+/* El plato héroe: ingredientes sueltos a distinta profundidad (los de atrás van en el fondo, los de adelante
+   arriba de las fotos), vapor en video y las franjas del armado (ver heroe en local.js y profundidad.js) */
+.prof__sat-atras { position: absolute; inset: 0; pointer-events: none; display: none; }
+.prof__sat-delante { position: fixed; inset: 0; z-index: 3; pointer-events: none; display: none; overflow: hidden; }
+html[data-profundidad="1"] .prof__sat-atras, html[data-profundidad="1"] .prof__sat-delante { display: block; }
+.prof__sat {
+  position: absolute; left: 0; top: 0; max-width: none; height: auto; opacity: 0; transition: opacity .25s;
+  will-change: transform, opacity; pointer-events: none; -webkit-user-drag: none; user-select: none;
+}
+.prof__vapor {
+  position: fixed; inset: 0; z-index: 3; pointer-events: none; display: none; overflow: hidden;
+  mix-blend-mode: screen; opacity: 0; transition: opacity .5s;
+}
+html[data-profundidad="1"][data-estilo="brasa"] .prof__vapor { display: block; }
+.prof__vapor video {
+  position: absolute; left: 0; top: 0; display: block; object-fit: cover; opacity: 0; transition: opacity .9s;
+  will-change: transform; filter: blur(1.2px);
+  /* se esfuma por todos los bordes: que no se vea la caja del video */
+  -webkit-mask-image: radial-gradient(ellipse 50% 52% at 50% 52%, #000 38%, transparent 100%);
+  mask-image: radial-gradient(ellipse 50% 52% at 50% 52%, #000 38%, transparent 100%);
+}
+.prof__vapor video.on { opacity: 1; }
+.fp__abre { position: absolute; display: block; pointer-events: none; }
+.fp.abriendo .fp__entero, .fp.abriendo .fp__brillo { visibility: hidden; }
+.fp.armando .fp__entero { visibility: hidden; }
+.fp.armando .fp__brillo { display: none; }
+.fp__armado { position: absolute; inset: 0; }
+.fp__pieza { position: absolute; inset: 0; will-change: transform, opacity, filter; transform-origin: 50% 60%; }
+
+/* El aura: el plato tiene un halo de su color que sigue su silueta (como la galleta que brilla en su sabor) */
+.fp__aura { display: none; position: absolute; inset: -9%; pointer-events: none; }
+.fp__aura > i {
+  display: block; width: 100%; height: 100%;
+  background: var(--luz-actual, #FF9B45);
+  -webkit-mask: var(--mascara) center / 100% 100% no-repeat; mask: var(--mascara) center / 100% 100% no-repeat;
+}
+html[data-profundidad="1"][data-estilo="brasa"] .fp__aura { display: block; opacity: .62; filter: blur(30px) saturate(1.4); }
+/* El título fantasma: el nombre del plato, enorme, detrás de él (lo arma profundidad.js para el plato héroe) */
+.prof__titulo {
+  position: absolute; left: 0; right: 0; top: 14%; display: none; text-align: center; pointer-events: none;
+  font: italic 400 31vw/0.8 "Instrument Serif", Georgia, serif; letter-spacing: -0.03em;
+  color: color-mix(in srgb, var(--luz-actual, #FF9B45) 22%, transparent);
+  -webkit-text-stroke: 1px color-mix(in srgb, var(--luz-actual, #FF9B45) 38%, transparent);
+  white-space: pre-line; user-select: none; will-change: transform, opacity; opacity: 0;
+  text-shadow: 0 0 60px color-mix(in srgb, var(--luz-actual, #FF9B45) 30%, transparent);
+}
+html[data-profundidad="1"][data-estilo="brasa"] .prof__titulo { display: block; }
+@media (min-width: 900px) { .prof__titulo { font-size: 17vw; } }
+
+/* La sombra de contacto del plato: un centro oscuro (que lo apoye) además del glow de color */
+html[data-profundidad="1"][data-estilo="brasa"] .fp__sombra {
+  background:
+    radial-gradient(42% 70% at 50% 45%, rgba(0, 0, 0, .55), transparent 100%),
+    radial-gradient(closest-side, color-mix(in srgb, var(--luz-actual) 55%, transparent), transparent);
+}
+
+/* En Brasa, la palabra de la sección asoma detrás del plato: una capa más de profundidad */
+html[data-profundidad="1"][data-estilo="brasa"] .fondo__palabra {
+  display: block; position: absolute; left: 50%; top: var(--foco-y);
+  transform: translate(-50%, -50%);
+  font: 800 21vw/0.85 var(--display, "Unbounded", sans-serif);
+  letter-spacing: -0.05em; color: transparent;
+  -webkit-text-stroke: 1.5px color-mix(in srgb, var(--luz-actual, #fff) 38%, transparent);
+  white-space: nowrap; user-select: none; opacity: .5; transition: opacity .3s;
+  will-change: translate, scale;
+}
+html[data-profundidad="1"][data-estilo="brasa"] .fondo__palabra.cambiando { opacity: 0; }
+/* El plato se inclina un poco hacia donde está la cámara y su sombra se corre al otro lado
+   (la inclinación la escribe profundidad.js directo en el plato; acá solo su punto de giro) */
+html[data-profundidad="1"] .fp { transform-origin: 50% 60%; }
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
 }

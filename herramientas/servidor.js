@@ -18,6 +18,7 @@ const tipos = {
   ".svg": "image/svg+xml", ".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg",
   ".webp": "image/webp", ".ico": "image/x-icon", ".txt": "text/plain; charset=utf-8",
   ".xml": "application/xml", ".webmanifest": "application/manifest+json",
+  ".mp4": "video/mp4", ".webm": "video/webm",
 };
 
 http.createServer((req, res) => {
@@ -31,9 +32,21 @@ http.createServer((req, res) => {
     res.writeHead(404, { "Content-Type": tipos[".html"] });
     return res.end(fs.existsSync(p404) ? fs.readFileSync(p404) : "No existe: " + ruta);
   }
-  res.writeHead(200, {
-    "Content-Type": tipos[path.extname(archivo).toLowerCase()] || "application/octet-stream",
-    "Cache-Control": "no-store",
-  });
+  const tipo = tipos[path.extname(archivo).toLowerCase()] || "application/octet-stream";
+  const largo = fs.statSync(archivo).size;
+  // Los videos se piden por pedazos (Range): Safari y el iPhone no los reproducen si el servidor no lo entiende
+  const pedido = /^bytes=(\d*)-(\d*)$/.exec(req.headers.range || "");
+  if (pedido && (pedido[1] || pedido[2])) {
+    let desde = pedido[1] === "" ? largo - Number(pedido[2]) : Number(pedido[1]);
+    let hasta = pedido[1] === "" || pedido[2] === "" ? largo - 1 : Number(pedido[2]);
+    desde = Math.max(0, desde); hasta = Math.min(largo - 1, hasta);
+    if (desde > hasta) { res.writeHead(416, { "Content-Range": `bytes */${largo}` }); return res.end(); }
+    res.writeHead(206, {
+      "Content-Type": tipo, "Cache-Control": "no-store", "Accept-Ranges": "bytes",
+      "Content-Range": `bytes ${desde}-${hasta}/${largo}`, "Content-Length": hasta - desde + 1,
+    });
+    return fs.createReadStream(archivo, { start: desde, end: hasta }).pipe(res);
+  }
+  res.writeHead(200, { "Content-Type": tipo, "Cache-Control": "no-store", "Accept-Ranges": "bytes", "Content-Length": largo });
   fs.createReadStream(archivo).pipe(res);
 }).listen(puerto, () => console.log(`Sirviendo ${raiz} en http://localhost:${puerto}`));

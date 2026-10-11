@@ -190,6 +190,66 @@ sin borde ni grosor). Gaby pidió sumar a la app las dos versiones nuevas:
 En la demo cada pizza tiene su botón "Video / 3D" (vale para las dos y queda guardado); un local
 elige una en `local.js` (`pizzas`). Falta que Gaby elija con cuál se queda.
 
+### La página en capas: escena, video y cámara (11-oct-2026)
+
+Pedido de Juanma: que la carta dé sensación de página 3D, con capas de render y video. Hasta acá el plato
+flotaba sobre un degradé; ahora vive en un lugar. Se hizo con `app/assets/profundidad.js` (sin tocar la
+lógica de los platos; en la cinta de la demo hay un **Plano / Capas** para comparar).
+- **Capas, de atrás para adelante:** la escena (foto del ambiente de la sección: cocina, horno de leña,
+  freidoras, barra de postres, bar), un video de humo/brasas/vapor sobre negro, partículas de atrás,
+  la palabra gigante de la sección, el plato (se inclina un poco, su sombra lo sigue) y partículas de adelante.
+- **Los colores siguen siendo del plato:** la escena se mezcla con `luminosity` con el degradé de Brasa
+  (así la pizzería se tiñe de rojo y el bar de verde), y el video con `screen` (el negro desaparece).
+- **Cámara:** giroscopio en el celu (en iPhone pide permiso con el primer toque), mouse en la compu y,
+  si nadie toca nada, una respiración lenta. Al deslizar entre platos la escena se acerca un poco.
+  Con una hoja abierta (¿Qué tiene?, Armala…) los platos se quedan derechos.
+- **Cuida el celu:** con "reducir movimiento" o ahorro de datos no hay video ni partículas; si los cuadros
+  bajan de ritmo primero bajan las partículas y después se sacan las capas con mezcla; todo se frena con
+  la pestaña oculta o en el panel. Jugo y Estudio no llevan escena ni video (colores vivos o claros).
+- **Se carga desde `local.js`:** `profundidad: true` y, en cada sección, `ambiente: { escena, video,
+  videoOpacidad, particulas }`. Un local sin eso queda con partículas y cámara, o plano con `profundidad: false`.
+- **Cómo se hicieron los assets (Higgsfield, cuenta de Juanma, ~60 créditos):** escenas con GPT Image 2.5
+  (alta, 2K, 9:16: "set vacío" con mesada abajo y el centro libre) y loops con Kling 3.0 Turbo (5 s, 720p,
+  "pure black background… embers/steam…"). Después, a la web con ffmpeg: la escena a JPG de 1080 px y el video
+  sin audio a 540×960 con una curva que hunde los grises en negro (si no, el `screen` vela la escena):
+  `ffmpeg -i in.mp4 -an -vf "curves=all='0/0 0.18/0 0.55/0.5 1/1',scale=540:960,fps=24" -c:v libx264 -crf 27 -pix_fmt yuv420p -movflags +faststart out.mp4`.
+  Si el video sale muy denso (humo): bajar `videoOpacidad`; pedir "sparse" en el prompt no ayudó, empeoró.
+- **Medido** (Chrome, render por software, celu emulado): 54 fps con capas contra 59 en plano; el costo grande
+  era escribir variables CSS heredadas en cada cuadro (656 ms/s de estilo): ahora se escribe directo en los
+  platos visibles. **Sin probar todavía en un celu de verdad** (GPU real, giroscopio, Safari).
+- **El plato héroe: La Clásica (11-oct-2026, después de ver los reels de referencia).** Se le dio la coreografía
+  completa; se activa por plato con `heroe` en `local.js` (ver `profundidad.js`):
+  · **Se arma al llegar:** las 7 franjas de la burger (las mismas de "Armala") caen desde la cámara, grandes y
+    desenfocadas, y se ensamblan de abajo hacia arriba en ~1,4 s con un rebote; al irse se desarman casi a la par
+    del dedo. Cuando termina vuelve la foto entera. Lo dibuja `EscenaFotos.armado()`.
+  · **Ingredientes sueltos con profundidad propia:** lechuga, tomate, cebolla, cheddar y una corona de salsa
+    (Higgsfield, GPT Image 2.5 con fondo transparente, 1,5 créditos cada una), unos detrás y otros delante del plato,
+    más o menos desenfocados según su z, que flotan, se mueven con la cámara y entran volando con el armado.
+  · **Vapor** en video (Kling Turbo sobre negro, `screen`) que nace del pan de arriba, y una sombra de contacto
+    oscura bajo el plato.
+  · Cómo replicarlo en otro plato: generar 4–6 recortes con fondo transparente en el estilo de la foto (prompt:
+    "professional macro food photography of <ingrediente>, floating in mid-air, studio softbox lighting with a warm
+    rim light, hyper-realistic, isolated on a fully transparent background"), pasarlos a WebP de 640 px con ffmpeg
+    y listarlos en `heroe.satelites`. Sirve para cualquier plato con `capas` en `fotos.js` (burgers).
+- **Segunda vuelta: el plato "hace algo" (11-oct-2026, tras comparar con Kolpu Sites).** Se estudiaron las plantillas
+  de kolpusites.com (Migaï, Miga Brava, Bruta, Bocado) y la diferencia era: el producto que se transforma, el halo
+  de su color, los ingredientes reconocibles a distintas profundidades y la tipografía enorme integrada. Se sumó:
+  · **La tapa se abre** (`abre` en `fotos.js`): Kling 3.0 pro, imagen→video con el mismo cuadro al principio y al final
+    (la burger vuelve exacta a la foto), 8,75 créditos. El fondo se sacó con `remove_background` de Higgsfield (devuelve
+    el plato sobre negro, no con alfa; el alfa se armó por diferencia contra el original y se pasó a atlas WebP de
+    47 cuadros con `ffmpeg`). Corre una vez por llegada, cuando el plato terminó de armarse y quedó quieto 0,8 s.
+  · **Aura:** halo desenfocado del color del plato que sigue su silueta (`.fp__aura`; el blur va en el contenedor y la
+    máscara en el hijo, porque en CSS el filtro se aplica antes que la máscara).
+  · **Título fantasma:** el nombre del plato, enorme, detrás de él; reemplaza a la palabra de la sección mientras el héroe
+    está a la vista. El héroe se achicó a 84 % (`heroe.escala`) para que haya aire: es una excepción a la regla de que
+    los platos no se achican, a confirmar con Gaby.
+  · **Ingredientes:** 8 recortes reconocibles (tomate entero, media cebolla, medallón, mitad de pan, cheddar apilado,
+    lechuga, aros, salsa), con sombra propia y menos desenfoque que en la primera vuelta.
+- **Lo que todavía falta para el nivel de las referencias:** el fondo sigue siendo una foto oscura (Migaï y Bocado usan un
+  mundo de color liso por sabor, mucho más limpio); falta el cambio de color de toda la pantalla entre platos y la
+  transición tipo rueda; la tipografía de la ficha (nombre, descripción, botón) sigue siendo de app, no de póster; los
+  cortes del armado siguen siendo rectos; hecho solo en La Clásica; sin probar en celu real.
+
 ## 2. Qué se reutiliza de Fena y qué cambia
 
 | | Fena (turnos) | Carta Viva |

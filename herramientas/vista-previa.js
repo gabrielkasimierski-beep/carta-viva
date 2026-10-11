@@ -8,7 +8,8 @@
 // Uso:  node vista-previa.js <sitio/index.html> <salida.html> [--afuera=assets/cuadros/]
 //   --afuera: las imágenes que empiezan así no se meten adentro: quedan como archivos aparte (con
 //   la ruta vista desde el HTML de salida; se publican junto con él). Sirve para lo pesado que se
-//   carga cuando hace falta (los cuadros de los giros y los juegos).
+//   carga cuando hace falta (los cuadros de los giros y los juegos, y el ambiente: escenas y videos).
+//   Se puede repetir: --afuera=assets/cuadros/ --afuera=assets/ambiente/
 
 const fs = require("fs");
 const path = require("path");
@@ -26,6 +27,7 @@ const dir = path.dirname(entrada);
 const prefijo = path.relative(path.dirname(path.resolve(salida)), path.resolve(dir)).split(path.sep).join("/");
 const desdeSalida = r => (prefijo ? prefijo + "/" : "") + r;
 const mime = { ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".png": "image/png", ".webp": "image/webp", ".svg": "image/svg+xml" };
+const esVideo = ruta => /\.(mp4|webm)$/i.test(ruta);   // los videos nunca van adentro del HTML: solo aparte (--afuera)
 const faltan = [];
 const leer = ruta => {
   const abs = path.join(dir, ruta.replace(/^\//, ""));        // "/assets/x" y "assets/x" son lo mismo
@@ -55,11 +57,12 @@ html = html.replace(/[ \t]*<script[^>]+src="((?!https?:|\/\/)[^"]+\.js)"[^>]*><\
   return `<script${atributos}>\n/* ${ruta} */\n${codigo}\n</script>\n`;
 });
 
-// 3. Imágenes, como data URI
+// 3. Imágenes, como data URI (los videos, si no están en --afuera, quedan con su ruta)
 const hechas = {};
-html = html.replace(/\/?assets\/[\w\/.-]+\.(jpe?g|png|webp|svg)/gi, ruta => {
+html = html.replace(/\/?assets\/[\w\/.-]+\.(jpe?g|png|webp|svg|mp4|webm)/gi, ruta => {
   const limpia = ruta.replace(/^\//, "");
   if (afuera.some(a => limpia.startsWith(a))) { if (leer(ruta)) aparte.add(desdeSalida(limpia)); return desdeSalida(limpia); }
+  if (esVideo(ruta)) return ruta;
   if (!hechas[ruta]) {
     const abs = leer(ruta);
     if (!abs) return ruta;

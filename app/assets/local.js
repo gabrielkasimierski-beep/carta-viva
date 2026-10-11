@@ -96,12 +96,25 @@ window.LOCAL = {
   // del plato) o "estudio" (fondo de foto de producto, en el tono del plato).
   estilo: "brasa",
 
+  // La página en capas (profundidad.js): detrás de los platos de cada sección hay una escena (foto
+  // del ambiente) y un video (humo, brasas, vapor sobre negro), y pasan partículas delante y
+  // detrás. En la demo se prende y apaga desde la cinta (Plano / Capas). false: carta plana.
+  profundidad: true,
+
+  // ambiente (cada sección): escena = foto del lugar, video = loop sobre negro (assets/ambiente/),
+  // videoOpacidad = cuánto se ve el video (0 a 1: el humo denso pide menos, las brasas sueltas más),
+  // particulas = brasas · harina · chispas · azucar · burbujas · polvo.
   categorias: [
-    { id: "burgers", nombre: "Burgers",    palabra: "BURGERS", estacion: "cocina" },
-    { id: "pizzas",  nombre: "Pizzas",     palabra: "PIZZAS",  estacion: "cocina" },
-    { id: "picar",   nombre: "Para picar", palabra: "PICOTEO", estacion: "cocina" },
-    { id: "postres", nombre: "Postres",    palabra: "POSTRES", estacion: "cocina" },
-    { id: "bebidas", nombre: "Bebidas",    palabra: "BEBIDAS", estacion: "barra" },
+    { id: "burgers", nombre: "Burgers",    palabra: "BURGERS", estacion: "cocina",
+      ambiente: { escena: "assets/ambiente/burgers-escena.jpg", video: "assets/ambiente/burgers.mp4", videoOpacidad: 0.85, escenaOpacidad: 0.42, particulas: "brasas" } },
+    { id: "pizzas",  nombre: "Pizzas",     palabra: "PIZZAS",  estacion: "cocina",
+      ambiente: { escena: "assets/ambiente/pizzas-escena.jpg", video: "assets/ambiente/pizzas.mp4", videoOpacidad: 0.5, particulas: "harina" } },
+    { id: "picar",   nombre: "Para picar", palabra: "PICOTEO", estacion: "cocina",
+      ambiente: { escena: "assets/ambiente/picar-escena.jpg", video: "assets/ambiente/picar.mp4", videoOpacidad: 0.42, particulas: "chispas" } },
+    { id: "postres", nombre: "Postres",    palabra: "POSTRES", estacion: "cocina",
+      ambiente: { escena: "assets/ambiente/postres-escena.jpg", video: "assets/ambiente/postres.mp4", videoOpacidad: 0.6, particulas: "azucar" } },
+    { id: "bebidas", nombre: "Bebidas",    palabra: "BEBIDAS", estacion: "barra",
+      ambiente: { escena: "assets/ambiente/bebidas-escena.jpg", video: "assets/ambiente/bebidas.mp4", videoOpacidad: 0.32, particulas: "burbujas" } },
   ],
 
   // color: el color del plato, sacado de lo que tiene (remolacha → magenta, fernet → marrón).
@@ -116,6 +129,28 @@ window.LOCAL = {
       sellos: ["El más pedido"],
       modelo: { tipo: "hamburguesa", medallon: "carne", medallones: 1, con: ["lechuga", "tomate", "cebolla"], salsa: "#F3B63F", salsaNombre: "Salsa de la casa" },
       armable: "hamburguesa",
+      // El plato héroe (profundidad.js): se arma al llegar (las franjas caen y se ensamblan), echa vapor
+      // y a su alrededor flotan ingredientes sueltos a distinta profundidad. x, y: lugar en el
+      // escenario (de 0 a 1) · z: menos de 1 detrás del plato, más de 1 delante (más lejos de 1, más
+      // desenfocado) · tam: ancho como fracción del escenario · rot/giro: ángulo y cuánto se mece.
+      heroe: {
+        armado: true,
+        vapor: "assets/ambiente/vapor.mp4",
+        vaporOpacidad: 0.7,
+        escala: 0.84,
+        satelites: [
+          // detrás del plato (z menor que 1): asoman por las esquinas
+          { src: "assets/ambiente/heroe/clasica-cebolla-mitad.webp", x: 0.12, y: 0.12, z: 0.65, tam: 0.28, rot: -20, giro: 9 },
+          { src: "assets/ambiente/heroe/clasica-tomate.webp",        x: 0.90, y: 0.16, z: 0.7,  tam: 0.24, rot: 20,  giro: 10 },
+          { src: "assets/ambiente/heroe/clasica-pan.webp",           x: 0.08, y: 0.80, z: 0.75, tam: 0.28, rot: -28, giro: 8 },
+          { src: "assets/ambiente/heroe/clasica-salsa.webp",         x: 0.88, y: 0.82, z: 0.9,  tam: 0.34, rot: 22,  giro: 4 },
+          // delante (z mayor que 1): cruzan el borde del plato, más desenfocados cuanto más cerca de la cámara
+          { src: "assets/ambiente/heroe/clasica-lechuga.webp",       x: 0.04, y: 0.50, z: 1.5,  tam: 0.36, rot: -22, giro: 12 },
+          { src: "assets/ambiente/heroe/clasica-cheddar-pila.webp",  x: 0.96, y: 0.60, z: 1.35, tam: 0.32, rot: 14,  giro: 8 },
+          { src: "assets/ambiente/heroe/clasica-tomate-entero.webp", x: 0.84, y: 0.05, z: 1.8,  tam: 0.30, rot: 22,  giro: 14 },
+          { src: "assets/ambiente/heroe/clasica-cebolla.webp",       x: 0.16, y: 0.86, z: 1.4,  tam: 0.22, rot: -10, giro: 11 },
+        ],
+      },
     },
     {
       id: "doble-bacon", categoria: "burgers", nombre: "Doble Bacon", precio: 21900, color: "#B3261E",

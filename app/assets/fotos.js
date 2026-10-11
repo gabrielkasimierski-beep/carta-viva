@@ -31,6 +31,8 @@ window.FOTOS = {
     foto: "assets/fotos/clasica.jpg", alfa: "assets/fotos/clasica-alfa.jpg", tam: [900, 776], vista: "frente",
     lleva: [["pan", "Pan de papa"], ["medallon", "Medallón"], ["cheddar", "Cheddar"], ["lechuga", "Lechuga"], ["tomate", "Tomate"], ["cebolla", "Cebolla morada"], ["salsa", "Salsa de la casa"]],
     giro: { src: ["assets/cuadros/clasica-giro-1.webp", "assets/cuadros/clasica-giro-2.webp"], n: 96, cols: 7, tam: [520, 445], porParte: 63, sentido: -1 },
+    // La tapa sube y el queso y la salsa se estiran (un video de Higgsfield, recortado): arranca y termina en la foto.
+    abre: { src: ["assets/cuadros/clasica-abre-1.webp", "assets/cuadros/clasica-abre-2.webp"], n: 47, cols: 6, tam: [480, 622], porParte: 24, fps: 9.4 },
     capas: [
       { nombre: "Pan de papa", hasta: [268, 250, 268] },
       { nombre: "Salsa y cebolla morada", tiene: ["cebolla"], hasta: [328, 340, 336] },

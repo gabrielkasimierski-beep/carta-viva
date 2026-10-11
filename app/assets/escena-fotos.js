@@ -109,6 +109,8 @@
       const [x0, y0, x1, y1] = p.caja, [W, H] = d.tam, cw = x1 - x0, ch = y1 - y0;
       html = `<div class="fp__boceto"><img src="${d.foto}" alt="" draggable="false" style="width:${(W / cw) * 100}%;height:${(H / ch) * 100}%;left:${(-x0 / cw) * 100}%;top:${(-y0 / ch) * 100}%"></div>`;
     }
+    p.armadoCaja = p.armadoEls = null;
+    p.fp.classList.remove("armando");
     p.plato3.innerHTML = html;
     ubicar(p);
     pedirRecorte(p.plato).then(r => {
@@ -125,10 +127,19 @@
     let html = `<div class="fp__entero">${img}</div><div class="fp__capas"></div>`;
     if (p.vista !== "arriba" && !p.entera && !p.juego) html += `<div class="fp__brillo" style="--mascara:url(${r.url})"></div>`;
     const boceto = p.plato3.querySelector(".fp__boceto");
+    p.armadoCaja = p.armadoEls = null;                          // se reescribe todo el plato: el armado se rehace
+    p.fp.classList.remove("armando");
     p.plato3.innerHTML = html;
     if (boceto) { p.plato3.prepend(boceto); setTimeout(() => boceto.remove(), 700); }
     p.brillo = p.plato3.querySelector(".fp__brillo");
     p.capas = p.plato3.querySelector(".fp__capas");
+    // El aura: un halo del color del plato que sigue su silueta (se ve en Brasa con las capas prendidas)
+    if (p.aura) p.aura.remove();
+    p.aura = document.createElement("div");
+    p.aura.className = "fp__aura";
+    p.aura.innerHTML = "<i></i>";                               // el blur va en el contenedor y la máscara en el hijo
+    p.aura.firstChild.style.setProperty("--mascara", `url(${r.url})`);
+    p.mueve.prepend(p.aura);
     p.bandas = bandas(p);
     if (p.vista === "arriba") {
       p.canto = document.createElement("div");
@@ -256,6 +267,103 @@
     });
     viejas.forEach(e => { e.style.opacity = "0"; setTimeout(() => e.remove(), 260); });
     p.fp.classList.add("con-capas");
+  }
+
+  /* ---------- El armado: las franjas de la burger caen y se ensamblan (lo maneja profundidad.js) ----------
+     k va de 0 (desarmada: cada franja arriba, más cerca de la cámara, grande y desenfocada) a 1 (armada:
+     vuelve la foto entera). Las de abajo llegan primero y el pan de arriba cierra, con un pequeño rebote.
+     cam: { x, y } de -1 a 1, para que las franjas en el aire se muevan distinto según qué tan cerca estén.
+     Devuelve null si todavía no hay recorte (no se puede), false si no corresponde (se está mirando qué
+     tiene, armando o girando con el dedo) y true si se dibujó. */
+  const rebote = t => { const c1 = 1.5, c3 = c1 + 1; return 1 + c3 * Math.pow(t - 1, 3) + c1 * Math.pow(t - 1, 2); };
+  function soltarArmado(p) {
+    if (!p.armadoCaja || !p.fp.classList.contains("armando")) return;
+    p.fp.classList.remove("armando");
+    p.armadoCaja.style.display = "none";
+  }
+  function armado(el, k, cam) {
+    const p = puestos.get(el);
+    if (!p || !p.d || !p.d.capas) return false;
+    if (!p.bandas || !p.r || !p.w) return null;
+    const girando = p.fp.classList.contains("girando") || p.fp.classList.contains("girado");
+    if (p.modo || p.eleccion || p.arrastrando || p.juego || p.grosor || girando) { soltarArmado(p); return false; }
+    if (k >= 0.99) { soltarArmado(p); return true; }
+    if (!p.armadoCaja || !p.armadoCaja.isConnected) {
+      const caja = document.createElement("div");
+      caja.className = "fp__armado";
+      p.armadoEls = p.bandas.map(b => {
+        const d = document.createElement("div");
+        d.className = "fp__pieza";
+        d.style.clipPath = b.clip;
+        d.innerHTML = `<img src="${p.r.url}" alt="" draggable="false">`;
+        caja.appendChild(d);
+        return d;
+      });
+      p.plato3.appendChild(caja);
+      p.armadoCaja = caja;
+    }
+    p.armadoCaja.style.display = "";
+    p.fp.classList.add("armando");
+    const n = p.armadoEls.length, W = p.w, H = p.h, hueco = 0.075, ventana = 1 - hueco * (n - 1);
+    const cx = (cam && cam.x) || 0, cy = (cam && cam.y) || 0;
+    p.armadoEls.forEach((d, i) => {
+      const j = n - 1 - i;                                           // 0: el pan de abajo, el primero en llegar
+      const t = Math.max(0, Math.min(1, (k - j * hueco) / ventana));
+      const e = rebote(t), f = 1 - e;                                // f: lo que le falta (negativo en el rebote)
+      const lado = Math.sin(i * 2.4 + 0.7);
+      const cerca = 0.5 + j / Math.max(1, n - 1);                    // los de arriba, más cerca de la cámara
+      const dx = lado * W * 0.24 * f - cx * 24 * cerca * Math.max(0, f);
+      const dy = -H * (0.3 + 0.1 * j) * f - cy * 14 * cerca * Math.max(0, f);
+      const esc = 1 + Math.max(0, f) * 0.3;
+      d.style.transform = `translate3d(${dx.toFixed(1)}px, ${dy.toFixed(1)}px, 0) rotate(${(lado * 14 * f).toFixed(2)}deg) scale(${esc.toFixed(3)})`;
+      d.style.opacity = Math.min(1, t * 4).toFixed(2);
+      d.style.filter = f > 0.03 ? `blur(${(f * 7).toFixed(1)}px)` : "";
+    });
+    return true;
+  }
+
+  /* ---------- Abrirse: el plato héroe hace algo (la tapa sube y el queso se estira) ----------
+     Son los cuadros de un video de Higgsfield con el plato recortado (FOTOS: abre), que empiezan y
+     terminan en la foto de siempre. Se calzan sobre la foto como el giro, se tocan una vez y el plato
+     vuelve a ser la foto. Lo dispara profundidad.js cuando el plato termina de armarse. */
+  function terminarAbre(p) {
+    if (!p.abriendo && !p.cvAbre) return;
+    p.abriendo = false;
+    p.fp.classList.remove("abriendo");
+    if (p.d && p.d.abre) Cuadros.soltar(p.d.abre);
+    if (p.cvAbre) { p.cvAbre.remove(); p.cvAbre = null; }
+  }
+  function abrir(el) {
+    const p = puestos.get(el);
+    if (!p || !p.d || !p.d.abre || p.abriendo || !p.r || !MOVIMIENTO) return false;
+    const girando = p.fp.classList.contains("girando") || p.fp.classList.contains("girado");
+    if (p.modo || p.eleccion || p.arrastrando || p.juego || p.grosor || girando) return false;
+    p.abriendo = true;
+    const def = p.d.abre;
+    Cuadros.pedir(def).then(a => {
+      if (!a || !p.abriendo || puestos.get(el) !== p) { if (a) Cuadros.soltar(def); p.abriendo = false; return; }
+      p.cvAbre = document.createElement("canvas");
+      p.cvAbre.className = "fp__abre";
+      p.plato3.appendChild(p.cvAbre);
+      // Calzado sobre la foto: lo que ocupa el plato en el cuadro 0 es lo que ocupa en la foto
+      const [u0, v0, u1, v1] = Cuadros.util(a, 0), [s0, t0, s1, t1] = p.r.util;
+      const W = (s1 - s0) / (u1 - u0), H = (t1 - t0) / (v1 - v0);
+      Object.assign(p.cvAbre.style, { left: `${(s0 - u0 * W) * 100}%`, top: `${(t0 - v0 * H) * 100}%`, width: `${W * 100}%`, height: `${H * 100}%` });
+      p.cvAbre.width = a.tam[0]; p.cvAbre.height = a.tam[1];
+      const g = p.cvAbre.getContext("2d");
+      const dur = (a.n / (def.fps || 9.4)) * 1000, inicio = performance.now();
+      Cuadros.dibujar(g, a, 0, p.cvAbre.width, p.cvAbre.height, false);
+      p.fp.classList.add("abriendo");
+      const paso = ahora => {
+        const girando2 = p.fp.classList.contains("girando") || p.fp.classList.contains("girado");
+        if (!p.abriendo || p.arrastrando || p.modo || p.eleccion || girando2 || !p.cvAbre) return terminarAbre(p);
+        const f = Math.min(a.n - 1, ((ahora - inicio) / dur) * a.n);
+        Cuadros.dibujar(g, a, f, p.cvAbre.width, p.cvAbre.height, false);
+        if (f < a.n - 1) requestAnimationFrame(paso); else terminarAbre(p);
+      };
+      requestAnimationFrame(paso);
+    });
+    return true;
   }
 
   /* ---------- Dónde va y de qué tamaño (como el 3D: ocupa todo su lugar) ---------- */
@@ -693,6 +801,9 @@
     variante: () => variante,
     usarVariante,
     colorDe: plato => { const d = datos(plato) || {}; return { color: d.colorPropio || d.color || null, color2: d.colorPropio ? null : d.color2 || null }; },
+    armado,
+    abrir,
+    abriendo: el => { const p = puestos.get(el); return !!(p && p.abriendo); },
     acomodar(el, cambiar) {
       const p = puestos.get(el);
       if (p) mudarse(p, cambiar); else if (cambiar) cambiar();

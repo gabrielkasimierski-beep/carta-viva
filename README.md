@@ -57,6 +57,8 @@ app/assets/pizza3d.js     la pizza con grosor en 3D (con la foto de arriba): se 
 app/assets/recorte.js     saca el plato de la foto · cuadros.js: carga los cuadros · juegos.js: postres y bebidas
 app/assets/platos3d.js    los platos modelados por código, por capas (solo en 3D)
 app/assets/escena.js      el escenario 3D (Three.js): se carga solo si se eligen los platos en 3D
+app/assets/profundidad.js la página en capas: escena + video + partículas detrás y delante del plato, con cámara (giroscopio/mouse)
+app/assets/ambiente/      por sección: la foto del ambiente (-escena.jpg) y un video de humo/brasas sobre negro (.mp4)
 app/assets/datos.js       mesas, comensales, pedidos, llamados, agotados, equipo con permisos y el club (demo: en el navegador)
 app/assets/simulacion.js  lo que se simula en la demo: Juli y Tomi, cocina, barra y otras mesas
 app/assets/app.js         la carta: bienvenida, feed, armar, pedido de la mesa, seguimiento, mozo, cuenta y el club

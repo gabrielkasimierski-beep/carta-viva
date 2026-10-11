@@ -63,6 +63,10 @@
     <button type="button" data-vista-plato="fotos" aria-pressed="true">Fotos</button>
     <button type="button" data-vista-plato="3d" aria-pressed="false">3D</button>
   </div>
+  <div class="estilos" id="capas-plato" role="group" aria-label="Profundidad de la carta">
+    <button type="button" data-capas="0" aria-pressed="false">Plano</button>
+    <button type="button" data-capas="1" aria-pressed="true">Capas</button>
+  </div>
   <div class="estilos estilos--plan" id="planes" role="group" aria-label="Plan del local">
     <button type="button" data-plan="basico">Básico</button>
     <button type="button" data-plan="medio">Medio</button>
@@ -284,6 +288,8 @@
 <script src="assets/cuadros.js"></script>
 <script src="assets/juegos.js"></script>
 <script src="assets/escena-fotos.js"></script>
+<!-- La página en capas: escena, video y partículas detrás y delante del plato -->
+<script src="assets/profundidad.js"></script>
 <!-- La pizza con grosor (3D con la foto de arriba): dormida hasta que se elige "3D" en una pizza -->
 <script type="text/plain" data-pizza3d src="assets/pizza3d.js"></script>
 <!-- Los platos en 3D: dormidos; app.js los despierta solo si se eligió el 3D (así no se baja Three.js) -->

@@ -280,6 +280,7 @@ function activar(i) {
   }
   E.foto(p);
   if (platos[i + 1]) E.foto(platos[i + 1]);
+  if (window.Profundidad) Profundidad.plato(p, escenario(i), { luz: pa.luz, sombra: pa.sombra });
 }
 
 /* ---------- Armar y precios ---------- */
@@ -1690,6 +1691,7 @@ function iniciar() {
   raiz.dataset.estilo = estilo;
   $$("#estilos [data-estilo]").forEach(b => b.setAttribute("aria-pressed", b.dataset.estilo === estilo));
   pintarCarta();
+  if (window.Profundidad) Profundidad.iniciar({ feed, fondo, palabra, platos });     // la página en capas (profundidad.js)
   const hay3D = E.iniciar({ lienzo: $("#lienzo"), etiquetas: $("#etiquetas") });
   if (hay3D) { E.estilo(estilo); secciones.forEach((s, i) => E.vincular(escenario(i), platos[i])); }
   else document.body.classList.add("sin-3d");

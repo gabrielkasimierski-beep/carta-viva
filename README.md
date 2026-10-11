@@ -1,5 +1,13 @@
 # Carta Viva
 
+> **Este es el único repo del producto Carta Viva.** Lo trabajamos Gaby y Juanma. "Comilona" fue una demo
+> publicada de Carta Viva (su repo `comilona` está archivado). Lo específico de un cliente va en el repo de ese
+> cliente, no acá.
+>
+> **Cómo trabajamos:** [`CONTRIBUTING.md`](CONTRIBUTING.md) (ramas, commits, PRs) · **Por qué se decidió cada
+> cosa:** [`decisiones.md`](decisiones.md) · **Planes para explicarle al cliente:**
+> [`planes-para-el-cliente.md`](planes-para-el-cliente.md)
+
 Carta viva para locales gastronómicos: el comensal escanea el QR de su mesa y ve cada plato de
 verdad (la foto real recortada, que gira con el dedo; los postres y las bebidas tienen su juego),
 mira qué tiene, lo arma a su gusto y lo pide desde el celular. También puede verse en 3D. Los de la mesa piden juntos, cada uno desde su
